@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import Avatar from "@/components/Avatar";
 import { CameraIcon, CheckIcon } from "@/components/icons";
+import IdCardGuide from "@/components/IdCardGuide";
 import { PhoneInput, StateSelect } from "@/components/forms";
 import {
   changePin,
@@ -233,6 +234,7 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
           className="field"
         />
         <span className="label">NYSC ID card</span>
+        {!preview && <IdCardGuide />}
         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-[14px] border-[1.5px] border-dashed border-line p-3 text-center">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element

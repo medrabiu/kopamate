@@ -89,6 +89,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 ### 4.1 Landing (`/`)
 - Top bar: `Kopamate` wordmark; **Log in** link.
 - **If the visitor arrived through a referral link:** a card at the top saying "**Chidi** invited you to join" with Chidi's avatar.
+- **Hero illustration** (`components/HeroArt.tsx`): three corpers in khaki at a social night under string lights, one holding up a phone showing "#1". Inline SVG rendered with the page (no image request, about 1.5 KB gzipped), follows light/dark mode, no NYSC branding.
 - Pill: "For corps members across Nigeria".
 - Headline: "Every corper. / One place." (second line in pink).
 - Subtext: "Join early, climb the list, and be first in line for contests, awards and prizes."
@@ -97,7 +98,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 - **Top states:** top 5 states by signups, with counts.
 - **Coming soon:** 3 locked cards: Contests, Awards, Opportunities.
 - **Prize teaser** (pink outline): "Prizes are coming. For the first 500 signups and the top 10 referrers. Announced soon."
-- Also needs Open Graph tags and a preview image so the link looks good when shared on WhatsApp.
+- Also needs Open Graph tags and a preview image so the link looks good when shared on WhatsApp (see section 6).
 
 ### 4.2 Sign up (`/join`)
 - Title: "Join in 20 seconds". If referred: "Chidi invited you. You'll both move up when you join."
@@ -127,7 +128,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
   3. **Announcement** (set in Admin): pink card with a title, short text and an optional button. Hidden when switched off or the title is empty.
 - **Two stat cards:** "Corpers joined: 4,382" and "{State} is #2 · 280".
 - **New from {state}:** row of the 5 newest users from the user's state (avatars + nicknames), with **See all** linking to `/corpers/[state]`.
-- **Coming soon:** three sections (Contests, Awards, Opportunities), each a heading and a sideways-scrolling row of locked cards (about 220px wide, icon, title, one-line description, small "Coming soon" lock pill). Tapping a card shows "<title> is coming soon".
+- **Coming soon:** three sections (Contests, Awards, Opportunities), each a heading and a sideways-scrolling row of locked cards (about 220px wide: an illustration banner on top, then icon, title and one-line description, with a small "Coming soon" lock pill over the image). The illustrations are inline SVGs in the Social Night palette (`components/CardArt.tsx`): no image downloads, about 3 KB extra for all 15, cached with the app's JavaScript, and they follow light/dark mode. Tapping a card shows "<title> is coming soon".
   - Contests: Best Khaki Drip, Camp Talent Showdown, Man O' War Challenge, Mammy Market Cook-off, Best CDS Project.
   - Awards: Corper of the Month, Best Platoon, Camp Comedian, Social Night MVP, Most Stylish in {user's state}.
   - Opportunities: Jobs from ex-corpers, Remote gigs, Retention at your PPA, Skills and SAED, Scholarships and grants.
@@ -165,7 +166,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.8 Profile (`/profile`)
 - Large avatar with a camera button to add or change the photo.
-- **Get verified** card (top of Profile): only verified corpers can win prizes. The user enters their state code (format `EN/26B/1234`) and a photo of their NYSC ID card; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. Status shows as "Checking your ID" (pending), the admin's reason (rejected, with a form to try again) or "Verified corper". The state code is locked while pending and once verified. A state code can only be verified on one account.
+- **Get verified** card (top of Profile): only verified corpers can win prizes. The user enters their state code (format `EN/26B/1234`) and a photo of their NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. Status shows as "Checking your ID" (pending), the admin's reason (rejected, with a form to try again) or "Verified corper". The state code is locked while pending and once verified. A state code can only be verified on one account.
 - Nickname, "{State} · #{position} · Joined {date}".
 - Editable rows: Nickname, WhatsApp number ("only you can see this", shown masked), State serving in, State code ("Not added" / **Add**).
 - Toggle: **Show me in the Corpers list** ("Others see your nickname and photo only"). On by default.
@@ -232,7 +233,7 @@ Short, readable, unique per user, e.g. nickname-based + digits (`ada347`), lower
 
 - Use `https://wa.me/?text=<encoded>` for the WhatsApp button.
 - Use the Web Share API when available for a general share option.
-- **Open Graph preview** for `/` and `/r/[code]`: title, description, and an image in the Social Night style showing the app name and "Every corper. One place." For referral links, the title can be "Chidi invited you to Kopamate".
+- **Open Graph preview** for `/` and `/r/[code]` (`lib/og.tsx`, 1200×630, app fonts): the app name and "Every corper. One place.", with art on the right. For referral links the title is "Chidi invited you to Kopamate", the image says "Chidi invited you" and shows Chidi's photo (JPEG/PNG photos only) or their initial on their avatar colour, in a lime ring. Without an inviter it shows a row of avatar circles.
 
 ---
 

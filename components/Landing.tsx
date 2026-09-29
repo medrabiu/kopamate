@@ -2,6 +2,7 @@ import Link from "next/link";
 import Avatar from "./Avatar";
 import ComingSoon from "./ComingSoon";
 import CountUp from "./CountUp";
+import HeroArt from "./HeroArt";
 import PrizeCard from "./PrizeCard";
 import { APP_NAME } from "@/lib/config";
 import type { PublicStats } from "@/lib/stats";
@@ -35,6 +36,7 @@ export default function Landing({ stats, prizeText, inviter }: Props) {
       )}
 
       <section className="flex flex-col gap-3.5">
+        <HeroArt />
         <span className="self-start rounded-full bg-lime px-3 py-1.5 text-[13px] font-medium text-on-accent">
           For corps members across Nigeria
         </span>

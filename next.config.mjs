@@ -1,13 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
-  // The Status card route reads these font files at runtime.
-  outputFileTracingIncludes: {
-    "/card/[code]": [
-      "./node_modules/@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-800-normal.woff",
-      "./node_modules/@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff",
-    ],
-  },
+  // The Status card and share preview images read these font files at runtime.
+  outputFileTracingIncludes: Object.fromEntries(
+    ["/card/[code]", "/opengraph-image", "/r/[code]/opengraph-image"].map((route) => [
+      route,
+      [
+        "./node_modules/@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-800-normal.woff",
+        "./node_modules/@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff",
+      ],
+    ]),
+  ),
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
   },
