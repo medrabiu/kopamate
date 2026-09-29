@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { validateNickname } from "@/lib/validate";
+import { normalizeStateCode, validateNickname } from "@/lib/validate";
+import { isState } from "@/lib/states";
 import { randomDigits } from "@/lib/util";
 import { isUniqueViolation } from "@/lib/signup";
 
@@ -17,7 +18,37 @@ function id(fd: FormData) {
 
 function done() {
   revalidateTag("stats");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
+}
+
+/** Admin edit of a user's nickname, state and state code. Invalid values are ignored. */
+export async function adminUpdateUser(fd: FormData) {
+  await requireAdmin();
+  const userId = id(fd);
+  const nick = validateNickname(String(fd.get("nickname") ?? ""));
+  const state = String(fd.get("state") ?? "");
+  const code = normalizeStateCode(String(fd.get("state_code") ?? ""));
+  if (nick.ok) await sql`UPDATE users SET nickname = ${nick.value} WHERE id = ${userId}`;
+  if (state === "" || isState(state)) await sql`UPDATE users SET state = ${state || null} WHERE id = ${userId}`;
+  if (code !== null) {
+    try {
+      await sql`UPDATE users SET state_code = ${code || null} WHERE id = ${userId}`;
+    } catch (err) {
+      // Another account is already verified with this state code; keep the old one.
+      if (!isUniqueViolation(err)) throw err;
+    }
+  }
+  done();
+}
+
+/** Permanently deletes an account (not your own). Needs "DELETE" typed to confirm. */
+export async function adminDeleteUser(fd: FormData) {
+  const admin = await requireAdmin();
+  const userId = id(fd);
+  if (userId === admin.id || String(fd.get("confirm") ?? "").trim().toUpperCase() !== "DELETE") return;
+  await sql`DELETE FROM users WHERE id = ${userId}`;
+  done();
+  redirect("/admin/users");
 }
 
 export async function setFlag(fd: FormData) {
@@ -147,7 +178,7 @@ export async function saveAnnouncement(fd: FormData) {
   }
   revalidateTag("settings");
   revalidatePath("/home");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 /** Sets a temporary 4-digit PIN (for people who forgot theirs) and shows it once on the admin page. */
@@ -160,5 +191,5 @@ export async function resetPin(fd: FormData) {
     WHERE id = ${userId} RETURNING nickname
   `;
   if (!rows[0]) return;
-  redirect(`/admin?reset=${encodeURIComponent(rows[0].nickname)}&pin=${pin}`);
+  redirect(`/admin/users/${userId}?pin=${pin}`);
 }

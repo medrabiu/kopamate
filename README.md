@@ -22,7 +22,8 @@ Create a new private repository and upload this folder (or `git push` it).
 
 | Name | Value |
 |---|---|
-| `DATABASE_URL` | the Supabase connection string from step 1 |
+| `DATABASE_URL` | the Supabase connection string from step 1 (Transaction pooler, port 6543) |
+| `DB_POOL_MAX` | optional. Database connections per server instance, default `3`. Keep it low: every running instance opens its own pool. |
 | `APP_URL` | your site address, e.g. `https://kopamate.vercel.app` (no slash at the end). Update it later when you add your own domain. |
 | `SESSION_SECRET` | a long random string. On any computer with Node: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `ADMIN_IDS` | your Google email and/or WhatsApp number, comma-separated, e.g. `you@gmail.com,08031234567` |
@@ -45,6 +46,8 @@ In Vercel: **Project → Settings → Domains** and add e.g. `kopamate.ng`. Then
 ### 6. Check it works
 - Open the site on your phone, sign up, and open **Profile → Open admin** (shows only for `ADMIN_IDS`).
 - Copy your invite link, open it in a private window, and sign up as a second person. Your referral count should go up and your position should improve.
+- The app runs in Vercel's Frankfurt region (`fra1` in `vercel.json`), next to a Supabase project in `eu-central-1`. If your Supabase project is somewhere else, change the region to the closest one: every page makes several database round trips, so distance adds up fast.
+- The database client sends one query at a time per connection (`max_pipeline: 1` in `lib/db.ts`). Don't remove it: sending several at once through Supabase's transaction pooler can leave connections stuck and make pages hang.
 - The daily position snapshot runs automatically at 00:05 Lagos time (see `vercel.json`). The "↑ 20 since yesterday" badge appears from the second day.
 
 ---

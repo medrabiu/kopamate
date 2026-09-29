@@ -1,0 +1,313 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import Avatar from "@/components/Avatar";
+import { requireAdmin } from "@/lib/session";
+import { sql } from "@/lib/db";
+import { ranked } from "@/lib/ranking";
+import { STATES } from "@/lib/states";
+import { formatJoined, timeAgo } from "@/lib/util";
+import {
+  addReward,
+  adminDeleteUser,
+  adminRemovePhoto,
+  adminUpdateUser,
+  approveVerification,
+  markRewardSent,
+  rejectVerification,
+  resetPin,
+  revokeVerification,
+  setBan,
+  setFlag,
+} from "@/app/actions/admin";
+import { btn, btnPrimary, input, panel } from "../../ui";
+import { StatusBadges } from "../../badges";
+
+export const metadata: Metadata = { title: "User" };
+
+type Detail = {
+  id: string;
+  nickname: string;
+  whatsapp_e164: string | null;
+  email: string | null;
+  state: string | null;
+  state_code: string | null;
+  referral_code: string;
+  photo_version: number;
+  signup_number: number | null;
+  completed_at: Date | null;
+  created_at: Date;
+  is_flagged: boolean;
+  is_banned: boolean;
+  is_seed: boolean;
+  show_in_list: boolean;
+  verification_status: string;
+  verification_note: string | null;
+  verified_at: Date | null;
+  has_id_card: boolean;
+  has_pin: boolean;
+  google: boolean;
+  position: number | null;
+  refs: number | null;
+  prize_position: number | null;
+  referrer_id: string | null;
+  referrer: string | null;
+};
+
+export default async function AdminUserPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ pin?: string }>;
+}) {
+  const admin = await requireAdmin();
+  const { id } = await params;
+  const { pin } = await searchParams;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+
+  const [rows, referred, rewards] = await Promise.all([
+    sql<Detail[]>`
+      ${ranked()}
+      SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.state_code, u.referral_code, u.photo_version,
+             u.signup_number, u.completed_at, u.created_at, u.is_flagged, u.is_banned, u.is_seed, u.show_in_list,
+             u.verification_status, u.verification_note, u.verified_at, (u.id_card_data IS NOT NULL) AS has_id_card,
+             (u.pin_hash IS NOT NULL) AS has_pin, (u.google_id IS NOT NULL) AS google,
+             r.position, r.refs, r.prize_position, ref.id AS referrer_id, ref.nickname AS referrer
+      FROM users u
+      LEFT JOIN ranked r ON r.id = u.id
+      LEFT JOIN users ref ON ref.id = u.referred_by
+      WHERE u.id = ${id}
+    `,
+    sql<{ id: string; nickname: string; completed_at: Date | null; is_flagged: boolean; is_banned: boolean }[]>`
+      SELECT id, nickname, completed_at, is_flagged, is_banned FROM users
+      WHERE referred_by = ${id} ORDER BY created_at DESC LIMIT 50
+    `,
+    sql<{ id: string; title: string; description: string | null; status: string; created_at: Date }[]>`
+      SELECT id, title, description, status, created_at FROM rewards WHERE user_id = ${id} ORDER BY created_at DESC
+    `,
+  ]);
+  const u = rows[0];
+  if (!u) notFound();
+  const isSelf = u.id === admin.id;
+
+  return (
+    <>
+      <Link href="/admin/users" className="text-sm text-muted hover:text-ink">
+        ← All users
+      </Link>
+
+      {pin && /^\d{4}$/.test(pin) && (
+        <p role="status" className="rounded-2xl border border-lime p-4 text-sm">
+          Temporary PIN for <b>{u.nickname}</b>: <b className="text-lime-ink">{pin}</b>. Send it to them on WhatsApp and ask them to
+          change it in their profile. It won&apos;t be shown again.
+        </p>
+      )}
+
+      <section className={`${panel} flex flex-wrap items-start gap-4`}>
+        <Avatar id={u.id} nickname={u.nickname} photoVersion={u.photo_version} size={72} />
+        <div className="min-w-0 flex-1">
+          <h2 className="h-display text-2xl">{u.nickname}</h2>
+          <StatusBadges user={u} />
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-muted">WhatsApp</dt>
+            <dd>{u.whatsapp_e164 ?? "–"}</dd>
+            <dt className="text-muted">Email</dt>
+            <dd>{u.email ?? "–"}</dd>
+            <dt className="text-muted">Sign-in</dt>
+            <dd>{[u.google && "Google", u.has_pin && "PIN"].filter(Boolean).join(" + ") || "–"}</dd>
+            <dt className="text-muted">State</dt>
+            <dd>
+              {u.state ?? "–"} {u.state_code && <span className="text-muted">· {u.state_code}</span>}
+            </dd>
+            <dt className="text-muted">Position</dt>
+            <dd>
+              {u.position ? `#${u.position}` : "Not ranked"}
+              {u.prize_position && <span className="text-muted"> · #{u.prize_position} among verified</span>}
+            </dd>
+            <dt className="text-muted">Referrals</dt>
+            <dd>{u.refs ?? 0}</dd>
+            <dt className="text-muted">Invited by</dt>
+            <dd>
+              {u.referrer_id ? (
+                <Link href={`/admin/users/${u.referrer_id}`} className="underline">
+                  {u.referrer}
+                </Link>
+              ) : (
+                "–"
+              )}
+            </dd>
+            <dt className="text-muted">Joined</dt>
+            <dd>
+              {u.completed_at ? `${formatJoined(u.completed_at)} (sign-up #${u.signup_number})` : `Unfinished, started ${timeAgo(u.created_at)}`}
+            </dd>
+            <dt className="text-muted">Referral code</dt>
+            <dd>{u.referral_code}</dd>
+            <dt className="text-muted">In Corpers list</dt>
+            <dd>{u.show_in_list ? "Shown" : "Hidden by them"}</dd>
+          </dl>
+        </div>
+      </section>
+
+      <section className={panel}>
+        <h2 className="h-display mb-3 text-lg">Moderation</h2>
+        <div className="flex flex-wrap gap-2">
+          <form action={setFlag}>
+            <input type="hidden" name="id" value={u.id} />
+            <input type="hidden" name="on" value={u.is_flagged ? "0" : "1"} />
+            <button className={btn}>{u.is_flagged ? "Unflag" : "Flag (referrals stop counting)"}</button>
+          </form>
+          {!isSelf && (
+            <form action={setBan}>
+              <input type="hidden" name="id" value={u.id} />
+              <input type="hidden" name="on" value={u.is_banned ? "0" : "1"} />
+              <button className={btn}>{u.is_banned ? "Unban" : "Ban (signs them out)"}</button>
+            </form>
+          )}
+          {u.whatsapp_e164 && (
+            <form action={resetPin}>
+              <input type="hidden" name="id" value={u.id} />
+              <button className={btn}>Reset PIN</button>
+            </form>
+          )}
+          {u.photo_version > 0 && (
+            <form action={adminRemovePhoto}>
+              <input type="hidden" name="id" value={u.id} />
+              <button className={btn}>Remove photo</button>
+            </form>
+          )}
+        </div>
+      </section>
+
+      <section className={panel}>
+        <h2 className="h-display mb-3 text-lg">Edit</h2>
+        <form action={adminUpdateUser} className="grid gap-3 md:grid-cols-3">
+          <input type="hidden" name="id" value={u.id} />
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            Nickname
+            <input name="nickname" defaultValue={u.nickname} maxLength={20} required className={input} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            State
+            <select name="state" defaultValue={u.state ?? ""} className={input}>
+              <option value="">–</option>
+              {STATES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            State code
+            <input name="state_code" defaultValue={u.state_code ?? ""} maxLength={16} placeholder="EN/26B/1234" className={input} />
+          </label>
+          <button className={`${btnPrimary} self-start`}>Save changes</button>
+        </form>
+      </section>
+
+      <section className={panel}>
+        <h2 className="h-display mb-3 text-lg">Verification</h2>
+        {u.verification_status === "pending" ? (
+          <div className="flex flex-col gap-3">
+            {u.has_id_card && (
+              <a href={`/admin/id-card/${u.id}`} target="_blank" rel="noopener" className="self-start">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/admin/id-card/${u.id}`} alt={`ID card sent by ${u.nickname}`} className="max-h-72 rounded-lg bg-bg object-contain" />
+              </a>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <form action={approveVerification}>
+                <input type="hidden" name="id" value={u.id} />
+                <button className={btnPrimary}>Approve</button>
+              </form>
+              <form action={rejectVerification} className="flex min-w-[280px] flex-1 gap-1.5">
+                <input type="hidden" name="id" value={u.id} />
+                <input name="note" maxLength={200} placeholder="Reason (shown to them)" className={`${input} min-w-0 flex-1`} />
+                <button className={btn}>Reject</button>
+              </form>
+            </div>
+          </div>
+        ) : u.verification_status === "verified" ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span>Verified {u.verified_at ? timeAgo(u.verified_at) : ""}</span>
+            <form action={revokeVerification}>
+              <input type="hidden" name="id" value={u.id} />
+              <button className={btn}>Remove verification</button>
+            </form>
+          </div>
+        ) : (
+          <p className="text-sm text-muted">
+            {u.verification_status === "rejected" ? `Rejected: ${u.verification_note ?? ""}` : "Hasn't asked to be verified."}
+          </p>
+        )}
+      </section>
+
+      <section className="grid gap-6 md:grid-cols-2">
+        <div className={panel}>
+          <h2 className="h-display mb-3 text-lg">Rewards</h2>
+          {rewards.length > 0 && (
+            <ul className="mb-4 flex flex-col gap-2 text-sm">
+              {rewards.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-3">
+                  <span>
+                    <b>{r.title}</b> <span className="text-muted">· {timeAgo(r.created_at)}</span>
+                    {r.description && <span className="block text-xs text-muted">{r.description}</span>}
+                  </span>
+                  {r.status === "pending" ? (
+                    <form action={markRewardSent}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <button className={btn}>Mark sent</button>
+                    </form>
+                  ) : (
+                    <span className="text-xs text-muted">Sent</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <form action={addReward} className="flex flex-col gap-2">
+            <input type="hidden" name="id" value={u.id} />
+            <input name="title" required maxLength={80} placeholder="₦1,000 airtime" className={input} />
+            <input name="description" maxLength={200} placeholder="Note (optional)" className={input} />
+            <button className={`${btn} self-start`}>Add reward</button>
+          </form>
+        </div>
+
+        <div className={panel}>
+          <h2 className="h-display mb-3 text-lg">Invited ({referred.length}{referred.length === 50 ? "+" : ""})</h2>
+          {referred.length === 0 ? (
+            <p className="text-sm text-muted">Nobody yet.</p>
+          ) : (
+            <ul className="flex flex-col gap-1 text-sm">
+              {referred.map((r) => (
+                <li key={r.id} className="flex justify-between gap-2">
+                  <Link href={`/admin/users/${r.id}`} className="underline-offset-2 hover:underline">
+                    {r.nickname}
+                  </Link>
+                  <span className="text-muted">
+                    {r.is_banned ? "Banned" : r.is_flagged ? "Flagged" : r.completed_at ? timeAgo(r.completed_at) : "Unfinished"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {!isSelf && (
+        <section className="rounded-2xl border border-pink/40 p-5">
+          <h2 className="h-display mb-1 text-lg">Delete account</h2>
+          <p className="mb-3 text-sm text-muted">
+            Removes the account, position, rewards and sessions for good. People they invited stay, but stop counting as their referrals.
+          </p>
+          <form action={adminDeleteUser} className="flex flex-wrap gap-2">
+            <input type="hidden" name="id" value={u.id} />
+            <input name="confirm" autoComplete="off" placeholder="Type DELETE" className={input} />
+            <button className="rounded-full bg-pink px-4 py-1.5 text-sm font-bold text-on-accent">Delete</button>
+          </form>
+        </section>
+      )}
+    </>
+  );
+}
