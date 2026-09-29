@@ -48,8 +48,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const improved = user.last_seen_position !== null && position > 0 && position < user.last_seen_position;
   const celebrate = welcome === "1" || improved;
   if (user.last_seen_on !== today || user.last_seen_position !== position) {
-    await sql`UPDATE users SET last_seen_on = ${today}::date, last_seen_position = ${position} WHERE id = ${user.id}`;
-    if (user.last_seen_on !== today) await track("daily_return", user.id);
+    // Run both writes together: one database round trip instead of two.
+    await Promise.all([
+      sql`UPDATE users SET last_seen_on = ${today}::date, last_seen_position = ${position} WHERE id = ${user.id}`,
+      user.last_seen_on !== today ? track("daily_return", user.id) : null,
+    ]);
   }
 
   return (

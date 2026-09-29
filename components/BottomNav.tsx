@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { GiftIcon, HomeIcon, LinkIcon, UserIcon, UsersIcon } from "./icons";
 
 const TABS = [
@@ -12,8 +13,13 @@ const TABS = [
   { href: "/profile", label: "Profile", Icon: UserIcon },
 ];
 
+const matches = (path: string, href: string) => path === href || path.startsWith(href + "/");
+
 export default function BottomNav() {
   const path = usePathname();
+  // The tab you just tapped lights up straight away, before its page has loaded.
+  const [tapped, setTapped] = useState<string | null>(null);
+  useEffect(() => setTapped(null), [path]);
   return (
     <nav
       aria-label="Main"
@@ -22,13 +28,18 @@ export default function BottomNav() {
     >
       <div className="mx-auto grid h-[76px] max-w-[480px] grid-cols-5">
         {TABS.map(({ href, label, Icon }) => {
-          const active = path === href || path.startsWith(href + "/");
+          const active = tapped ? tapped === href : matches(path, href);
           return (
             <Link
               key={href}
               href={href}
-              aria-current={active ? "page" : undefined}
-              className={`flex flex-col items-center justify-center gap-1 text-[11px] font-medium ${
+              aria-current={matches(path, href) ? "page" : undefined}
+              onClick={(e) => {
+                // Only plain taps: modified clicks open a new browser tab and never change this page.
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (!matches(path, href)) setTapped(href);
+              }}
+              className={`flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors duration-100 ${
                 active ? "text-lime-ink" : "text-faint hover:text-ink"
               }`}
             >

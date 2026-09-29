@@ -13,6 +13,9 @@ const nextConfig = {
   ),
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
+    // Reuse a tab you visited in the last 30 seconds instead of fetching it again, so switching
+    // back is instant. Saving anything (server actions) clears this cache, so edits show right away.
+    staleTimes: { dynamic: 30 },
   },
   async headers() {
     return [

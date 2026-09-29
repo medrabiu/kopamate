@@ -88,6 +88,17 @@ textarea {
   }
 }
 
+/* New pages inside the app fade in briefly (see app/(app)/template.tsx). */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.page-enter {
+  animation: page-enter 160ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
