@@ -1,0 +1,76 @@
+-- Kopamate database schema. Safe to run more than once.
+
+CREATE SEQUENCE IF NOT EXISTS signup_number_seq;
+
+CREATE TABLE IF NOT EXISTS users (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nickname            text NOT NULL,
+  whatsapp_e164       text UNIQUE,              -- private; null until a Google user finishes sign-up
+  state               text,
+  state_code          text,                     -- private, optional
+  photo_data          text,                     -- base64, resized on the phone before upload
+  photo_mime          text,
+  photo_version       int  NOT NULL DEFAULT 0,
+  google_id           text UNIQUE,
+  email               text,
+  pin_hash            text,
+  failed_pin_attempts int  NOT NULL DEFAULT 0,
+  pin_locked_until    timestamptz,
+  referral_code       text NOT NULL UNIQUE,
+  referred_by         uuid REFERENCES users(id) ON DELETE SET NULL,
+  signup_number       int UNIQUE,               -- set when sign-up is completed
+  completed_at        timestamptz,
+  show_in_list        boolean NOT NULL DEFAULT true,
+  state_changed_at    timestamptz,
+  is_flagged          boolean NOT NULL DEFAULT false,
+  is_banned           boolean NOT NULL DEFAULT false,
+  signup_ip_hash      text,
+  last_seen_on        date,
+  last_seen_position  int,
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS users_referred_by_idx ON users (referred_by);
+CREATE INDEX IF NOT EXISTS users_state_idx ON users (state);
+CREATE INDEX IF NOT EXISTS users_completed_at_idx ON users (completed_at);
+CREATE INDEX IF NOT EXISTS users_ip_idx ON users (signup_ip_hash, created_at);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id          text PRIMARY KEY,                 -- sha256 of the cookie token
+  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at  timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions (user_id);
+
+CREATE TABLE IF NOT EXISTS position_snapshots (
+  user_id        uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  snapshot_date  date NOT NULL,
+  position       int  NOT NULL,
+  PRIMARY KEY (user_id, snapshot_date)
+);
+
+CREATE TABLE IF NOT EXISTS rewards (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title        text NOT NULL,
+  description  text,
+  status       text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent')),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  sent_at      timestamptz
+);
+CREATE INDEX IF NOT EXISTS rewards_user_idx ON rewards (user_id);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key    text PRIMARY KEY,
+  value  text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS events (
+  id          bigserial PRIMARY KEY,
+  name        text NOT NULL,
+  user_id     uuid REFERENCES users(id) ON DELETE SET NULL,
+  meta        jsonb,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS events_name_time_idx ON events (name, created_at);

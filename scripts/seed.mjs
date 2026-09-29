@@ -1,0 +1,64 @@
+// FOR LOCAL TESTING ONLY. Fills the database with fake corpers so you can see the app with data.
+// Never run this against the live database.
+// Usage: npm run db:seed            (adds 300 fake users)
+//        npm run db:seed -- 1000    (adds 1000)
+// Also creates a demo login: WhatsApp 0803 000 0001, PIN 1234.
+import { readFileSync, existsSync } from "node:fs";
+import postgres from "postgres";
+import bcrypt from "bcryptjs";
+
+if (!process.env.DATABASE_URL && existsSync(".env")) {
+  for (const line of readFileSync(".env", "utf8").split("\n")) {
+    const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
+if (/supabase|neon|amazonaws/.test(process.env.DATABASE_URL || "") && !process.argv.includes("--force")) {
+  console.error("This looks like a hosted database. Seeding is for local testing only. Add --force if you're sure.");
+  process.exit(1);
+}
+
+const count = Number(process.argv[2]) || 300;
+const sql = postgres(process.env.DATABASE_URL, { prepare: false, max: 1 });
+
+const STATES = ["Lagos", "Enugu", "FCT", "Kano", "Oyo", "Rivers", "Kaduna", "Anambra", "Ogun", "Edo", "Delta", "Kwara", "Plateau", "Imo", "Osun", "Benue", "Ondo", "Akwa Ibom", "Cross River", "Niger"];
+const NAMES = ["Ada", "Tobi", "Nneka", "Kels", "Musa", "Ife", "Emeka", "Sade", "Uche", "Bayo", "Ola", "Zainab", "Chidi", "Fola", "Hauwa", "Dayo", "Amaka", "Tunde", "Bisi", "Ngozi", "Yusuf", "Kemi", "Obinna", "Aisha", "Segun", "Chioma", "Ibrahim", "Funmi", "Ikenna", "Halima"];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+// Weighted so a few states lead.
+const weightedState = () => (Math.random() < 0.45 ? STATES[Math.floor(Math.random() * 4)] : pick(STATES));
+
+try {
+  const ids = [];
+  const pinHash = await bcrypt.hash("1234", 10);
+
+  const demo = await sql`SELECT id FROM users WHERE whatsapp_e164 = '+2348030000001'`;
+  if (demo.length === 0) {
+    const [row] = await sql`
+      INSERT INTO users (nickname, whatsapp_e164, state, pin_hash, referral_code, signup_number, completed_at, created_at)
+      VALUES ('Ada', '+2348030000001', 'Enugu', ${pinHash}, 'ada001', nextval('signup_number_seq'), now() - interval '3 days', now() - interval '3 days')
+      RETURNING id`;
+    ids.push(row.id);
+    console.log("Demo login: WhatsApp 0803 000 0001, PIN 1234");
+  } else {
+    ids.push(demo[0].id);
+  }
+
+  for (let i = 0; i < count; i++) {
+    const name = pick(NAMES) + (Math.random() < 0.3 ? Math.floor(Math.random() * 99) : "");
+    const minutesAgo = Math.floor(((count - i) / count) * 3 * 24 * 60);
+    // About 40% of seeded users were invited by an earlier user (mostly by a few "top" referrers).
+    const referrer = ids.length > 5 && Math.random() < 0.4 ? (Math.random() < 0.5 ? ids[Math.floor(Math.random() * 5)] : pick(ids)) : null;
+    const phone = "+23480" + String(10000000 + Math.floor(Math.random() * 89999999));
+    const code = name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) + Math.floor(Math.random() * 1e6);
+    const [row] = await sql`
+      INSERT INTO users (nickname, whatsapp_e164, state, referral_code, referred_by, signup_number, completed_at, created_at)
+      VALUES (${name}, ${phone}, ${weightedState()}, ${code}, ${referrer}, nextval('signup_number_seq'),
+              now() - ${minutesAgo} * interval '1 minute', now() - ${minutesAgo} * interval '1 minute')
+      ON CONFLICT DO NOTHING
+      RETURNING id`;
+    if (row) ids.push(row.id);
+  }
+  console.log(`Added ${ids.length} users.`);
+} finally {
+  await sql.end();
+}

@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0e0e10;
+  --color-surface: #1c1c20;
+  --color-surface-2: #26262b;
+  --color-line: #2e2e34;
+  --color-ink: #f5f5f0;
+  --color-muted: #a8a8a0;
+  --color-faint: #8a8a84;
+  --color-lime: #c6f432;
+  --color-lime-hover: #ddfb7a;
+  --color-pink: #ff4fa3;
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-bg);
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+input,
+select,
+button,
+textarea {
+  font: inherit;
+}
+
+/* Shared building blocks */
+@layer components {
+  .btn-primary {
+    @apply flex h-14 w-full items-center justify-center gap-2 rounded-full bg-lime px-6 text-[17px] font-bold text-bg transition-colors hover:bg-lime-hover active:scale-[0.99] disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply flex h-13 w-full items-center justify-center gap-2 rounded-full border border-line px-6 font-bold text-ink transition-colors hover:bg-surface;
+  }
+  .card {
+    @apply rounded-3xl bg-surface p-5;
+  }
+  .field {
+    @apply h-13 w-full rounded-[14px] border border-line bg-surface px-4 text-base text-ink placeholder:text-faint focus:border-lime focus:outline-none;
+  }
+  .label {
+    @apply text-sm font-medium text-muted;
+  }
+  .h-display {
+    @apply font-display font-extrabold tracking-tight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
