@@ -1,7 +1,8 @@
 // Fills the database with fake corpers so you can see the app with data.
-// Seed accounts (is_seed) count toward totals but are never ranked, listed or eligible for prizes.
+// Seed accounts (is_seed) count toward totals and show in the Corpers lists, but never hold a
+// position, never count as referrals and are never eligible for prizes.
 // Never run this against the live database.
-// Usage: npm run db:seed            (adds 300 fake users)
+// Usage: npm run db:seed            (adds 100 fake users)
 //        npm run db:seed -- 1000    (adds 1000)
 // Also creates a demo login: WhatsApp 0803 000 0001, PIN 1234.
 import { readFileSync, existsSync } from "node:fs";
@@ -19,7 +20,7 @@ if (/supabase|neon|amazonaws/.test(process.env.DATABASE_URL || "") && !process.a
   process.exit(1);
 }
 
-const count = Number(process.argv[2]) || 300;
+const count = Number(process.argv[2]) || 100;
 const sql = postgres(process.env.DATABASE_URL, { prepare: false, max: 1 });
 
 const STATES = ["Lagos", "Enugu", "FCT", "Kano", "Oyo", "Rivers", "Kaduna", "Anambra", "Ogun", "Edo", "Delta", "Kwara", "Plateau", "Imo", "Osun", "Benue", "Ondo", "Akwa Ibom", "Cross River", "Niger"];

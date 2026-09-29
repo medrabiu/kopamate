@@ -103,16 +103,19 @@ export type MemberRow = {
   id: string;
   nickname: string;
   photo_version: number;
-  position: number;
+  /** Null for seed accounts: they're listed but never hold a position. */
+  position: number | null;
 };
 
+/** Everyone listed in a state: ranked users by position first, then seed accounts by join time. */
 export async function getStateMembers(state: string, limit: number): Promise<MemberRow[]> {
   return sql<MemberRow[]>`
     ${ranked()}
     SELECT u.id, u.nickname, u.photo_version, r.position
-    FROM ranked r JOIN users u ON u.id = r.id
-    WHERE u.state = ${state} AND u.show_in_list
-    ORDER BY r.position
+    FROM users u LEFT JOIN ranked r ON r.id = u.id
+    WHERE u.state = ${state} AND u.show_in_list AND u.completed_at IS NOT NULL AND NOT u.is_banned
+      AND (r.id IS NOT NULL OR u.is_seed)
+    ORDER BY r.position NULLS LAST, u.completed_at DESC
     LIMIT ${limit}
   `;
 }

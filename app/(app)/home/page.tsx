@@ -33,7 +33,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     sql<{ id: string; nickname: string; photo_version: number }[]>`
       SELECT id, nickname, photo_version FROM users
       WHERE state = ${user.state} AND id <> ${user.id} AND completed_at IS NOT NULL
-        AND NOT is_banned AND NOT is_seed AND show_in_list
+        AND NOT is_banned AND show_in_list
       ORDER BY completed_at DESC LIMIT 5
     `,
   ]);

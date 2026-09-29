@@ -24,7 +24,7 @@ Create a new private repository and upload this folder (or `git push` it).
 |---|---|
 | `DATABASE_URL` | the Supabase connection string from step 1 (Transaction pooler, port 6543) |
 | `DB_POOL_MAX` | optional. Database connections per server instance, default `3`. Keep it low: every running instance opens its own pool. |
-| `APP_URL` | your site address, e.g. `https://kopamate.vercel.app` (no slash at the end). Update it later when you add your own domain. |
+| `APP_URL` | your site address, e.g. `https://kopamate.vercel.app` (no slash at the end). Update it later when you add your own domain. Never copy `http://localhost:3000` from your local `.env`: if you do (or leave it empty), production falls back to your Vercel domain, but a custom domain needs this set. |
 | `SESSION_SECRET` | a long random string. On any computer with Node: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `ADMIN_IDS` | your Google email and/or WhatsApp number, comma-separated, e.g. `you@gmail.com,08031234567` |
 | `CRON_SECRET` | another long random string |

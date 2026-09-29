@@ -67,7 +67,7 @@ export default async function StatePage({ params, searchParams }: Props) {
                   {m.nickname}
                   {me ? " (you)" : ""}
                 </span>
-                <span className="text-xs text-faint">#{formatNumber(m.position)}</span>
+                {m.position !== null && <span className="text-xs text-faint">#{formatNumber(m.position)}</span>}
               </li>
             );
           })}

@@ -1,6 +1,21 @@
 export const APP_NAME = "Kopamate";
 
-export const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+/**
+ * Public address of the app, used in invite links, share previews and Google sign-in.
+ * On Vercel's production deployment a missing or localhost APP_URL (e.g. copied from a local .env)
+ * falls back to the project's production domain, so shared links never point at localhost.
+ */
+function appUrl() {
+  const set = (process.env.APP_URL || "").trim();
+  const onVercelProd = process.env.VERCEL_ENV === "production";
+  const vercelDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (onVercelProd && vercelDomain && (!set || /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(set))) {
+    return `https://${vercelDomain}`;
+  }
+  return set || "http://localhost:3000";
+}
+
+export const APP_URL = appUrl().replace(/\/$/, "");
 
 /** How many places each valid referral moves someone up. */
 export const PLACES_PER_REFERRAL = 10;

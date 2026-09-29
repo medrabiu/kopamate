@@ -221,7 +221,7 @@ Short, readable, unique per user, e.g. nickname-based + digits (`ada347`), lower
 - **Only verified corpers win.** Prize places are counted among verified users only: "first 500" means the first 500 verified users by position (or by sign-up order in `signup` mode), and "top 10 referrers" means the top 10 verified referrers. Unverified users still have a normal position on the list.
 
 ### Seed accounts
-- Accounts created by the seed script have `is_seed = true`. They count toward "Corpers joined" and state totals, but they never get a position, never appear in lists, leaderboards or "New from {state}", their referrals don't count, and they can never qualify for prizes.
+- Accounts created by the seed script have `is_seed = true` (100 by default). They count toward "Corpers joined" and state totals, and appear in the Corpers state lists (after ranked users, without a # position) and in "New from {state}". They never get a position, never appear on leaderboards, their referrals don't count, and they can never qualify for prizes.
 
 ---
 
