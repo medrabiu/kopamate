@@ -30,13 +30,15 @@ export type User = {
   last_seen_on: string | null;
   last_seen_position: number | null;
   created_at: Date;
+  verification_status: "none" | "pending" | "verified" | "rejected";
+  verification_note: string | null;
 };
 
 export const userColumns = () => sql`
   u.id, u.nickname, u.whatsapp_e164, u.state, u.state_code, u.photo_version, u.google_id, u.email,
   (u.pin_hash IS NOT NULL) AS has_pin, u.referral_code, u.referred_by, u.signup_number, u.completed_at,
   u.show_in_list, u.state_changed_at, u.is_flagged, u.is_banned, u.last_seen_on::text AS last_seen_on,
-  u.last_seen_position, u.created_at
+  u.last_seen_position, u.created_at, u.verification_status, u.verification_note
 `;
 
 /** Creates a session and sets the cookie. Call from a server action or route handler only. */

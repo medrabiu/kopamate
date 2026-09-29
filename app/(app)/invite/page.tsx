@@ -90,6 +90,7 @@ export default async function InvitePage() {
             <span className="font-bold">{mine?.refs ?? 0}</span>
           </div>
         )}
+        <p className="text-[13px] text-faint">Prizes go to verified corpers only. Get verified in your Profile.</p>
       </section>
     </>
   );

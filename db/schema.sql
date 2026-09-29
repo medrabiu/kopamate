@@ -74,3 +74,17 @@ CREATE TABLE IF NOT EXISTS events (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS events_name_time_idx ON events (name, created_at);
+
+-- Seed accounts (fake test users): counted in totals, never ranked, never eligible for prizes.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_seed boolean NOT NULL DEFAULT false;
+
+-- Verification for prizes: state code + NYSC ID card photo, checked by an admin.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status text NOT NULL DEFAULT 'none'
+  CHECK (verification_status IN ('none', 'pending', 'verified', 'rejected'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS id_card_data text;             -- base64; deleted once an admin decides
+ALTER TABLE users ADD COLUMN IF NOT EXISTS id_card_mime text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_requested_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_note text;        -- reason shown to the user when rejected
+CREATE UNIQUE INDEX IF NOT EXISTS users_verified_state_code_idx ON users (state_code) WHERE verification_status = 'verified';
+CREATE INDEX IF NOT EXISTS users_verification_pending_idx ON users (verification_requested_at) WHERE verification_status = 'pending';

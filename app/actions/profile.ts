@@ -58,6 +58,9 @@ export async function updateField(_prev: ProfileState, fd: FormData): Promise<Pr
       break;
     }
     case "state_code": {
+      if (user.verification_status === "verified" || user.verification_status === "pending") {
+        return { error: "Your state code is locked while it's being checked or once you're verified." };
+      }
       const code = normalizeStateCode(value);
       if (code === null) return { error: "State codes look like EN/26B/1234." };
       await sql`UPDATE users SET state_code = ${code || null} WHERE id = ${user.id}`;
@@ -112,6 +115,33 @@ export async function uploadPhoto(fd: FormData): Promise<ProfileState> {
   const b64 = Buffer.from(bytes).toString("base64");
   await sql`
     UPDATE users SET photo_data = ${b64}, photo_mime = ${mime}, photo_version = photo_version + 1
+    WHERE id = ${user.id}
+  `;
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+const MAX_ID_CARD_BYTES = 900 * 1024;
+
+/** Sends the state code and an ID card photo for an admin to check. The phone resizes the photo first. */
+export async function requestVerification(_prev: ProfileState, fd: FormData): Promise<ProfileState> {
+  const user = await me();
+  if (user.verification_status === "verified") return { ok: true };
+  const code = normalizeStateCode(String(fd.get("state_code") ?? ""));
+  if (!code) return { error: "Enter your state code, like EN/26B/1234." };
+  const file = fd.get("id_card");
+  if (!(file instanceof File) || file.size === 0) return { error: "Add a photo of your NYSC ID card." };
+  if (file.size > MAX_ID_CARD_BYTES) return { error: "That photo is too large. Try another." };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const mime = sniffImage(bytes);
+  if (!mime) return { error: "Use a JPG, PNG or WebP photo." };
+  const [taken] = await sql`
+    SELECT 1 FROM users WHERE state_code = ${code} AND id <> ${user.id} AND verification_status IN ('verified', 'pending')
+  `;
+  if (taken) return { error: "This state code is already used by another account." };
+  await sql`
+    UPDATE users SET state_code = ${code}, id_card_data = ${Buffer.from(bytes).toString("base64")}, id_card_mime = ${mime},
+      verification_status = 'pending', verification_requested_at = now(), verification_note = NULL
     WHERE id = ${user.id}
   `;
   revalidatePath("/", "layout");

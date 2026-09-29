@@ -77,6 +77,12 @@ textarea {
   .label {
     @apply text-sm font-medium text-muted;
   }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
   .h-display {
     @apply font-display font-extrabold tracking-tight;
   }

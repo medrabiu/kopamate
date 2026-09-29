@@ -116,15 +116,22 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.3 Home (`/home`)
 - Header: "Hi, {nickname}" and the user's avatar (links to Profile).
-- **Position card:**
-  - "Your position" and the position in large lime digits, e.g. **#347**
-  - Change badge: "↑ 20 since yesterday" (hide if no change; show "↓" in muted colour if they dropped)
-  - Progress bar and next goal: "Invite **2 more** to reach the top 300". Goals are the next round hundred (or top 100, top 50, top 10 when closer).
-  - **Share on WhatsApp** button (opens `https://wa.me/?text=...` with the share message, section 6) and a **copy link** icon button.
-  - "{N} friends joined with your link"
+- **Carousel** at the top: full-width slides the user swipes sideways (CSS scroll-snap, no library), with dots underneath that follow the scroll and jump to a slide when tapped. No auto-advance; dot jumps are instant when the user prefers reduced motion. Slides with nothing to show are left out.
+  1. **Your position** (always first):
+     - "Your position" and the position in large lime digits, e.g. **#347**
+     - Change badge: "↑ 20 since yesterday" (hide if no change; show "↓" in muted colour if they dropped)
+     - Progress bar and next goal: "Invite **2 more** to reach the top 300". Goals are the next round hundred (or top 100, top 50, top 10 when closer).
+     - **Share on WhatsApp** button (opens `https://wa.me/?text=...` with the share message, section 6) and a **copy link** icon button.
+     - "{N} friends joined with your link"
+  2. **Post your spot** (Status card): a preview of a portrait 1080×1920 image sized for WhatsApp Status, saying "I'm #347 on Kopamate", the user's nickname and state, "Every corper. One place." and "Join me: [domain]/r/<code>", in the Social Night colours. The image is generated at `/card/<referral code>` (live position, cached 5 minutes; 404 for unknown, banned or unfinished users). **Post to Status** opens the phone's share sheet with the image and the share message; where sharing files isn't supported it downloads the PNG and shows "Card saved. Add it to your WhatsApp Status." Logs `share_clicked` with channel `status_card`.
+  3. **Announcement** (set in Admin): pink card with a title, short text and an optional button. Hidden when switched off or the title is empty.
 - **Two stat cards:** "Corpers joined: 4,382" and "{State} is #2 · 280".
 - **New from {state}:** row of the 5 newest users from the user's state (avatars + nicknames), with **See all** linking to `/corpers/[state]`.
-- **Coming soon:** Contests ("Compete with corpers nationwide"), Awards ("Vote for the best in your state"), Opportunities ("Jobs and gigs for corpers"), each with a lock icon. Tapping shows a small "Coming soon" toast.
+- **Coming soon:** three sections (Contests, Awards, Opportunities), each a heading and a sideways-scrolling row of locked cards (about 220px wide, icon, title, one-line description, small "Coming soon" lock pill). Tapping a card shows "<title> is coming soon".
+  - Contests: Best Khaki Drip, Camp Talent Showdown, Man O' War Challenge, Mammy Market Cook-off, Best CDS Project.
+  - Awards: Corper of the Month, Best Platoon, Camp Comedian, Social Night MVP, Most Stylish in {user's state}.
+  - Opportunities: Jobs from ex-corpers, Remote gigs, Retention at your PPA, Skills and SAED, Scholarships and grants.
+  - The landing page keeps its small three-tile "Coming soon" grid.
 - **Prize teaser** card linking to Rewards.
 
 ### 4.4 Corpers (`/corpers`)
@@ -158,6 +165,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.8 Profile (`/profile`)
 - Large avatar with a camera button to add or change the photo.
+- **Get verified** card (top of Profile): only verified corpers can win prizes. The user enters their state code (format `EN/26B/1234`) and a photo of their NYSC ID card; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. Status shows as "Checking your ID" (pending), the admin's reason (rejected, with a form to try again) or "Verified corper". The state code is locked while pending and once verified. A state code can only be verified on one account.
 - Nickname, "{State} · #{position} · Joined {date}".
 - Editable rows: Nickname, WhatsApp number ("only you can see this", shown masked), State serving in, State code ("Not added" / **Add**).
 - Toggle: **Show me in the Corpers list** ("Others see your nickname and photo only"). On by default.
@@ -172,9 +180,12 @@ Only accessible to users whose email or phone is in an `ADMIN_IDS` environment v
 - **Overview:** total users, signups today, signups per day (last 14 days), top states, total referrals.
 - **Users table:** search by nickname or phone; see signup time, state, position, referral count, who referred them, flagged status. Actions: flag / unflag, ban, edit nickname (for offensive names), remove photo.
 - **Suspicious activity:** users who referred many people in a short time, many signups from the same IP/device, similar nicknames in a row. Flagged users' referrals don't count toward position or leaderboards.
-- **Prize lists:** export as CSV the first 500 and the top 10 referrers (excluding flagged/banned users), with nickname and WhatsApp number.
+- **Prize lists:** export as CSV the first 500 **verified** users and the top 10 **verified** referrers (flagged, banned and seed accounts left out), with nickname, WhatsApp number and state code.
 - **Rewards:** add a reward to a user (title, description), mark as sent.
-- **Announcement text:** edit the prize teaser text shown on Landing, Home and Rewards (so prizes can be announced without a code change).
+- **Verification requests:** pending requests, highest positions first, with the ID card photo (served only to admins at `/admin/id-card/[id]`, never cached), state code, whether another account uses the same code, position and referrals. **Approve**, or **Reject** with a reason the user sees. The ID card photo is deleted as soon as either decision is made. Verified users can have verification removed from the users table.
+- **Seed accounts** (created by `npm run db:seed`) are marked `Seed` in the users table.
+- **Prize text:** edit the prize teaser text shown on Landing, Home and Rewards (so prizes can be announced without a code change).
+- **Announcement:** switch the Home announcement slide on or off and set its title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away.
 
 ---
 
@@ -207,6 +218,11 @@ Short, readable, unique per user, e.g. nickname-based + digits (`ada347`), lower
 ### Prize eligibility
 - **First 500:** the top 500 **positions** at the time prizes are awarded (so referrals help). *(Owner can switch this to plain signup order; make it a config value.)*
 - **Top 10 referrers:** by number of valid referrals; ties broken by who reached the count first.
+
+- **Only verified corpers win.** Prize places are counted among verified users only: "first 500" means the first 500 verified users by position (or by sign-up order in `signup` mode), and "top 10 referrers" means the top 10 verified referrers. Unverified users still have a normal position on the list.
+
+### Seed accounts
+- Accounts created by the seed script have `is_seed = true`. They count toward "Corpers joined" and state totals, but they never get a position, never appear in lists, leaderboards or "New from {state}", their referrals don't count, and they can never qualify for prizes.
 
 ---
 
@@ -323,7 +339,7 @@ settings                                        -- editable from admin
 
 ## 9. Privacy, safety and fairness
 
-- **Public info is only:** nickname, photo (or default avatar), state, position. **WhatsApp numbers, emails, state codes and PINs are never exposed** in any page or API response to other users.
+- **Public info is only:** nickname, photo (or default avatar), state, position. **WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
 - Show a short privacy notice (linked from sign-up): what we collect, why (account, prizes, anti-fraud), that we don't sell data, and how to delete your account. Keep in line with Nigeria's Data Protection Act.
 - Users can hide themselves from the Corpers list and delete their account.
 - **Anti-fraud:**
@@ -331,7 +347,7 @@ settings                                        -- editable from admin
   - Rate-limit sign-ups per IP (e.g. max 5 per hour) and PIN login attempts (lock after 5 wrong tries for 15 minutes).
   - Store a hash of the sign-up IP (not the raw IP) to detect bulk sign-ups.
   - Admin can flag/ban; flagged users' referrals stop counting.
-  - Prize winners are checked by hand before prizes are sent.
+  - Prize winners must be verified (state code + NYSC ID card checked by an admin). ID card photos are only visible to admins and are deleted once a decision is made.
 - Filter offensive nicknames with a word list; admin can edit nicknames and remove photos.
 - Profile photo uploads: images only, max 5 MB before compression, strip metadata.
 
@@ -360,7 +376,7 @@ Use URL-safe slugs for routes (e.g. `akwa-ibom`, `cross-river`, `fct`).
 Track these events (a privacy-friendly tool like Plausible/Umami, or just a table):
 - `landing_view` (with or without referral code)
 - `signup_started`, `signup_completed` (method: google/phone)
-- `share_clicked` (whatsapp / copy / native)
+- `share_clicked` (whatsapp / copy / native / status_card)
 - `referral_completed`
 - `daily_return` (user opened the app on a new day)
 

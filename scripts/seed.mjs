@@ -1,4 +1,5 @@
-// FOR LOCAL TESTING ONLY. Fills the database with fake corpers so you can see the app with data.
+// Fills the database with fake corpers so you can see the app with data.
+// Seed accounts (is_seed) count toward totals but are never ranked, listed or eligible for prizes.
 // Never run this against the live database.
 // Usage: npm run db:seed            (adds 300 fake users)
 //        npm run db:seed -- 1000    (adds 1000)
@@ -34,8 +35,8 @@ try {
   const demo = await sql`SELECT id FROM users WHERE whatsapp_e164 = '+2348030000001'`;
   if (demo.length === 0) {
     const [row] = await sql`
-      INSERT INTO users (nickname, whatsapp_e164, state, pin_hash, referral_code, signup_number, completed_at, created_at)
-      VALUES ('Ada', '+2348030000001', 'Enugu', ${pinHash}, 'ada001', nextval('signup_number_seq'), now() - interval '3 days', now() - interval '3 days')
+      INSERT INTO users (nickname, whatsapp_e164, state, pin_hash, referral_code, signup_number, completed_at, created_at, is_seed)
+      VALUES ('Ada', '+2348030000001', 'Enugu', ${pinHash}, 'ada001', nextval('signup_number_seq'), now() - interval '3 days', now() - interval '3 days', true)
       RETURNING id`;
     ids.push(row.id);
     console.log("Demo login: WhatsApp 0803 000 0001, PIN 1234");
@@ -51,9 +52,9 @@ try {
     const phone = "+23480" + String(10000000 + Math.floor(Math.random() * 89999999));
     const code = name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) + Math.floor(Math.random() * 1e6);
     const [row] = await sql`
-      INSERT INTO users (nickname, whatsapp_e164, state, referral_code, referred_by, signup_number, completed_at, created_at)
+      INSERT INTO users (nickname, whatsapp_e164, state, referral_code, referred_by, signup_number, completed_at, created_at, is_seed)
       VALUES (${name}, ${phone}, ${weightedState()}, ${code}, ${referrer}, nextval('signup_number_seq'),
-              now() - ${minutesAgo} * interval '1 minute', now() - ${minutesAgo} * interval '1 minute')
+              now() - ${minutesAgo} * interval '1 minute', now() - ${minutesAgo} * interval '1 minute', true)
       ON CONFLICT DO NOTHING
       RETURNING id`;
     if (row) ids.push(row.id);

@@ -19,7 +19,7 @@ function csv(rows: Record<string, unknown>[]) {
   return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
 }
 
-/** Prize lists for the admin. Flagged and banned users are left out. */
+/** Prize lists for the admin. Only verified users; flagged, banned and seed accounts are left out. */
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user || !isAdmin(user)) return new Response("Not found", { status: 404 });
@@ -32,9 +32,9 @@ export async function GET(req: Request) {
     rows = await sql`
       ${ranked()}
       SELECT (row_number() OVER (ORDER BY r.refs DESC, r.reached_at ASC))::int AS rank,
-             u.nickname, u.whatsapp_e164 AS whatsapp, u.email, u.state, r.refs AS referrals
+             u.nickname, u.whatsapp_e164 AS whatsapp, u.email, u.state, u.state_code, r.refs AS referrals
       FROM ranked r JOIN users u ON u.id = r.id
-      WHERE r.refs > 0 AND NOT u.is_flagged
+      WHERE r.refs > 0 AND r.verified
       ORDER BY rank LIMIT ${TOP_REFERRERS}
     `;
   } else {
@@ -42,11 +42,11 @@ export async function GET(req: Request) {
     const mode = await getFirstNMode();
     rows = await sql`
       ${ranked()}
-      SELECT ${mode === "signup" ? sql`r.signup_number` : sql`r.position`} AS rank,
-             u.nickname, u.whatsapp_e164 AS whatsapp, u.email, u.state, r.position, r.signup_number, r.refs AS referrals
+      SELECT ${mode === "signup" ? sql`r.prize_signup` : sql`r.prize_position`} AS rank,
+             u.nickname, u.whatsapp_e164 AS whatsapp, u.email, u.state, u.state_code, r.position, r.signup_number, r.refs AS referrals
       FROM ranked r JOIN users u ON u.id = r.id
-      WHERE NOT u.is_flagged
-      ORDER BY ${mode === "signup" ? sql`r.signup_number` : sql`r.position`}
+      WHERE r.verified
+      ORDER BY ${mode === "signup" ? sql`r.prize_signup` : sql`r.prize_position`}
       LIMIT ${FIRST_N}
     `;
   }

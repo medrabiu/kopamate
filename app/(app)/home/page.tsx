@@ -4,12 +4,14 @@ import Avatar from "@/components/Avatar";
 import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
 import CountUp from "@/components/CountUp";
+import HomeCarousel from "@/components/HomeCarousel";
 import PrizeCard from "@/components/PrizeCard";
 import ShareButtons from "@/components/ShareButtons";
+import StatusCardButton from "@/components/StatusCardButton";
 import { ArrowDownIcon, ArrowUpIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getSnapshotPosition, nextGoal } from "@/lib/ranking";
-import { getPrizeText, getPublicStats, track } from "@/lib/stats";
+import { getAnnouncement, getPrizeText, getPublicStats, track } from "@/lib/stats";
 import { referralLink, shareMessage, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import { formatNumber, lagosDate } from "@/lib/util";
@@ -22,15 +24,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const { welcome } = await searchParams;
   const today = lagosDate();
 
-  const [rank, stats, prizeText, snapshot, newcomers] = await Promise.all([
+  const [rank, stats, prizeText, announcement, snapshot, newcomers] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getPrizeText(),
+    getAnnouncement(),
     getSnapshotPosition(user.id, today),
     sql<{ id: string; nickname: string; photo_version: number }[]>`
       SELECT id, nickname, photo_version FROM users
       WHERE state = ${user.state} AND id <> ${user.id} AND completed_at IS NOT NULL
-        AND NOT is_banned AND show_in_list
+        AND NOT is_banned AND NOT is_seed AND show_in_list
       ORDER BY completed_at DESC LIMIT 5
     `,
   ]);
@@ -59,49 +62,92 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </Link>
       </header>
 
-      <section className="card flex flex-col gap-3.5 !p-[22px]" aria-label="Your position">
-        <div className="text-sm text-muted">Your position</div>
-        <div className="flex items-end justify-between gap-3">
-          <div className="h-display text-[72px] leading-[0.9] text-lime-ink">
-            <CountUp to={position} from={improved && user.last_seen_position ? user.last_seen_position : position} prefix="#" />
+      <HomeCarousel labels={["Your position", "Post your spot", ...(announcement ? [announcement.title] : [])]}>
+        <div className="card flex w-full flex-col gap-3.5 !p-[22px]">
+          <div className="text-sm text-muted">Your position</div>
+          <div className="flex items-end justify-between gap-3">
+            <div className="h-display text-[72px] leading-[0.9] text-lime-ink">
+              <CountUp to={position} from={improved && user.last_seen_position ? user.last_seen_position : position} prefix="#" />
+            </div>
+            {change > 0 && (
+              <div className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-lime-ink">
+                <ArrowUpIcon size={14} strokeWidth={2.5} />
+                {change} since yesterday
+              </div>
+            )}
+            {change < 0 && (
+              <div className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-muted">
+                <ArrowDownIcon size={14} strokeWidth={2.5} />
+                {Math.abs(change)} since yesterday
+              </div>
+            )}
           </div>
-          {change > 0 && (
-            <div className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-lime-ink">
-              <ArrowUpIcon size={14} strokeWidth={2.5} />
-              {change} since yesterday
+
+          {goal ? (
+            <div className="flex flex-col gap-2">
+              <div className="h-2 rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.round(goal.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-2 rounded-full bg-lime" style={{ width: `${Math.max(4, goal.progress * 100)}%` }} />
+              </div>
+              <p className="text-sm">
+                Invite <span className="font-bold">{goal.invites} more</span> to reach the top {goal.target}
+              </p>
             </div>
+          ) : (
+            <p className="text-sm font-bold text-lime-ink">You&apos;re in the top 10. Keep inviting to stay there.</p>
           )}
-          {change < 0 && (
-            <div className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-muted">
-              <ArrowDownIcon size={14} strokeWidth={2.5} />
-              {Math.abs(change)} since yesterday
-            </div>
-          )}
+
+          <ShareButtons
+            variant="compact"
+            link={referralLink(user.referral_code)}
+            whatsappUrl={whatsappShareUrl(user.referral_code)}
+            message={shareMessage(user.referral_code)}
+          />
+          <p className="text-sm text-muted">
+            {refs === 0 ? "No friends have joined with your link yet" : `${refs} ${refs === 1 ? "friend" : "friends"} joined with your link`}
+          </p>
         </div>
 
-        {goal ? (
-          <div className="flex flex-col gap-2">
-            <div className="h-2 rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.round(goal.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-2 rounded-full bg-lime" style={{ width: `${Math.max(4, goal.progress * 100)}%` }} />
-            </div>
-            <p className="text-sm">
-              Invite <span className="font-bold">{goal.invites} more</span> to reach the top {goal.target}
+        <div className="card flex w-full gap-4 !p-[22px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/card/${user.referral_code}`}
+            alt={`Status card: I'm #${formatNumber(position)} on Kopamate`}
+            width={108}
+            height={192}
+            loading="lazy"
+            className="aspect-[9/16] w-[108px] shrink-0 self-start rounded-xl bg-bg object-cover"
+          />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <h2 className="h-display text-xl leading-tight">Post your spot</h2>
+            <p className="text-sm leading-normal text-muted">
+              A WhatsApp Status card with your position and your link. It updates as you climb.
             </p>
+            <div className="mt-auto">
+              <StatusCardButton
+                cardUrl={`/card/${user.referral_code}`}
+                message={shareMessage(user.referral_code)}
+                fileName={`kopamate-${user.referral_code}.png`}
+              />
+            </div>
           </div>
-        ) : (
-          <p className="text-sm font-bold text-lime-ink">You&apos;re in the top 10. Keep inviting to stay there.</p>
-        )}
+        </div>
 
-        <ShareButtons
-          variant="compact"
-          link={referralLink(user.referral_code)}
-          whatsappUrl={whatsappShareUrl(user.referral_code)}
-          message={shareMessage(user.referral_code)}
-        />
-        <p className="text-sm text-muted">
-          {refs === 0 ? "No friends have joined with your link yet" : `${refs} ${refs === 1 ? "friend" : "friends"} joined with your link`}
-        </p>
-      </section>
+        {announcement && (
+          <div className="flex w-full flex-col gap-2 rounded-3xl bg-pink p-[22px] text-on-accent">
+            <h2 className="h-display text-[26px] leading-tight">{announcement.title}</h2>
+            {announcement.body && <p className="text-[15px] font-medium leading-normal">{announcement.body}</p>}
+            {announcement.buttonLabel && announcement.buttonUrl && (
+              <a
+                href={announcement.buttonUrl}
+                {...(announcement.buttonUrl.startsWith("https://") ? { target: "_blank", rel: "noopener" } : {})}
+                className="mt-auto flex h-12 items-center justify-center self-start rounded-full bg-on-accent px-6 text-[15px] font-bold text-pink"
+              >
+                {announcement.buttonLabel}
+              </a>
+            )}
+          </div>
+        )}
+      </HomeCarousel>
 
       <section className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1 rounded-[20px] bg-surface p-4">
@@ -135,7 +181,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </section>
       )}
 
-      <ComingSoon layout="list" />
+      <ComingSoon layout="rows" state={user.state} />
       <PrizeCard text={prizeText} href="/rewards" />
     </>
   );

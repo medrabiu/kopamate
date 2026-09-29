@@ -6,7 +6,7 @@ import { useToast } from "./Toast";
 
 type Props = { link: string; whatsappUrl: string; message: string; variant: "compact" | "full" };
 
-function logShare(channel: string) {
+export function logShare(channel: string) {
   try {
     const body = JSON.stringify({ name: "share_clicked", meta: { channel } });
     if (!navigator.sendBeacon?.("/api/event", new Blob([body], { type: "application/json" }))) {

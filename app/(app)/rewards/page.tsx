@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckIcon, GiftIcon } from "@/components/icons";
+import { CheckIcon, ChevronRight, GiftIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getReferrerRank } from "@/lib/ranking";
 import { getFirstNMode, getPrizeText } from "@/lib/stats";
@@ -22,9 +22,20 @@ export default async function RewardsPage() {
     `,
   ]);
 
-  const firstNValue = mode === "signup" ? user.signup_number ?? 0 : rank?.position ?? 0;
-  const inFirstN = firstNValue > 0 && firstNValue <= FIRST_N;
-  const inTopRefs = Boolean(refRank && refRank.rank <= TOP_REFERRERS);
+  const verified = user.verification_status === "verified";
+  // Prizes count verified users only, so once verified you're compared with other verified corpers.
+  const firstNValue = verified
+    ? (mode === "signup" ? rank?.prize_signup : rank?.prize_position) ?? 0
+    : mode === "signup" ? user.signup_number ?? 0 : rank?.position ?? 0;
+  const inFirstN = verified && firstNValue > 0 && firstNValue <= FIRST_N;
+  const refPrizeRank = refRank?.prize_rank ?? null;
+  const inTopRefs = verified && refPrizeRank !== null && refPrizeRank <= TOP_REFERRERS;
+  const verifyText =
+    user.verification_status === "pending"
+      ? "We're checking your ID. You'll qualify once you're verified."
+      : user.verification_status === "rejected"
+        ? "Your verification needs another try. Open Profile to see why."
+        : "Add your state code and NYSC ID card in Profile. Only verified corpers win prizes.";
 
   return (
     <>
@@ -34,6 +45,16 @@ export default async function RewardsPage() {
         <h2 className="h-display text-[26px] leading-tight">Prizes are coming</h2>
         <p className="text-[15px] font-medium leading-normal">{prizeText}</p>
       </section>
+
+      {!verified && (
+        <Link href="/profile#verify" className="flex items-center gap-3.5 rounded-[18px] border-[1.5px] border-lime p-4">
+          <div className="min-w-0 flex-1">
+            <div className="font-bold">{user.verification_status === "pending" ? "Verification in progress" : "Get verified to win"}</div>
+            <div className="text-sm text-muted">{verifyText}</div>
+          </div>
+          <ChevronRight size={20} className="shrink-0 text-lime-ink" />
+        </Link>
+      )}
 
       <section className="flex flex-col gap-2.5">
         <h2 className="h-display text-xl">Where you stand</h2>
@@ -51,8 +72,10 @@ export default async function RewardsPage() {
             <div className="font-bold">First {FIRST_N} {mode === "signup" ? "signups" : "on the list"}</div>
             <div className="text-sm text-muted">
               {inFirstN
-                ? `You're in at #${formatNumber(firstNValue)}`
-                : mode === "signup"
+                ? `You're in at #${formatNumber(firstNValue)} among verified corpers`
+                : verified && firstNValue > 0
+                  ? `You're #${formatNumber(firstNValue)} among verified corpers. Invite friends to get into the first ${FIRST_N}.`
+                  : mode === "signup"
                   ? `You joined as #${formatNumber(firstNValue)}`
                   : `You're #${formatNumber(firstNValue)}. Invite friends to get into the first ${FIRST_N}.`}
             </div>
@@ -65,16 +88,16 @@ export default async function RewardsPage() {
             </span>
           ) : (
             <span className="h-display flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm">
-              {refRank ? refRank.rank : "–"}
+              {verified ? refPrizeRank ?? "–" : refRank ? refRank.rank : "–"}
             </span>
           )}
           <div className="min-w-0 flex-1">
             <div className="font-bold">Top {TOP_REFERRERS} referrers</div>
             <div className="text-sm text-muted">
               {inTopRefs
-                ? `You're #${refRank!.rank} with ${refRank!.refs} referrals`
+                ? `You're #${refPrizeRank} among verified referrers with ${refRank!.refs} referrals`
                 : refRank
-                  ? `You're #${refRank.rank}. Invite more to climb.`
+                  ? `You're #${verified ? refPrizeRank : refRank.rank}${verified ? " among verified referrers" : ""}. Invite more to climb.`
                   : "Invite your first friend to get on the board."}
             </div>
           </div>

@@ -7,6 +7,7 @@ import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { validateNickname } from "@/lib/validate";
 import { randomDigits } from "@/lib/util";
+import { isUniqueViolation } from "@/lib/signup";
 
 function id(fd: FormData) {
   const v = String(fd.get("id") ?? "");
@@ -81,6 +82,72 @@ export async function saveSettings(fd: FormData) {
   `;
   revalidateTag("settings");
   revalidatePath("/", "layout");
+}
+
+/** Approves a verification request. The ID card photo is deleted once a decision is made. */
+export async function approveVerification(fd: FormData) {
+  await requireAdmin();
+  const userId = id(fd);
+  try {
+    await sql`
+      UPDATE users SET verification_status = 'verified', verified_at = now(), verification_note = NULL,
+        id_card_data = NULL, id_card_mime = NULL
+      WHERE id = ${userId} AND verification_status = 'pending'
+    `;
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    await rejectWith(userId, "This state code is already verified on another account.");
+  }
+  done();
+}
+
+export async function rejectVerification(fd: FormData) {
+  await requireAdmin();
+  const note = String(fd.get("note") ?? "").trim().slice(0, 200) || "We couldn't confirm your ID card. Please try again with a clear photo.";
+  await rejectWith(id(fd), note);
+  done();
+}
+
+async function rejectWith(userId: string, note: string) {
+  await sql`
+    UPDATE users SET verification_status = 'rejected', verification_note = ${note}, id_card_data = NULL, id_card_mime = NULL
+    WHERE id = ${userId} AND verification_status = 'pending'
+  `;
+}
+
+/** Removes someone's verified status (e.g. it turned out to be fake). */
+export async function revokeVerification(fd: FormData) {
+  await requireAdmin();
+  await sql`
+    UPDATE users SET verification_status = 'rejected', verified_at = NULL,
+      verification_note = 'Your verification was removed. Contact us on WhatsApp if you think this is a mistake.'
+    WHERE id = ${id(fd)} AND verification_status = 'verified'
+  `;
+  done();
+}
+
+/** Home announcement slide. Links must be in-app ("/…") or https. */
+export async function saveAnnouncement(fd: FormData) {
+  await requireAdmin();
+  const text = (name: string, max: number) => String(fd.get(name) ?? "").trim().slice(0, max);
+  let url = text("announcement_button_url", 300);
+  if (url && !(url.startsWith("/") && !url.startsWith("//")) && !url.startsWith("https://")) url = "";
+  const values: [string, string][] = [
+    ["announcement_active", fd.get("announcement_active") === "1" ? "1" : "0"],
+    ["announcement_title", text("announcement_title", 60)],
+    ["announcement_body", text("announcement_body", 200)],
+    ["announcement_button_label", text("announcement_button_label", 24)],
+    ["announcement_button_url", url],
+  ];
+  for (const [key, value] of values) {
+    await sql`
+      INSERT INTO settings (key, value) VALUES (${key}, ${value})
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `;
+  }
+  revalidateTag("settings");
+  revalidatePath("/home");
+  revalidatePath("/admin");
 }
 
 /** Sets a temporary 4-digit PIN (for people who forgot theirs) and shows it once on the admin page. */

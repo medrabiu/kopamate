@@ -4,7 +4,7 @@ import { isAdmin, requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
 import { formatJoined, formatNumber } from "@/lib/util";
 import { maskPhone } from "@/lib/validate";
-import { AccountActions, ChangePinRow, EditableRow, LightModeToggle, PhotoPicker, ShowInListToggle } from "./ProfileControls";
+import { AccountActions, ChangePinRow, EditableRow, LightModeToggle, PhotoPicker, ShowInListToggle, VerificationCard } from "./ProfileControls";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -24,6 +24,8 @@ export default async function ProfilePage() {
         </div>
       </section>
 
+      <VerificationCard status={user.verification_status} note={user.verification_note} stateCode={user.state_code} />
+
       <section>
         <EditableRow field="nickname" label="Nickname" display={user.nickname} value={user.nickname} />
         <EditableRow
@@ -33,14 +35,16 @@ export default async function ProfilePage() {
           value={user.whatsapp_e164 ?? ""}
         />
         <EditableRow field="state" label="State serving in" display={user.state ?? ""} value={user.state ?? ""} />
-        <EditableRow
-          field="state_code"
-          label="State code · only you can see this"
-          display={user.state_code || "Not added"}
-          value={user.state_code ?? ""}
-          muted={!user.state_code}
-          actionLabel={user.state_code ? "Edit" : "Add"}
-        />
+        {user.verification_status !== "verified" && user.verification_status !== "pending" && (
+          <EditableRow
+            field="state_code"
+            label="State code · only you can see this"
+            display={user.state_code || "Not added"}
+            value={user.state_code ?? ""}
+            muted={!user.state_code}
+            actionLabel={user.state_code ? "Edit" : "Add"}
+          />
+        )}
         {user.has_pin && <ChangePinRow />}
         <ShowInListToggle on={user.show_in_list} />
         <LightModeToggle />

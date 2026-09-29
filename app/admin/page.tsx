@@ -3,15 +3,19 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/session";
 import { sql } from "@/lib/db";
 import { ranked } from "@/lib/ranking";
-import { getFirstNMode, getPrizeText, getPublicStats } from "@/lib/stats";
+import { getAnnouncementSettings, getFirstNMode, getPrizeText, getPublicStats } from "@/lib/stats";
 import { formatNumber, timeAgo } from "@/lib/util";
 import { normalizeNigerianPhone } from "@/lib/validate";
 import {
   addReward,
   adminRemovePhoto,
+  approveVerification,
   markRewardSent,
+  rejectVerification,
   renameUser,
   resetPin,
+  revokeVerification,
+  saveAnnouncement,
   saveSettings,
   setBan,
   setFlag,
@@ -33,7 +37,22 @@ type UserRow = {
   referrer: string | null;
   is_flagged: boolean;
   is_banned: boolean;
+  is_seed: boolean;
+  verification_status: string;
+  state_code: string | null;
   photo_version: number;
+};
+
+type PendingRow = {
+  id: string;
+  nickname: string;
+  state: string | null;
+  state_code: string | null;
+  whatsapp_e164: string | null;
+  verification_requested_at: Date;
+  position: number | null;
+  refs: number | null;
+  same_code: number;
 };
 
 const btn = "rounded-lg border border-line px-2.5 py-1.5 text-xs font-bold hover:bg-surface-2";
@@ -46,10 +65,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const phone = normalizeNigerianPhone(search);
   const like = `%${search}%`;
 
-  const [stats, prizeText, mode, overview, daily, users, fastReferrers, sharedIps, pendingRewards] = await Promise.all([
+  const [stats, prizeText, mode, announcement, overview, daily, users, fastReferrers, sharedIps, pendingRewards, pendingVerifications, verifiedCount] = await Promise.all([
     getPublicStats(),
     getPrizeText(),
     getFirstNMode(),
+    getAnnouncementSettings(),
     sql<{ referred: number; completed: number; referrers: number; incomplete: number }[]>`
       SELECT count(*) FILTER (WHERE referred_by IS NOT NULL AND completed_at IS NOT NULL)::int AS referred,
              count(*) FILTER (WHERE completed_at IS NOT NULL)::int AS completed,
@@ -68,7 +88,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     sql<UserRow[]>`
       ${ranked()}
       SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.completed_at, u.created_at,
-             r.position, r.refs, ref.nickname AS referrer, u.is_flagged, u.is_banned, u.photo_version
+             r.position, r.refs, ref.nickname AS referrer, u.is_flagged, u.is_banned, u.photo_version,
+             u.is_seed, u.verification_status, u.state_code
       FROM users u
       LEFT JOIN ranked r ON r.id = u.id
       LEFT JOIN users ref ON ref.id = u.referred_by
@@ -100,6 +121,16 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       FROM rewards r JOIN users u ON u.id = r.user_id
       WHERE r.status = 'pending' ORDER BY r.created_at LIMIT 100
     `,
+    sql<PendingRow[]>`
+      ${ranked()}
+      SELECT u.id, u.nickname, u.state, u.state_code, u.whatsapp_e164, u.verification_requested_at, r.position, r.refs,
+             (SELECT count(*)::int FROM users o WHERE o.state_code = u.state_code AND o.id <> u.id) AS same_code
+      FROM users u LEFT JOIN ranked r ON r.id = u.id
+      WHERE u.verification_status = 'pending'
+      ORDER BY r.position NULLS LAST, u.verification_requested_at
+      LIMIT 50
+    `,
+    sql<{ n: number }[]>`SELECT count(*)::int AS n FROM users WHERE verification_status = 'verified'`,
   ]);
 
   const o = overview[0];
@@ -186,12 +217,102 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </form>
         <div className="mt-4 flex flex-wrap gap-2">
           <a href="/admin/export?list=first" className={btn}>
-            Download first 500 (CSV)
+            Download first 500 verified (CSV)
           </a>
           <a href="/admin/export?list=referrers" className={btn}>
-            Download top 10 referrers (CSV)
+            Download top 10 verified referrers (CSV)
           </a>
         </div>
+      </section>
+
+      <section className="rounded-2xl bg-surface p-5">
+        <h2 className="h-display mb-1 text-lg">Verification requests ({pendingVerifications.length})</h2>
+        <p className="mb-3 text-xs text-muted">
+          {verifiedCount[0].n} verified so far. Check the name, state and state code on the ID card. Highest positions first. The photo is
+          deleted when you approve or reject.
+        </p>
+        {pendingVerifications.length === 0 ? (
+          <p className="text-sm text-muted">No requests waiting.</p>
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-2">
+            {pendingVerifications.map((v) => (
+              <li key={v.id} className="flex flex-col gap-3 rounded-xl border border-line p-3">
+                <a href={`/admin/id-card/${v.id}`} target="_blank" rel="noopener">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/admin/id-card/${v.id}`} alt={`ID card sent by ${v.nickname}`} className="max-h-64 w-full rounded-lg bg-bg object-contain" />
+                </a>
+                <div className="text-sm">
+                  <div className="font-bold">
+                    {v.nickname} · {v.state ?? "–"}
+                  </div>
+                  <div className="text-muted">
+                    State code <b className="text-ink">{v.state_code}</b>
+                    {v.same_code > 0 && <span className="text-pink-ink"> · used by {v.same_code} other account(s)</span>}
+                  </div>
+                  <div className="text-muted">
+                    #{v.position ?? "–"} · {v.refs ?? 0} refs · {v.whatsapp_e164 ?? "no WhatsApp"} · sent {timeAgo(v.verification_requested_at)}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <form action={approveVerification}>
+                    <input type="hidden" name="id" value={v.id} />
+                    <button className="rounded-full bg-lime px-4 py-1.5 text-sm font-bold text-on-accent">Approve</button>
+                  </form>
+                  <form action={rejectVerification} className="flex flex-1 gap-1.5">
+                    <input type="hidden" name="id" value={v.id} />
+                    <input name="note" maxLength={200} placeholder="Reason (shown to them)" className={`${input} min-w-0 flex-1`} />
+                    <button className={btn}>Reject</button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-2xl bg-surface p-5">
+        <h2 className="h-display mb-1 text-lg">Announcement</h2>
+        <p className="mb-3 text-xs text-muted">A pink slide in the carousel at the top of Home. Hidden when switched off or the title is empty.</p>
+        <form action={saveAnnouncement} className="flex flex-col gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="announcement_active" value="1" defaultChecked={announcement.active} className="size-4 accent-lime" />
+            Show on Home
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            Title
+            <input name="announcement_title" defaultValue={announcement.title} maxLength={60} className={`${input} text-ink`} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            Text
+            <textarea
+              name="announcement_body"
+              defaultValue={announcement.body}
+              rows={2}
+              maxLength={200}
+              className="rounded-lg border border-line bg-bg p-3 text-sm text-ink"
+            />
+          </label>
+          <div className="grid gap-3 md:grid-cols-[1fr_2fr]">
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              Button label (optional)
+              <input name="announcement_button_label" defaultValue={announcement.buttonLabel} maxLength={24} className={`${input} text-ink`} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              Button link: starts with / or https://
+              <input
+                name="announcement_button_url"
+                defaultValue={announcement.buttonUrl}
+                maxLength={300}
+                placeholder="/invite"
+                pattern="(/[^/].*|/|https://.+)"
+                className={`${input} text-ink`}
+              />
+            </label>
+          </div>
+          <button type="submit" className="self-start rounded-full bg-lime px-5 py-2 text-sm font-bold text-on-accent">
+            Save
+          </button>
+        </form>
       </section>
 
       <section className="grid gap-6 md:grid-cols-2">
@@ -291,13 +412,21 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                       {u.is_flagged && <span className="rounded bg-pink px-1.5 text-xs font-bold text-on-accent">Flagged</span>}
                       {u.is_banned && <span className="rounded bg-ink px-1.5 text-xs font-bold text-bg">Banned</span>}
                       {!u.completed_at && <span className="rounded bg-surface-2 px-1.5 text-xs">Unfinished</span>}
+                      {u.is_seed && <span className="rounded bg-surface-2 px-1.5 text-xs">Seed</span>}
+                      {u.verification_status === "verified" && (
+                        <span className="rounded bg-lime px-1.5 text-xs font-bold text-on-accent">Verified</span>
+                      )}
+                      {u.verification_status === "pending" && <span className="rounded bg-surface-2 px-1.5 text-xs">Pending check</span>}
                     </div>
                   </td>
                   <td className="p-3 text-muted">
                     <div>{u.whatsapp_e164 ?? "–"}</div>
                     <div className="text-xs">{u.email}</div>
                   </td>
-                  <td className="p-3">{u.state ?? "–"}</td>
+                  <td className="p-3">
+                    {u.state ?? "–"}
+                    {u.state_code && <div className="text-xs text-muted">{u.state_code}</div>}
+                  </td>
                   <td className="p-3">{u.position ?? "–"}</td>
                   <td className="p-3">{u.refs ?? 0}</td>
                   <td className="p-3 text-muted">{u.referrer ?? "–"}</td>
@@ -318,6 +447,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                         <form action={resetPin}>
                           <input type="hidden" name="id" value={u.id} />
                           <button className={btn}>Reset PIN</button>
+                        </form>
+                      )}
+                      {u.verification_status === "verified" && (
+                        <form action={revokeVerification}>
+                          <input type="hidden" name="id" value={u.id} />
+                          <button className={btn}>Remove verification</button>
                         </form>
                       )}
                       {u.photo_version > 0 && (

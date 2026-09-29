@@ -65,3 +65,44 @@ export async function track(name: string, userId: string | null, meta?: Record<s
     // Analytics must never break a page.
   }
 }
+
+export type Announcement = {
+  title: string;
+  body: string;
+  buttonLabel: string;
+  buttonUrl: string;
+};
+
+export const ANNOUNCEMENT_KEYS = [
+  "announcement_active",
+  "announcement_title",
+  "announcement_body",
+  "announcement_button_label",
+  "announcement_button_url",
+] as const;
+
+/** Raw announcement settings, for the admin form. */
+export const getAnnouncementSettings = unstable_cache(
+  async () => {
+    const rows = await sql<{ key: string; value: string }[]>`
+      SELECT key, value FROM settings WHERE key IN ${sql(ANNOUNCEMENT_KEYS as unknown as string[])}
+    `;
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+    return {
+      active: map.get("announcement_active") === "1",
+      title: map.get("announcement_title") ?? "",
+      body: map.get("announcement_body") ?? "",
+      buttonLabel: map.get("announcement_button_label") ?? "",
+      buttonUrl: map.get("announcement_button_url") ?? "",
+    };
+  },
+  ["announcement"],
+  { revalidate: 60, tags: ["settings"] },
+);
+
+/** The Home announcement, or null when it's switched off or has no title. */
+export async function getAnnouncement(): Promise<Announcement | null> {
+  const a = await getAnnouncementSettings();
+  if (!a.active || !a.title) return null;
+  return { title: a.title, body: a.body, buttonLabel: a.buttonLabel, buttonUrl: a.buttonUrl };
+}
