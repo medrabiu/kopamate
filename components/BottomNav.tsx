@@ -29,7 +29,7 @@ export default function BottomNav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={`flex flex-col items-center justify-center gap-1 text-[11px] font-medium ${
-                active ? "text-lime" : "text-faint hover:text-ink"
+                active ? "text-lime-ink" : "text-faint hover:text-ink"
               }`}
             >
               <Icon />

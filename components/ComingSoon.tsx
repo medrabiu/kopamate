@@ -39,7 +39,7 @@ export default function ComingSoon({ layout }: { layout: "grid" | "list" }) {
               onClick={() => show(`${title} is coming soon`)}
               className="flex items-center gap-3.5 rounded-[18px] bg-surface p-4 text-left"
             >
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-surface-2 text-pink">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-surface-2 text-pink-ink">
                 <Icon />
               </span>
               <span className="min-w-0 flex-1">

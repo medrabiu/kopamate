@@ -7,6 +7,7 @@ import "@fontsource/bricolage-grotesque/latin-800.css";
 import "./globals.css";
 import { APP_NAME, APP_URL } from "@/lib/config";
 import ServiceWorker from "@/components/ServiceWorker";
+import { themeScript } from "@/lib/theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -31,7 +32,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // The theme script sets data-theme before hydration, so React must not complain about it.
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-dvh">
         {children}
         <ServiceWorker />

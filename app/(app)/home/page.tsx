@@ -62,11 +62,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <section className="card flex flex-col gap-3.5 !p-[22px]" aria-label="Your position">
         <div className="text-sm text-muted">Your position</div>
         <div className="flex items-end justify-between gap-3">
-          <div className="h-display text-[72px] leading-[0.9] text-lime">
+          <div className="h-display text-[72px] leading-[0.9] text-lime-ink">
             <CountUp to={position} from={improved && user.last_seen_position ? user.last_seen_position : position} prefix="#" />
           </div>
           {change > 0 && (
-            <div className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-lime">
+            <div className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-lime-ink">
               <ArrowUpIcon size={14} strokeWidth={2.5} />
               {change} since yesterday
             </div>
@@ -89,7 +89,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </p>
           </div>
         ) : (
-          <p className="text-sm font-bold text-lime">You&apos;re in the top 10. Keep inviting to stay there.</p>
+          <p className="text-sm font-bold text-lime-ink">You&apos;re in the top 10. Keep inviting to stay there.</p>
         )}
 
         <ShareButtons
@@ -111,7 +111,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <Link href={`/corpers/${stateSlug(user.state ?? "")}`} className="flex flex-col gap-1 rounded-[20px] bg-surface p-4">
           <span className="text-[13px] text-muted">{user.state} is</span>
           <span className="h-display text-[28px]">
-            <span className="text-pink">#{myState?.rank ?? "–"}</span> · {formatNumber(myState?.count ?? 0)}
+            <span className="text-pink-ink">#{myState?.rank ?? "–"}</span> · {formatNumber(myState?.count ?? 0)}
           </span>
         </Link>
       </section>
@@ -120,7 +120,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="h-display text-xl">New from {user.state}</h2>
-            <Link href={`/corpers/${stateSlug(user.state ?? "")}`} className="py-2 text-sm font-medium text-lime">
+            <Link href={`/corpers/${stateSlug(user.state ?? "")}`} className="py-2 text-sm font-medium text-lime-ink">
               See all
             </Link>
           </div>

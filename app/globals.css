@@ -11,9 +11,33 @@
   --color-lime: #c6f432;
   --color-lime-hover: #ddfb7a;
   --color-pink: #ff4fa3;
+  /* Accent colours used as text on the page background */
+  --color-lime-ink: #c6f432;
+  --color-pink-ink: #ff4fa3;
+  /* Text sitting on a lime or pink fill */
+  --color-on-accent: #0e0e10;
 
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Light mode, switched on from Profile (see lib/theme.ts) */
+:root[data-theme="light"] {
+  --color-bg: #f6f6f1;
+  --color-surface: #ffffff;
+  --color-surface-2: #ebebe4;
+  --color-line: #d9d9d0;
+  --color-ink: #141416;
+  --color-muted: #55554f;
+  --color-faint: #6b6b65;
+  --color-lime-hover: #b4e21c;
+  --color-lime-ink: #4d7a00;
+  --color-pink-ink: #c8106f;
+  color-scheme: light;
+}
+
+:root[data-theme="light"] .card {
+  box-shadow: 0 0 0 1px var(--color-line);
 }
 
 html {
@@ -39,7 +63,7 @@ textarea {
 /* Shared building blocks */
 @layer components {
   .btn-primary {
-    @apply flex h-14 w-full items-center justify-center gap-2 rounded-full bg-lime px-6 text-[17px] font-bold text-bg transition-colors hover:bg-lime-hover active:scale-[0.99] disabled:opacity-60;
+    @apply flex h-14 w-full items-center justify-center gap-2 rounded-full bg-lime px-6 text-[17px] font-bold text-on-accent transition-colors hover:bg-lime-hover active:scale-[0.99] disabled:opacity-60;
   }
   .btn-secondary {
     @apply flex h-13 w-full items-center justify-center gap-2 rounded-full border border-line px-6 font-bold text-ink transition-colors hover:bg-surface;

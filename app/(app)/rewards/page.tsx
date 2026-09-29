@@ -30,7 +30,7 @@ export default async function RewardsPage() {
     <>
       <h1 className="h-display text-[28px]">Rewards</h1>
 
-      <section className="flex flex-col gap-2 rounded-3xl bg-pink p-[22px] text-bg">
+      <section className="flex flex-col gap-2 rounded-3xl bg-pink p-[22px] text-on-accent">
         <h2 className="h-display text-[26px] leading-tight">Prizes are coming</h2>
         <p className="text-[15px] font-medium leading-normal">{prizeText}</p>
       </section>
@@ -39,7 +39,7 @@ export default async function RewardsPage() {
         <h2 className="h-display text-xl">Where you stand</h2>
         <div className="flex items-center gap-3.5 rounded-[18px] bg-surface p-4">
           {inFirstN ? (
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-bg">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-on-accent">
               <CheckIcon size={20} strokeWidth={2.5} />
             </span>
           ) : (
@@ -60,7 +60,7 @@ export default async function RewardsPage() {
         </div>
         <div className="flex items-center gap-3.5 rounded-[18px] bg-surface p-4">
           {inTopRefs ? (
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-bg">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-on-accent">
               <CheckIcon size={20} strokeWidth={2.5} />
             </span>
           ) : (
@@ -78,7 +78,7 @@ export default async function RewardsPage() {
                   : "Invite your first friend to get on the board."}
             </div>
           </div>
-          <Link href="/invite" className="py-2.5 text-sm font-bold text-lime">
+          <Link href="/invite" className="py-2.5 text-sm font-bold text-lime-ink">
             Invite
           </Link>
         </div>
@@ -98,7 +98,7 @@ export default async function RewardsPage() {
           <ul className="flex flex-col gap-2.5">
             {rewards.map((r) => (
               <li key={r.id} className="flex items-center gap-3.5 rounded-[18px] bg-surface p-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-pink">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
                   <GiftIcon size={20} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -108,7 +108,7 @@ export default async function RewardsPage() {
                 </div>
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                    r.status === "sent" ? "bg-lime text-bg" : "bg-surface-2 text-muted"
+                    r.status === "sent" ? "bg-lime text-on-accent" : "bg-surface-2 text-muted"
                   }`}
                 >
                   {r.status === "sent" ? "Sent" : "Pending"}

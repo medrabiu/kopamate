@@ -4,7 +4,7 @@ import { isAdmin, requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
 import { formatJoined, formatNumber } from "@/lib/util";
 import { maskPhone } from "@/lib/validate";
-import { AccountActions, ChangePinRow, EditableRow, PhotoPicker, ShowInListToggle } from "./ProfileControls";
+import { AccountActions, ChangePinRow, EditableRow, LightModeToggle, PhotoPicker, ShowInListToggle } from "./ProfileControls";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -43,6 +43,7 @@ export default async function ProfilePage() {
         />
         {user.has_pin && <ChangePinRow />}
         <ShowInListToggle on={user.show_in_list} />
+        <LightModeToggle />
       </section>
 
       {isAdmin(user) && (

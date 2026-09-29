@@ -27,7 +27,7 @@ export default async function InvitePage() {
       <div className="flex flex-col gap-1.5">
         <h1 className="h-display text-[28px]">Invite friends</h1>
         <p className="text-[15px] leading-normal text-muted">
-          Every friend who joins with your link moves you <span className="font-bold text-lime">up {PLACES_PER_REFERRAL} places</span>.
+          Every friend who joins with your link moves you <span className="font-bold text-lime-ink">up {PLACES_PER_REFERRAL} places</span>.
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export default async function InvitePage() {
       <section className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <h2 className="h-display text-xl">Top referrers</h2>
-          <span className="rounded-full bg-pink px-2.5 py-1 text-xs font-bold text-bg">Top {TOP_REFERRERS} win prizes</span>
+          <span className="rounded-full bg-pink px-2.5 py-1 text-xs font-bold text-on-accent">Top {TOP_REFERRERS} win prizes</span>
         </div>
         {top.length === 0 ? (
           <p className="rounded-[20px] bg-surface px-4 py-5 text-sm text-muted">Be the first on the board. Invite a friend.</p>
@@ -70,9 +70,9 @@ export default async function InvitePage() {
               const me = r.id === user.id;
               return (
                 <li key={r.id} className={`flex h-14 items-center gap-3 ${i < top.length - 1 ? "border-b border-surface-2" : ""}`}>
-                  <span className={`h-display w-6 ${r.rank <= 3 ? "text-lime" : "text-faint"}`}>{r.rank}</span>
+                  <span className={`h-display w-6 ${r.rank <= 3 ? "text-lime-ink" : "text-faint"}`}>{r.rank}</span>
                   <Avatar id={r.id} nickname={r.nickname} photoVersion={r.photo_version} size={40} />
-                  <span className={`flex-1 truncate ${me ? "font-bold text-lime" : "font-medium"}`}>
+                  <span className={`flex-1 truncate ${me ? "font-bold text-lime-ink" : "font-medium"}`}>
                     {me ? "You" : r.nickname}
                     {r.state ? <span className="text-muted"> · {r.state}</span> : null}
                   </span>
@@ -84,7 +84,7 @@ export default async function InvitePage() {
         )}
         {!inTop && (
           <div className="flex h-14 items-center gap-3 rounded-2xl border-[1.5px] border-lime px-4">
-            <span className="h-display text-lime">{mine ? mine.rank : "–"}</span>
+            <span className="h-display text-lime-ink">{mine ? mine.rank : "–"}</span>
             <Avatar id={user.id} nickname={user.nickname} photoVersion={user.photo_version} size={40} />
             <span className="flex-1 font-bold">You</span>
             <span className="font-bold">{mine?.refs ?? 0}</span>

@@ -17,7 +17,7 @@ export default async function CorpersPage() {
       <div className="flex flex-col gap-1">
         <h1 className="h-display text-[28px]">Corpers</h1>
         <p className="text-[15px] text-muted">
-          <span className="font-bold text-lime">{formatNumber(stats.total)}</span> joined across {stats.activeStates}{" "}
+          <span className="font-bold text-lime-ink">{formatNumber(stats.total)}</span> joined across {stats.activeStates}{" "}
           {stats.activeStates === 1 ? "state" : "states"}
         </p>
       </div>

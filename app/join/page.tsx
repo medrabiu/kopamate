@@ -42,7 +42,7 @@ export default async function JoinPage() {
           <PhoneSignupForm googleOn={googleEnabled()} />
           <p className="text-center text-sm text-muted">
             Already joined?{" "}
-            <Link href="/login" className="font-bold text-lime">
+            <Link href="/login" className="font-bold text-lime-ink">
               Log in
             </Link>
           </p>

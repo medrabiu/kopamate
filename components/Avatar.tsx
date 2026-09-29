@@ -11,7 +11,7 @@ type Props = {
 
 /** Photo if the user uploaded one, otherwise a coloured circle with their first letter. */
 export default function Avatar({ id, nickname, photoVersion = 0, size = 40, ring, className = "" }: Props) {
-  const ringStyle = ring ? { boxShadow: "0 0 0 3px #0E0E10, 0 0 0 5px #C6F432" } : undefined;
+  const ringStyle = ring ? { boxShadow: "0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-lime)" } : undefined;
   if (photoVersion > 0) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -30,7 +30,7 @@ export default function Avatar({ id, nickname, photoVersion = 0, size = 40, ring
   return (
     <div
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center rounded-full font-display font-extrabold text-bg ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-full font-display font-extrabold text-on-accent ${className}`}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.4), background: avatarColor(id), ...ringStyle }}
     >
       {letter}

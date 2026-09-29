@@ -20,7 +20,7 @@ export default function Landing({ stats, prizeText, inviter }: Props) {
     <main className="mx-auto flex max-w-[480px] flex-col gap-6 px-5 pb-10 pt-5">
       <header className="flex h-11 items-center justify-between">
         <span className="h-display text-xl">{APP_NAME}</span>
-        <Link href="/login" className="px-1 py-2.5 text-[15px] font-medium text-lime hover:text-lime-hover">
+        <Link href="/login" className="px-1 py-2.5 text-[15px] font-medium text-lime-ink hover:opacity-80">
           Log in
         </Link>
       </header>
@@ -35,13 +35,13 @@ export default function Landing({ stats, prizeText, inviter }: Props) {
       )}
 
       <section className="flex flex-col gap-3.5">
-        <span className="self-start rounded-full bg-lime px-3 py-1.5 text-[13px] font-medium text-bg">
+        <span className="self-start rounded-full bg-lime px-3 py-1.5 text-[13px] font-medium text-on-accent">
           For corps members across Nigeria
         </span>
         <h1 className="h-display text-[44px] leading-[1.02]">
           Every corper.
           <br />
-          <span className="text-pink">One place.</span>
+          <span className="text-pink-ink">One place.</span>
         </h1>
         <p className="text-base leading-normal text-muted">
           Join early, climb the list, and be first in line for contests, awards and prizes.
@@ -57,7 +57,7 @@ export default function Landing({ stats, prizeText, inviter }: Props) {
           <CountUp to={stats.total} />
         </div>
         <div className="text-base">corpers have joined</div>
-        {stats.today > 0 && <div className="text-sm font-medium text-lime">+{formatNumber(stats.today)} today</div>}
+        {stats.today > 0 && <div className="text-sm font-medium text-lime-ink">+{formatNumber(stats.today)} today</div>}
       </section>
 
       <Link href="/join" className="btn-primary">
@@ -70,7 +70,7 @@ export default function Landing({ stats, prizeText, inviter }: Props) {
           <ol className="rounded-[20px] bg-surface px-4 py-2">
             {top.map((s, i) => (
               <li key={s.state} className={`flex h-11 items-center gap-3 ${i < top.length - 1 ? "border-b border-surface-2" : ""}`}>
-                <span className={`h-display w-5 ${i < 3 ? "text-lime" : "text-muted"}`}>{i + 1}</span>
+                <span className={`h-display w-5 ${i < 3 ? "text-lime-ink" : "text-muted"}`}>{i + 1}</span>
                 <span className="flex-1 font-medium">{s.state}</span>
                 <span className="text-muted">{formatNumber(s.count)}</span>
               </li>

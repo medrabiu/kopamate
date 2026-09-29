@@ -45,14 +45,14 @@ export default async function StatePage({ params, searchParams }: Props) {
             {info && info.count > 0 ? ` · #${info.rank} state` : ""}
           </p>
         </div>
-        {isMine && <span className="rounded-full bg-lime px-3 py-1.5 text-xs font-bold text-bg">Your state</span>}
+        {isMine && <span className="rounded-full bg-lime px-3 py-1.5 text-xs font-bold text-on-accent">Your state</span>}
       </div>
 
       {shown.length === 0 ? (
         <div className="rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-8 text-center">
           <p className="font-bold">No one from {state} yet</p>
           <p className="mt-1 text-sm text-muted">Know a corper serving here? Send them your link.</p>
-          <Link href="/invite" className="mt-3 inline-block font-bold text-lime">
+          <Link href="/invite" className="mt-3 inline-block font-bold text-lime-ink">
             Invite friends
           </Link>
         </div>
@@ -63,7 +63,7 @@ export default async function StatePage({ params, searchParams }: Props) {
             return (
               <li key={m.id} className="flex flex-col items-center gap-1.5">
                 <Avatar id={m.id} nickname={m.nickname} photoVersion={m.photo_version} size={72} ring={me} />
-                <span className={`w-full truncate text-center text-sm font-medium ${me ? "text-lime" : ""}`}>
+                <span className={`w-full truncate text-center text-sm font-medium ${me ? "text-lime-ink" : ""}`}>
                   {m.nickname}
                   {me ? " (you)" : ""}
                 </span>

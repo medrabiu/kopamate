@@ -111,14 +111,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     <main className="mx-auto flex max-w-[1100px] flex-col gap-8 px-5 py-8">
       <header className="flex items-center justify-between">
         <h1 className="h-display text-3xl">Admin</h1>
-        <Link href="/home" className="text-sm font-bold text-lime">
+        <Link href="/home" className="text-sm font-bold text-lime-ink">
           Back to app
         </Link>
       </header>
 
       {reset && pin && /^\d{4}$/.test(pin) && (
         <p role="status" className="rounded-2xl border border-lime p-4 text-sm">
-          Temporary PIN for <b>{reset}</b>: <b className="text-lime">{pin}</b>. Send it to them on WhatsApp and ask them to change it in
+          Temporary PIN for <b>{reset}</b>: <b className="text-lime-ink">{pin}</b>. Send it to them on WhatsApp and ask them to change it in
           their profile.
         </p>
       )}
@@ -180,7 +180,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <option value="signup">sign-up order</option>
             </select>
           </label>
-          <button type="submit" className="self-start rounded-full bg-lime px-5 py-2 text-sm font-bold text-bg">
+          <button type="submit" className="self-start rounded-full bg-lime px-5 py-2 text-sm font-bold text-on-accent">
             Save
           </button>
         </form>
@@ -266,7 +266,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <section className="flex flex-col gap-3">
         <form className="flex gap-2">
           <input name="q" defaultValue={search} placeholder="Search nickname, phone, email or referral code" className={`${input} flex-1`} />
-          <button className="rounded-lg bg-lime px-4 text-sm font-bold text-bg">Search</button>
+          <button className="rounded-lg bg-lime px-4 text-sm font-bold text-on-accent">Search</button>
         </form>
         <div className="overflow-x-auto rounded-2xl bg-surface">
           <table className="w-full min-w-[980px] text-left text-sm">
@@ -288,7 +288,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   <td className="p-3">
                     <div className="font-bold">{u.nickname}</div>
                     <div className="flex gap-1 pt-1">
-                      {u.is_flagged && <span className="rounded bg-pink px-1.5 text-xs font-bold text-bg">Flagged</span>}
+                      {u.is_flagged && <span className="rounded bg-pink px-1.5 text-xs font-bold text-on-accent">Flagged</span>}
                       {u.is_banned && <span className="rounded bg-ink px-1.5 text-xs font-bold text-bg">Banned</span>}
                       {!u.completed_at && <span className="rounded bg-surface-2 px-1.5 text-xs">Unfinished</span>}
                     </div>
@@ -328,7 +328,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                       )}
                     </div>
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-lime">Rename or add reward</summary>
+                      <summary className="cursor-pointer text-xs text-lime-ink">Rename or add reward</summary>
                       <form action={renameUser} className="mt-2 flex gap-1.5">
                         <input type="hidden" name="id" value={u.id} />
                         <input name="nickname" defaultValue={u.nickname} className={`${input} w-32`} />

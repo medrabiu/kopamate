@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function PrizeCard({ text, href }: { text: string; href?: string }) {
   const body = (
     <>
-      <span className="h-display block text-lg text-pink">Prizes are coming</span>
+      <span className="h-display block text-lg text-pink-ink">Prizes are coming</span>
       <span className="mt-1 block text-[15px] leading-relaxed">{text}</span>
     </>
   );

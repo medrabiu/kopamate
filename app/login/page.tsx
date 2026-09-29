@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <LoginForm initialError={error ? ERRORS[error] : undefined} />
       <p className="text-center text-sm text-muted">
         New here?{" "}
-        <Link href="/join" className="font-bold text-lime">
+        <Link href="/join" className="font-bold text-lime-ink">
           Join now
         </Link>
       </p>

@@ -14,6 +14,7 @@ import {
   type ProfileState,
 } from "@/app/actions/profile";
 import { logout } from "@/app/actions/auth";
+import { getTheme, setTheme } from "@/lib/theme";
 
 type FieldName = "nickname" | "whatsapp" | "state" | "state_code";
 
@@ -47,7 +48,7 @@ export function EditableRow({
             <div className="text-[13px] text-faint">{label}</div>
             <div className={`truncate text-base font-medium ${muted ? "text-faint" : ""}`}>{display}</div>
           </div>
-          <button type="button" onClick={() => setOpen(true)} className="py-2.5 text-sm font-bold text-lime">
+          <button type="button" onClick={() => setOpen(true)} className="py-2.5 text-sm font-bold text-lime-ink">
             {actionLabel}
           </button>
         </div>
@@ -72,7 +73,7 @@ export function EditableRow({
               autoFocus
             />
           )}
-          {state?.error && <p className="text-sm text-pink">{state.error}</p>}
+          {state?.error && <p className="text-sm text-pink-ink">{state.error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={pending} className="btn-primary h-11 flex-1 text-[15px]">
               {pending ? "Saving…" : "Save"}
@@ -150,14 +151,14 @@ export function PhotoPicker({ id, nickname, photoVersion }: { id: string; nickna
           type="button"
           onClick={() => input.current?.click()}
           aria-label={photoVersion > 0 ? "Change photo" : "Add a photo"}
-          className="absolute -bottom-0.5 -right-0.5 flex size-10 items-center justify-center rounded-full border-[3px] border-bg bg-pink text-bg"
+          className="absolute -bottom-0.5 -right-0.5 flex size-10 items-center justify-center rounded-full border-[3px] border-bg bg-pink text-on-accent"
         >
           <CameraIcon size={18} strokeWidth={2.2} />
         </button>
         <input ref={input} type="file" accept="image/*" className="hidden" onChange={onPick} />
       </div>
       {pending && <p className="text-sm text-muted">Uploading…</p>}
-      {error && <p className="text-sm text-pink">{error}</p>}
+      {error && <p className="text-sm text-pink-ink">{error}</p>}
       {photoVersion > 0 && !pending && (
         <form action={removePhoto}>
           <button type="submit" className="text-xs text-faint underline">
@@ -169,28 +170,74 @@ export function PhotoPicker({ id, nickname, photoVersion }: { id: string; nickna
   );
 }
 
-export function ShowInListToggle({ on }: { on: boolean }) {
-  const [pending, start] = useTransition();
+function SwitchRow({
+  id,
+  title,
+  hint,
+  on,
+  disabled,
+  onToggle,
+}: {
+  id: string;
+  title: string;
+  hint: string;
+  on: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className="flex items-center gap-3 border-b border-surface-2 py-3 last:border-b-0">
       <div className="min-w-0 flex-1">
-        <div id="show-label" className="text-base font-medium">
-          Show me in the Corpers list
+        <div id={id} className="text-base font-medium">
+          {title}
         </div>
-        <div className="text-[13px] text-faint">Others see your nickname and photo only</div>
+        <div className="text-[13px] text-faint">{hint}</div>
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={on}
-        aria-labelledby="show-label"
-        disabled={pending}
-        onClick={() => start(() => toggleShowInList())}
+        aria-labelledby={id}
+        disabled={disabled}
+        onClick={onToggle}
         className={`flex h-[30px] w-[52px] shrink-0 rounded-full p-[3px] transition-colors ${on ? "justify-end bg-lime" : "justify-start bg-surface-2"}`}
       >
-        <span className={`size-6 rounded-full ${on ? "bg-bg" : "bg-faint"}`} />
+        <span className={`size-6 rounded-full ${on ? "bg-on-accent" : "bg-faint"}`} />
       </button>
     </div>
+  );
+}
+
+export function ShowInListToggle({ on }: { on: boolean }) {
+  const [pending, start] = useTransition();
+  return (
+    <SwitchRow
+      id="show-label"
+      title="Show me in the Corpers list"
+      hint="Others see your nickname and photo only"
+      on={on}
+      disabled={pending}
+      onToggle={() => start(() => toggleShowInList())}
+    />
+  );
+}
+
+/** Saved on this device only, so it applies before sign-in and on every page. */
+export function LightModeToggle() {
+  const [light, setLight] = useState(false);
+  useEffect(() => setLight(getTheme() === "light"), []);
+  return (
+    <SwitchRow
+      id="light-label"
+      title="Light mode"
+      hint="Saved on this device"
+      on={light}
+      onToggle={() => {
+        const next = !light;
+        setTheme(next ? "light" : "dark");
+        setLight(next);
+      }}
+    />
   );
 }
 
@@ -208,7 +255,7 @@ export function ChangePinRow() {
             <div className="text-[13px] text-faint">PIN</div>
             <div className="text-base font-medium">{state?.ok ? "PIN changed" : "••••"}</div>
           </div>
-          <button type="button" onClick={() => setOpen(true)} className="py-2.5 text-sm font-bold text-lime">
+          <button type="button" onClick={() => setOpen(true)} className="py-2.5 text-sm font-bold text-lime-ink">
             Change
           </button>
         </div>
@@ -222,7 +269,7 @@ export function ChangePinRow() {
             New PIN
           </label>
           <input id="pin-next" name="next" type="password" inputMode="numeric" maxLength={4} required className="field tracking-[0.5em]" />
-          {state?.error && <p className="text-sm text-pink">{state.error}</p>}
+          {state?.error && <p className="text-sm text-pink-ink">{state.error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={pending} className="btn-primary h-11 flex-1 text-[15px]">
               Save
@@ -257,7 +304,7 @@ export function AccountActions() {
           </label>
           <input id="confirm" name="confirm" autoComplete="off" className="field" />
           <div className="flex gap-2">
-            <button type="submit" className="flex h-11 flex-1 items-center justify-center rounded-full bg-pink font-bold text-bg">
+            <button type="submit" className="flex h-11 flex-1 items-center justify-center rounded-full bg-pink font-bold text-on-accent">
               Delete
             </button>
             <button type="button" onClick={() => setConfirming(false)} className="btn-secondary h-11 flex-1">
