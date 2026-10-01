@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Avatar from "@/components/Avatar";
 import BadgeIcon from "@/components/BadgeIcon";
 import Confetti from "@/components/Confetti";
 import Sheet from "@/components/Sheet";
-import { CheckIcon, ChevronRight, CrownIcon, LockIcon, SearchIcon } from "@/components/icons";
-import { voteState } from "@/app/actions/rewards";
-import { STATES } from "@/lib/states";
+import { CheckIcon, ChevronRight, CrownIcon, LockIcon } from "@/components/icons";
 import type { BadgeInfo } from "@/lib/badge-meta";
 
 export type BoardRow = {
@@ -205,139 +203,6 @@ export function AmbassadorCard({ leading }: { leading: string }) {
         <p className="text-sm font-medium text-pink-ink">{leading}</p>
       </Sheet>
     </section>
-  );
-}
-
-/**
- * "Which state will have the most corpers when camp ends?" Search, tap to vote, then live % bars
- * (top 8 plus your pick). Votes can change until the deadline.
- */
-export function StatePrediction({
-  results,
-  myPick,
-  locked,
-  lockLabel,
-}: {
-  results: { total: number; states: { state: string; votes: number }[] };
-  myPick: string | null;
-  locked: boolean;
-  lockLabel: string;
-}) {
-  const [pick, setPick] = useState(myPick);
-  const [choosing, setChoosing] = useState(!myPick && !locked);
-  const [query, setQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-  useEffect(() => setPick(myPick), [myPick]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return q ? STATES.filter((s) => s.toLowerCase().includes(q)) : STATES;
-  }, [query]);
-
-  function vote(state: string) {
-    setError(null);
-    start(async () => {
-      try {
-        const res = await voteState(state);
-        if (res?.error) return setError(res.error);
-        setPick(state);
-        setChoosing(false);
-      } catch {
-        setError("Couldn't save your vote. Check your connection and try again.");
-      }
-    });
-  }
-
-  const top = results.states.slice(0, 8);
-  const pickRow = pick && !top.some((s) => s.state === pick) ? (results.states.find((s) => s.state === pick) ?? { state: pick, votes: 0 }) : null;
-  const pct = (v: number) => (results.total ? Math.round((v / results.total) * 100) : 0);
-
-  return (
-    <section id="predict" className="card flex scroll-mt-5 flex-col gap-3" aria-labelledby="predict-title">
-      <div>
-        <h2 id="predict-title" className="h-display text-xl leading-tight">
-          Which state will have the most corpers when camp ends?
-        </h2>
-        <p className="mt-1 text-sm text-muted">{lockLabel}</p>
-      </div>
-
-      {choosing ? (
-        <>
-          <label className="relative block">
-            <span className="sr-only">Search states</span>
-            <SearchIcon size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search states"
-              className="field h-11 bg-bg pl-10"
-            />
-          </label>
-          <ul className="no-scrollbar -mx-1 flex max-h-72 flex-col overflow-y-auto px-1" aria-label="States">
-            {filtered.map((s) => (
-              <li key={s}>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => vote(s)}
-                  className={`flex h-11 w-full items-center justify-between rounded-xl px-3 text-left text-[15px] hover:bg-surface-2 disabled:opacity-60 ${
-                    s === pick ? "font-bold text-lime-ink" : ""
-                  }`}
-                >
-                  {s}
-                  {s === pick && <CheckIcon size={18} strokeWidth={2.5} />}
-                </button>
-              </li>
-            ))}
-            {filtered.length === 0 && <li className="px-3 py-2 text-sm text-muted">No state matches.</li>}
-          </ul>
-          {pick && (
-            <button type="button" onClick={() => setChoosing(false)} className="text-sm font-bold text-muted">
-              Cancel
-            </button>
-          )}
-        </>
-      ) : (
-        <>
-          <ul className="flex flex-col gap-2" aria-label="Votes so far">
-            {top.map((s) => (
-              <Bar key={s.state} label={s.state} percent={pct(s.votes)} mine={s.state === pick} />
-            ))}
-            {pickRow && <Bar label={`Your pick: ${pickRow.state}`} percent={pct(pickRow.votes)} mine />}
-            {top.length === 0 && !pickRow && <li className="text-sm text-muted">No votes yet.</li>}
-          </ul>
-          <p className="text-xs text-faint">
-            {results.total.toLocaleString("en-NG")} {results.total === 1 ? "vote" : "votes"} · updates every 30 seconds
-          </p>
-          {!locked && (
-            <button type="button" onClick={() => setChoosing(true)} className="btn-secondary h-11 text-[15px]">
-              {pick ? "Change my vote" : "Vote"}
-            </button>
-          )}
-        </>
-      )}
-      {pending && <p className="text-sm text-muted">Saving your vote…</p>}
-      {error && <p className="text-sm text-pink-ink">{error}</p>}
-    </section>
-  );
-}
-
-function Bar({ label, percent, mine }: { label: string; percent: number; mine: boolean }) {
-  return (
-    <li className="flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2 text-sm">
-        <span className={`flex items-center gap-1.5 ${mine ? "font-bold" : ""}`}>
-          {label}
-          {mine && <span className="rounded-full bg-lime px-1.5 py-px text-[11px] font-bold text-on-accent">Your pick</span>}
-        </span>
-        <span className="tabular-nums text-muted">{percent}%</span>
-      </div>
-      <div className="h-2 rounded-full bg-surface-2">
-        <div className={`h-2 rounded-full ${mine ? "bg-lime" : "bg-muted/50"}`} style={{ width: `${Math.max(percent ? 2 : 0, percent)}%` }} />
-      </div>
-    </li>
   );
 }
 

@@ -29,7 +29,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       <section className={panel}>
         <h2 className="h-display mb-1 text-lg">Countdowns and rewards</h2>
         <p className="mb-3 text-xs text-muted">
-          ISO times with a time zone (Lagos is +01:00). The Early Corper deadline also locks state predictions.
+          ISO times with a time zone (Lagos is +01:00).
         </p>
         {error && ERRORS[error] && (
           <p role="alert" className="mb-3 rounded-lg border border-pink px-3 py-2 text-sm">

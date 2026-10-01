@@ -9,11 +9,10 @@ import { requireUser } from "@/lib/session";
 import { getNationalLeaderboard, getReferrerStanding, getStateLeaderboard, type ReferrerRow } from "@/lib/ranking";
 import { getRewardSettings } from "@/lib/stats";
 import { getUserBadges } from "@/lib/badges";
-import { getPredictionResults, getUserPrediction } from "@/lib/predictions";
 import { referralLink, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import { formatJoined } from "@/lib/util";
-import { AmbassadorCard, Leaderboard, MysteryPrizes, RankConfetti, StatePrediction, type BoardRow } from "./RewardsClient";
+import { AmbassadorCard, Leaderboard, MysteryPrizes, RankConfetti, type BoardRow } from "./RewardsClient";
 
 export const metadata: Metadata = { title: "Rewards" };
 
@@ -29,14 +28,12 @@ function toBoard(r: ReferrerRow, rank: number): BoardRow {
 export default async function RewardsPage() {
   const user = await requireUser();
   const state = user.state ?? "";
-  const [settings, standing, national, stateBoard, badges, results, myPick, rewards] = await Promise.all([
+  const [settings, standing, national, stateBoard, badges, rewards] = await Promise.all([
     getRewardSettings(),
     getReferrerStanding(user.id),
     getNationalLeaderboard(),
     getStateLeaderboard(state),
     getUserBadges(user.id),
-    getPredictionResults(),
-    getUserPrediction(user.id),
     sql<{ id: string; title: string; description: string | null; status: string; created_at: Date }[]>`
       SELECT id, title, description, status, created_at FROM rewards WHERE user_id = ${user.id} ORDER BY created_at DESC
     `,
@@ -193,19 +190,7 @@ export default async function RewardsPage() {
       {/* 5. State Ambassador programme */}
       <AmbassadorCard leading={leading} />
 
-      {/* 6. State prediction */}
-      <StatePrediction
-        results={results}
-        myPick={myPick}
-        locked={!earlyOpen}
-        lockLabel={
-          earlyOpen
-            ? `One vote each. You can change it until ${lagosDay(settings.earlyDeadline)}. Right picks earn the Prophet badge.`
-            : "Votes are locked. Right picks earn the Prophet badge when camp ends."
-        }
-      />
-
-      {/* 7. Your badges and rewards */}
+      {/* 6. Your badges and rewards */}
       <section className="flex flex-col gap-2.5" aria-labelledby="your-badges">
         <h2 id="your-badges" className="h-display text-xl">
           Your badges
@@ -270,7 +255,7 @@ export default async function RewardsPage() {
         )}
       </section>
 
-      {/* 8. Share */}
+      {/* 7. Share */}
       <section className="card flex flex-col gap-3 !p-[18px]" aria-labelledby="share-title">
         <h2 id="share-title" className="h-display text-lg leading-tight">
           {me ? `You're #${me.state_rank} in ${state}` : `Lead ${state}`}

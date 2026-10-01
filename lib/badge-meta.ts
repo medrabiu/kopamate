@@ -16,18 +16,17 @@ export const badgeFill = (color: string) => BADGE_FILL[color] ?? BADGE_FILL.lime
 /** How to earn each badge, shown on locked badges. */
 export const BADGE_HOW_TO: Record<string, string> = {
   early_corper: "Join before the Early Corper countdown ends.",
-  profile_complete: "Finish all four profile steps.",
+  profile_complete: "Finish every profile step.",
   first_invite: "Get a friend to join with your link.",
-  prophet: "Pick the state with the most corpers when camp ends.",
+  prophet: "Coming soon: predict which state will have the most corpers.",
   state_ambassador: "Be the top referrer in your state when camp ends.",
 };
 
-export type StepKey = "photo" | "stateCode" | "prediction" | "friend";
+export type StepKey = "photo" | "stateCode" | "friend";
 
 /** Profile-completion steps, in order. Each is worth the same share of 100%. */
 export const PROFILE_STEPS: { key: StepKey; label: string; action: string; href: string }[] = [
   { key: "photo", label: "Add a photo", action: "Add a photo", href: "/profile#photo" },
   { key: "stateCode", label: "Add your state code", action: "Add your state code", href: "/profile#state-code" },
-  { key: "prediction", label: "Make your state prediction", action: "Make your prediction", href: "/rewards#predict" },
   { key: "friend", label: "Get your first friend to join with your link", action: "Invite a friend", href: "/invite" },
 ];

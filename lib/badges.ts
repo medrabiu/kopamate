@@ -81,7 +81,6 @@ const autoFacts = (deadline: string, where: PendingQuery<Row[]>) => sql`
          (u.completed_at <= ${deadline}::timestamptz) AS early,
          (u.photo_version > 0) AS photo,
          (u.state_code IS NOT NULL AND u.state_code <> '') AS state_code,
-         EXISTS (SELECT 1 FROM state_predictions p WHERE p.user_id = u.id) AS prediction,
          (NOT u.is_flagged AND NOT u.is_banned AND EXISTS (
             SELECT 1 FROM users r
             WHERE r.referred_by = u.id AND r.completed_at IS NOT NULL
@@ -109,7 +108,7 @@ export async function checkAutoBadges(userIds: string | (string | null | undefin
       CROSS JOIN LATERAL (VALUES
         ('early_corper', f.early),
         ('first_invite', f.friend),
-        ('profile_complete', f.photo AND f.state_code AND f.prediction AND f.friend)
+        ('profile_complete', f.photo AND f.state_code AND f.friend)
       ) AS v(slug, ok)
       WHERE v.ok
     )
@@ -120,18 +119,17 @@ export async function checkAutoBadges(userIds: string | (string | null | undefin
   `;
 }
 
-export type ProfileSteps = { photo: boolean; stateCode: boolean; prediction: boolean; friend: boolean };
+export type ProfileSteps = { photo: boolean; stateCode: boolean; friend: boolean };
 
-/** The four profile-completion steps, each worth 25%. */
+/** The profile-completion steps (photo, state code, first friend), each worth the same share. */
 export async function getProfileSteps(userId: string): Promise<ProfileSteps> {
   const deadline = await getEarlyDeadline();
-  const [row] = await sql<{ photo: boolean; state_code: boolean; prediction: boolean; friend: boolean }[]>`
+  const [row] = await sql<{ photo: boolean; state_code: boolean; friend: boolean }[]>`
     ${autoFacts(deadline, sql`u.id = ${userId}`)}
   `;
   return {
     photo: Boolean(row?.photo),
     stateCode: Boolean(row?.state_code),
-    prediction: Boolean(row?.prediction),
     friend: Boolean(row?.friend),
   };
 }

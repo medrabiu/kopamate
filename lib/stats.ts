@@ -56,7 +56,7 @@ export const getPrizeText = unstable_cache(
 export const REWARD_SETTING_KEYS = ["early_deadline", "leaderboard_close", "rewards_reveal_text"] as const;
 
 export type RewardSettings = {
-  /** ISO time: Early Corper badge closes, predictions lock. */
+  /** ISO time: Early Corper badge closes. */
   earlyDeadline: string;
   /** ISO time: leaderboards close, State Ambassadors and Prophets are picked. */
   leaderboardClose: string;

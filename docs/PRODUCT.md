@@ -166,16 +166,15 @@ Prize amounts stay hidden. In order:
 3. **Leaderboard** with two tabs: **Nigeria** (top 20 by valid referrals) and **{your state}** (top 10). Rows: rank, avatar, nickname, top badge icon, state, friends joined. Your row is highlighted, or pinned below the list when you're outside it. Cached 30 seconds.
 4. **Mystery prizes:** "Top 10 nationwide", "State Ambassadors", "Early Corpers". Each shows a lock, one line and the admin's reveal text ("Prizes are revealed when the countdown ends."); tapping opens a sheet with how it's decided (no amounts).
 5. **State Ambassador programme** (pink outline) with "Currently leading in {state}: {nickname} with N friends" and a **Learn more** sheet: the top referrer in each state when camp ends becomes that state's Kopamate Ambassador; perks: Kopamate team member (state admin), State Ambassador badge, promotion budget for the state, first access to new features, featured on Kopamate, certificate of recognition; "Ambassadors must be in good standing (no fake referrals). Final selection is confirmed by the Kopamate team."
-6. **State prediction** (`#predict`, section 5).
-7. **Your badges** (badges that qualify for rewards first, tagged "Qualifies for rewards") and **Your rewards:** list of rewards the admin has given this user (title, status: pending / sent, date). Empty state: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. We'll message you on WhatsApp."
-8. **Share:** "You're #4 in Enugu" with Share on WhatsApp ("I'm #4 in Enugu, help me become Ambassador 👑" + referral link) and copy link.
+6. **Your badges** (badges that qualify for rewards first, tagged "Qualifies for rewards") and **Your rewards:** list of rewards the admin has given this user (title, status: pending / sent, date). Empty state: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. We'll message you on WhatsApp."
+7. **Share:** "You're #4 in Enugu" with Share on WhatsApp ("I'm #4 in Enugu, help me become Ambassador 👑" + referral link) and copy link.
 - Confetti when your national or state referrer rank improved since your last Rewards visit (last seen ranks are kept in localStorage on the device).
 - **This is not a money wallet.** No balances, withdrawals or payments.
 
 ### 4.8 Profile (`/profile`)
 - Large avatar with a camera button to add or change the photo.
 - **Badges:** a row of chips, earned first; locked badges are greyed out with a lock. Tapping a chip opens a sheet with the name, description, and the date earned or how to earn it.
-- **Profile checklist:** the four completion steps (section 5, "Profile completion") with ticks and a percentage. Reaching 100% gives the Profile Complete badge with confetti.
+- **Profile checklist:** the three completion steps (section 5, "Profile completion") with ticks and a percentage. Reaching 100% gives the Profile Complete badge with confetti.
 - **Get verified** card (top of Profile): only verified corpers can win prizes. The user enters their state code (format `EN/26B/1234`) and a photo of their NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. Status shows as "Checking your ID" (pending), the admin's reason (rejected, with a form to try again) or "Verified corper". The state code is locked while pending and once verified. A state code can only be verified on one account.
 - Nickname, "{State} · #{position} · Joined {date}".
 - Editable rows: Nickname, WhatsApp number ("only you can see this", shown masked), State serving in, State code ("Not added" / **Add**).
@@ -197,7 +196,7 @@ Only accessible to users whose email or phone is in an `ADMIN_IDS` environment v
 - **Badges** (`/admin/badges`): how many people hold each badge; **Run badge backfill** (gives every completed user the auto badges they've earned; revoked badges stay revoked); **Award Prophet badges** (only after the leaderboard closes: gives Prophet to everyone who picked the state with the most completed sign-ups at that moment, every tied state counts); **Download Early Corpers (CSV)** (holders of the badge, not revoked, without flagged, banned and seed accounts: nickname, WhatsApp, state); and **Ambassador candidates**: the top 3 referrers in each state (flagged, banned and seed accounts left out) with an **Award State Ambassador** button.
 - **Users** table also lists each user's badges (revoked ones faded). On the **user page**, a Badges section shows every badge with when and by whom it was given; admins can award manual badges (Prophet, State Ambassador), revoke any badge with a reason, and restore a revoked one.
 - **Rewards** (`/admin/rewards`): download the prize lists as CSV (first 500 **verified** users and top 10 **verified** referrers; flagged, banned and seed accounts left out; with nickname, WhatsApp number and state code), and the rewards waiting to be sent.
-- **Settings** (`/admin/settings`): **Countdowns and rewards**: `early_deadline` (default `2026-10-02T23:59:59+01:00`; Early Corper badge closes and predictions lock), `leaderboard_close` (default `2026-10-21T23:59:59+01:00`) and `rewards_reveal_text` (default "Prizes are revealed when the countdown ends."). Times must be ISO 8601 with a time zone, and the leaderboard must close after the Early Corper deadline. Also the prize teaser text shown on Landing, Home and Rewards, whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away.
+- **Settings** (`/admin/settings`): **Countdowns and rewards**: `early_deadline` (default `2026-10-02T23:59:59+01:00`; Early Corper badge closes), `leaderboard_close` (default `2026-10-21T23:59:59+01:00`) and `rewards_reveal_text` (default "Prizes are revealed when the countdown ends."). Times must be ISO 8601 with a time zone, and the leaderboard must close after the Early Corper deadline. Also the prize teaser text shown on Landing, Home and Rewards, whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away.
 
 ---
 
@@ -234,21 +233,21 @@ Short, readable, unique per user, e.g. nickname-based + digits (`ada347`), lower
 - **Only verified corpers win.** Prize places are counted among verified users only: "first 500" means the first 500 verified users by position (or by sign-up order in `signup` mode), and "top 10 referrers" means the top 10 verified referrers. Unverified users still have a normal position on the list.
 
 ### Profile completion
-Four steps, each worth 25%: **add a photo** · **add your state code** · **make your state prediction** · **get your first friend to join with your link** (one valid referral). Home shows the next undone step as a button (photo and state code → Profile, prediction → `/rewards#predict`, first friend → `/invite`) until 100%. 100% gives the **Profile Complete** badge.
+Three steps, each worth a third: **add a photo** · **add your state code** · **get your first friend to join with your link** (one valid referral). Home shows the next undone step as a button (photo and state code → Profile, first friend → `/invite`) until 100%. 100% gives the **Profile Complete** badge.
 
-### State prediction
-"Which state will have the most corpers when camp ends?" One vote per user (`state_predictions`), changeable until `early_deadline`, then locked. Rewards shows a searchable list of states; after voting it shows % bars for the top 8 states plus "Your pick" (cached 30 seconds, refreshed on every vote). After the leaderboard closes, the admin awards **Prophet** to everyone who picked the state with the most completed sign-ups.
+### State prediction (removed for now)
+The "Which state will have the most corpers when camp ends?" poll was taken off Rewards and out of profile completion; it will come back. The `state_predictions` table and the admin **Award Prophet badges** button are kept for when it returns (the old UI is in git history, commit `aa6683e`).
 
 ### Badges
 | Badge | How it's given | Priority | Qualifies for rewards |
 |---|---|---|---|
 | Early Corper (lime) | Auto: finished sign-up on or before `early_deadline` | 50 | Yes |
-| Profile Complete (amber) | Auto: all four profile steps done | 20 | No |
+| Profile Complete (amber) | Auto: all three profile steps done | 20 | No |
 | First Invite (violet) | Auto: at least one valid referral (same rule as positions) | 30 | No |
-| Prophet (teal) | Manual, in bulk after the leaderboard closes | 40 | No |
+| Prophet (teal) | Manual, in bulk after the leaderboard closes (needs the prediction poll, currently removed) | 40 | No |
 | State Ambassador (pink) | Manual: top referrer in their state, Kopamate team member | 100 | Yes |
 
-- `lib/badges.ts` checks the auto badges after sign-up (for the new user and their referrer), profile changes, photo upload, verification request, a prediction vote, and on every Home visit. The check is one idempotent statement that only adds missing badges and never brings back a revoked one.
+- `lib/badges.ts` checks the auto badges after sign-up (for the new user and their referrer), profile changes, photo upload, verification request, and on every Home visit. The check is one idempotent statement that only adds missing badges and never brings back a revoked one.
 - The highest-priority badge appears as a small icon next to the nickname on Invite, the Rewards leaderboards, the Corpers state grid and Home's newcomers row (fetched in the same query).
 - **Flagged or banned users' badges are hidden everywhere and never count for rewards.** Seed accounts can show badges but are never eligible for rewards (they're left out of every prize list and export).
 
