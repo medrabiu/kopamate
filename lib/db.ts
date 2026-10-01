@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { parseConnectionString } from "./connection-string.mjs";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -28,46 +29,8 @@ function createClient() {
     idle_timeout: 20,
     max_lifetime: 60 * 10,
   };
-  const url = connectionUrl(process.env.DATABASE_URL);
-  return url ? postgres(url, options) : postgres(options);
-}
-
-/**
- * Accepts a connection string whose password has unencoded special characters (e.g. "@", "&", "!"),
- * as copied from Supabase. Without this, the driver throws "Invalid URL" when the module loads,
- * which also fails `next build`.
- */
-function connectionUrl(raw: string | undefined) {
-  // Also forgive quotes, spaces and "DATABASE_URL=" pasted into the value.
-  const url = raw?.trim().replace(/^DATABASE_URL\s*=\s*/, "").replace(/^["']|["']$/g, "").trim();
-  if (!url) return url;
-  const valid = (u: string) => {
-    try {
-      new URL(u);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  if (valid(url)) return url;
-  // scheme://user:password@host...: the host follows the last "@", the user ends at the first ":".
-  const m = url.match(/^([a-z]+:\/\/)([^:/@]+):(.*)@([^@]+)$/i);
-  if (m) {
-    const [, scheme, user, password, rest] = m;
-    let decoded = password;
-    try {
-      decoded = decodeURIComponent(password);
-    } catch {
-      // A lone "%" means the password wasn't encoded at all.
-    }
-    const fixed = `${scheme}${user}:${encodeURIComponent(decoded)}@${rest}`;
-    if (valid(fixed)) return fixed;
-  }
-  // Never print the value: it contains the password.
-  throw new Error(
-    "DATABASE_URL is not a valid connection string. Expected postgresql://USER:PASSWORD@HOST:6543/postgres " +
-      "(Supabase: Connect > Transaction pooler), with no spaces and the real password in place of [YOUR-PASSWORD].",
-  );
+  // Parsed here rather than by the driver, which fails on passwords with unencoded "@", "%" or ",".
+  return postgres({ ...options, ...parseConnectionString(process.env.DATABASE_URL) });
 }
 
 /** One shared client per server process (survives hot reloads in dev). */
