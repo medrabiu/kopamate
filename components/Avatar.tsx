@@ -1,4 +1,4 @@
-import { avatarColor } from "@/lib/util";
+import { avatarColor } from "@/lib/avatar";
 
 type Props = {
   id: string;

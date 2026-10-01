@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
 import Avatar from "@/components/Avatar";
+import BadgeIcon from "@/components/BadgeIcon";
 import ShareButtons from "@/components/ShareButtons";
 import { requireUser } from "@/lib/session";
 import { getReferrerRank, getTopReferrers } from "@/lib/ranking";
 import { PLACES_PER_REFERRAL, TOP_REFERRERS, referralLink, shareMessage, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import { timeAgo } from "@/lib/util";
+import { topBadge } from "@/lib/badges";
+import type { BadgeInfo } from "@/lib/badge-meta";
 
 export const metadata: Metadata = { title: "Invite friends" };
 
 export default async function InvitePage() {
   const user = await requireUser();
   const [joined, top, mine] = await Promise.all([
-    sql<{ id: string; nickname: string; photo_version: number; completed_at: Date }[]>`
-      SELECT id, nickname, photo_version, completed_at FROM users
-      WHERE referred_by = ${user.id} AND completed_at IS NOT NULL AND NOT is_banned AND NOT is_flagged
-      ORDER BY completed_at DESC LIMIT 100
+    sql<{ id: string; nickname: string; photo_version: number; completed_at: Date; top_badge: BadgeInfo | null }[]>`
+      SELECT u.id, u.nickname, u.photo_version, u.completed_at, ${topBadge()} FROM users u
+      WHERE u.referred_by = ${user.id} AND u.completed_at IS NOT NULL AND NOT u.is_banned AND NOT u.is_flagged
+      ORDER BY u.completed_at DESC LIMIT 100
     `,
     getTopReferrers(TOP_REFERRERS),
     getReferrerRank(user.id),
@@ -49,7 +52,10 @@ export default async function InvitePage() {
             {joined.map((j, i) => (
               <li key={j.id} className={`flex h-14 items-center gap-3 ${i < joined.length - 1 ? "border-b border-surface-2" : ""}`}>
                 <Avatar id={j.id} nickname={j.nickname} photoVersion={j.photo_version} size={40} />
-                <span className="flex-1 truncate font-medium">{j.nickname}</span>
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
+                  <span className="truncate">{j.nickname}</span>
+                  <BadgeIcon badge={j.top_badge} />
+                </span>
                 <span className="text-[13px] text-faint">{timeAgo(j.completed_at)}</span>
               </li>
             ))}
@@ -72,9 +78,12 @@ export default async function InvitePage() {
                 <li key={r.id} className={`flex h-14 items-center gap-3 ${i < top.length - 1 ? "border-b border-surface-2" : ""}`}>
                   <span className={`h-display w-6 ${r.rank <= 3 ? "text-lime-ink" : "text-faint"}`}>{r.rank}</span>
                   <Avatar id={r.id} nickname={r.nickname} photoVersion={r.photo_version} size={40} />
-                  <span className={`flex-1 truncate ${me ? "font-bold text-lime-ink" : "font-medium"}`}>
-                    {me ? "You" : r.nickname}
-                    {r.state ? <span className="text-muted"> · {r.state}</span> : null}
+                  <span className={`flex min-w-0 flex-1 items-center gap-1.5 ${me ? "font-bold text-lime-ink" : "font-medium"}`}>
+                    <span className="truncate">
+                      {me ? "You" : r.nickname}
+                      {r.state ? <span className="text-muted"> · {r.state}</span> : null}
+                    </span>
+                    <BadgeIcon badge={r.top_badge} />
                   </span>
                   <span className="font-bold">{r.refs}</span>
                 </li>
@@ -86,7 +95,10 @@ export default async function InvitePage() {
           <div className="flex h-14 items-center gap-3 rounded-2xl border-[1.5px] border-lime px-4">
             <span className="h-display text-lime-ink">{mine ? mine.rank : "–"}</span>
             <Avatar id={user.id} nickname={user.nickname} photoVersion={user.photo_version} size={40} />
-            <span className="flex-1 font-bold">You</span>
+            <span className="flex flex-1 items-center gap-1.5 font-bold">
+              You
+              <BadgeIcon badge={mine?.top_badge} />
+            </span>
             <span className="font-bold">{mine?.refs ?? 0}</span>
           </div>
         )}

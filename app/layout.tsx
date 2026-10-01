@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "@fontsource/dm-sans/latin-700.css";
@@ -7,7 +8,11 @@ import "@fontsource/bricolage-grotesque/latin-800.css";
 import "./globals.css";
 import { APP_NAME, APP_URL } from "@/lib/config";
 import ServiceWorker from "@/components/ServiceWorker";
-import { themeScript } from "@/lib/theme";
+import { THEME_COLOR, THEME_COOKIE, themeMigrationScript, type Theme } from "@/lib/theme";
+
+async function currentTheme(): Promise<Theme> {
+  return (await cookies()).get(THEME_COOKIE)?.value === "light" ? "light" : "dark";
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -23,19 +28,23 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#0E0E10",
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+export async function generateViewport(): Promise<Viewport> {
+  return {
+    themeColor: THEME_COLOR[await currentTheme()],
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = await currentTheme();
   return (
-    // The theme script sets data-theme before hydration, so React must not complain about it.
-    <html lang="en" suppressHydrationWarning>
+    // Light mode is a cookie (km_theme), so the server sends the right theme. The migration script may still
+    // set data-theme for people with the old saved setting, so React must not complain about it.
+    <html lang="en" data-theme={theme} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeMigrationScript }} />
       </head>
       <body className="min-h-dvh">
         {children}

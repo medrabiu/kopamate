@@ -21,18 +21,24 @@
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Light mode, switched on from Profile (see lib/theme.ts) */
+/*
+ * Light mode, switched on from Profile and saved in the km_theme cookie (lib/theme.ts, app/layout.tsx).
+ * Lime and pink stay as fills with dark text on them; lime and pink TEXT use darker shades.
+ * Contrast (AA, 4.5:1) on bg / surface / surface-2: muted 6.0 / 6.5 / 5.5, faint 5.0 / 5.4 / 4.6,
+ * lime-ink 5.7 / 6.1 / 5.2, pink-ink 5.3 / 5.7 / 4.8. (Faint and pink-ink are a step darker than
+ * #7A7973 and #D6247A, which fell short of 4.5:1.)
+ */
 :root[data-theme="light"] {
-  --color-bg: #f6f6f1;
+  --color-bg: #f7f6f1;
   --color-surface: #ffffff;
-  --color-surface-2: #ebebe4;
-  --color-line: #d9d9d0;
-  --color-ink: #141416;
-  --color-muted: #55554f;
-  --color-faint: #6b6b65;
+  --color-surface-2: #eeece4;
+  --color-line: #dedbd0;
+  --color-ink: #141413;
+  --color-muted: #5f5e5a;
+  --color-faint: #6b6a65;
   --color-lime-hover: #b4e21c;
-  --color-lime-ink: #4d7a00;
-  --color-pink-ink: #c8106f;
+  --color-lime-ink: #4d6b00;
+  --color-pink-ink: #c21c6c;
   color-scheme: light;
 }
 
@@ -97,6 +103,33 @@ textarea {
 }
 .page-enter {
   animation: page-enter 160ms ease-out;
+}
+
+/* Countdown seconds fade in as they change. */
+@keyframes countdown-tick {
+  from {
+    opacity: 0.35;
+  }
+}
+.countdown-tick {
+  display: inline-block;
+  animation: countdown-tick 300ms ease-out;
+}
+
+/* Bottom sheet (components/Sheet.tsx) */
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+dialog.sheet {
+  max-height: 85dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+dialog.sheet[open] {
+  animation: sheet-up 180ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Landing from "@/components/Landing";
 import { getCurrentUser } from "@/lib/session";
-import { getPrizeText, getPublicStats, track } from "@/lib/stats";
+import { getEarlyDeadline, getPrizeText, getPublicStats, track } from "@/lib/stats";
 import { sql } from "@/lib/db";
 import { APP_NAME } from "@/lib/config";
 
@@ -33,7 +33,7 @@ export default async function ReferralLanding({ params }: Params) {
   const user = await getCurrentUser();
   if (user) redirect(user.completed_at ? "/home" : "/join");
 
-  const [stats, prizeText, inviter] = await Promise.all([getPublicStats(), getPrizeText(), findInviter(code)]);
+  const [stats, prizeText, inviter, earlyDeadline] = await Promise.all([getPublicStats(), getPrizeText(), findInviter(code), getEarlyDeadline()]);
   await track("landing_view", null, { referred: Boolean(inviter), code });
-  return <Landing stats={stats} prizeText={prizeText} inviter={inviter} />;
+  return <Landing stats={stats} prizeText={prizeText} inviter={inviter} earlyDeadline={earlyDeadline} />;
 }

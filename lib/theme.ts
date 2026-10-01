@@ -1,27 +1,22 @@
 export type Theme = "dark" | "light";
 
-const KEY = "kopamate-theme";
-const THEME_COLOR: Record<Theme, string> = { dark: "#0E0E10", light: "#F6F6F1" };
+/** Cookie read by app/layout.tsx, so the server renders <html data-theme="light"> and nothing flashes. */
+export const THEME_COOKIE = "km_theme";
+const LEGACY_KEY = "kopamate-theme";
+export const THEME_COLOR: Record<Theme, string> = { dark: "#0E0E10", light: "#F7F6F1" };
 
 /**
- * Runs in <head> before the page paints so a saved light theme never flashes dark.
- * Kept as a plain string because it executes before React loads.
+ * Moves the old localStorage setting into the cookie for people who switched on light mode before
+ * it was saved in a cookie. Runs in <head> before the page paints; a plain string because it runs before React.
  */
-export const themeScript = `(function(){try{if(localStorage.getItem("${KEY}")==="light"){document.documentElement.dataset.theme="light";var m=document.querySelector('meta[name="theme-color"]');if(m)m.content="${THEME_COLOR.light}"}}catch(e){}})()`;
+export const themeMigrationScript = `(function(){try{if(document.cookie.indexOf("${THEME_COOKIE}=")<0&&localStorage.getItem("${LEGACY_KEY}")==="light"){document.cookie="${THEME_COOKIE}=light;path=/;max-age=31536000;samesite=lax";document.documentElement.dataset.theme="light";localStorage.removeItem("${LEGACY_KEY}")}}catch(e){}})()`;
 
 export function getTheme(): Theme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
 export function setTheme(theme: Theme) {
-  const root = document.documentElement;
-  if (theme === "light") root.dataset.theme = "light";
-  else delete root.dataset.theme;
+  document.documentElement.dataset.theme = theme;
   document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[theme]);
-  try {
-    if (theme === "light") localStorage.setItem(KEY, "light");
-    else localStorage.removeItem(KEY);
-  } catch {
-    // Private mode or blocked storage: the switch still works for this visit.
-  }
+  document.cookie = `${THEME_COOKIE}=${theme};path=/;max-age=31536000;samesite=lax`;
 }

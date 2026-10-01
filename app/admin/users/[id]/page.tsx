@@ -7,9 +7,13 @@ import { sql } from "@/lib/db";
 import { ranked } from "@/lib/ranking";
 import { STATES } from "@/lib/states";
 import { formatJoined, timeAgo } from "@/lib/util";
+import BadgeChip from "@/components/BadgeChip";
 import {
   addReward,
+  adminAwardBadge,
   adminDeleteUser,
+  adminRestoreBadge,
+  adminRevokeBadge,
   adminRemovePhoto,
   adminUpdateUser,
   approveVerification,
@@ -66,7 +70,7 @@ export default async function AdminUserPage({
   const { pin } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
-  const [rows, referred, rewards] = await Promise.all([
+  const [rows, referred, rewards, badges] = await Promise.all([
     sql<Detail[]>`
       ${ranked()}
       SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.state_code, u.referral_code, u.photo_version,
@@ -85,6 +89,23 @@ export default async function AdminUserPage({
     `,
     sql<{ id: string; title: string; description: string | null; status: string; created_at: Date }[]>`
       SELECT id, title, description, status, created_at FROM rewards WHERE user_id = ${id} ORDER BY created_at DESC
+    `,
+    sql<
+      {
+        slug: string;
+        name: string;
+        icon: string;
+        color: string;
+        kind: string;
+        awarded_at: Date | null;
+        awarded_by: string | null;
+        revoked_at: Date | null;
+        revoked_reason: string | null;
+      }[]
+    >`
+      SELECT b.slug, b.name, b.icon, b.color, b.kind, ub.awarded_at, ub.awarded_by, ub.revoked_at, ub.revoked_reason
+      FROM badges b LEFT JOIN user_badges ub ON ub.badge_slug = b.slug AND ub.user_id = ${id}
+      ORDER BY b.priority DESC
     `,
   ]);
   const u = rows[0];
@@ -241,6 +262,53 @@ export default async function AdminUserPage({
             {u.verification_status === "rejected" ? `Rejected: ${u.verification_note ?? ""}` : "Hasn't asked to be verified."}
           </p>
         )}
+      </section>
+
+      <section className={panel}>
+        <h2 className="h-display mb-1 text-lg">Badges</h2>
+        <p className="mb-3 text-xs text-muted">
+          {u.is_flagged || u.is_banned
+            ? "Hidden while this user is flagged or banned, and they never count for rewards."
+            : "Auto badges are given by the system; Prophet and State Ambassador are given here."}
+        </p>
+        <ul className="flex flex-col gap-2.5">
+          {badges.map((b) => (
+            <li key={b.slug} className="flex flex-wrap items-center gap-2 text-sm">
+              <BadgeChip badge={b} locked={!b.awarded_at || Boolean(b.revoked_at)} />
+              <span className="min-w-[160px] flex-1 text-xs text-muted">
+                {b.revoked_at
+                  ? `Revoked ${timeAgo(b.revoked_at)}${b.revoked_reason ? `: ${b.revoked_reason}` : ""}`
+                  : b.awarded_at
+                    ? `Given ${timeAgo(b.awarded_at)} by ${b.awarded_by === "system" ? "the system" : b.awarded_by === admin.id ? "you" : "an admin"}`
+                    : b.kind === "auto"
+                      ? "Not earned yet"
+                      : "Not given"}
+              </span>
+              {b.awarded_at && !b.revoked_at && (
+                <form action={adminRevokeBadge} className="flex gap-1.5">
+                  <input type="hidden" name="id" value={u.id} />
+                  <input type="hidden" name="slug" value={b.slug} />
+                  <input name="reason" maxLength={200} placeholder="Reason" required className={`${input} w-44`} />
+                  <button className={btn}>Revoke</button>
+                </form>
+              )}
+              {b.revoked_at && (
+                <form action={adminRestoreBadge}>
+                  <input type="hidden" name="id" value={u.id} />
+                  <input type="hidden" name="slug" value={b.slug} />
+                  <button className={btn}>Restore</button>
+                </form>
+              )}
+              {!b.awarded_at && b.kind === "manual" && (
+                <form action={adminAwardBadge}>
+                  <input type="hidden" name="id" value={u.id} />
+                  <input type="hidden" name="slug" value={b.slug} />
+                  <button className={btn}>Award</button>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="grid gap-6 md:grid-cols-2">

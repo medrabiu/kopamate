@@ -27,7 +27,17 @@ export async function GET(req: Request) {
 
   let rows: Record<string, unknown>[];
   let name: string;
-  if (list === "referrers") {
+  if (list === "early") {
+    // Early Corpers holding the badge (not revoked); flagged, banned and seed accounts left out.
+    name = "early-corpers";
+    rows = await sql`
+      SELECT u.nickname, u.whatsapp_e164 AS whatsapp, u.state, ub.awarded_at
+      FROM user_badges ub JOIN users u ON u.id = ub.user_id
+      WHERE ub.badge_slug = 'early_corper' AND ub.revoked_at IS NULL
+        AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed
+      ORDER BY u.signup_number
+    `;
+  } else if (list === "referrers") {
     name = "top-referrers";
     rows = await sql`
       ${ranked()}

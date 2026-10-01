@@ -94,6 +94,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 - Headline: "Every corper. / One place." (second line in pink).
 - Subtext: "Join early, climb the list, and be first in line for contests, awards and prizes."
 - **Live counter card:** total signups (large number), "corpers have joined", and "+N today".
+- **Early Corper countdown** (lime outline, above Join now): "Early Corper badge closes in 1d 09:42:17" and "Early Corpers qualify for the first rewards drop." Disappears when the deadline passes.
 - **Join now** button (lime, full width).
 - **Top states:** top 5 states by signups, with counts.
 - **Coming soon:** 3 locked cards: Contests, Awards, Opportunities.
@@ -117,6 +118,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.3 Home (`/home`)
 - Header: "Hi, {nickname}" and the user's avatar (links to Profile).
+- **Early Corper banner** (slim, above the carousel, until the deadline): "Early Corper badge closes in …", or "You're an Early Corper · first rewards drop when the countdown ends" with the countdown when the user holds the badge.
 - **Carousel** at the top: full-width slides the user swipes sideways (CSS scroll-snap, no library), with dots underneath that follow the scroll and jump to a slide when tapped. No auto-advance; dot jumps are instant when the user prefers reduced motion. Slides with nothing to show are left out.
   1. **Your position** (always first):
      - "Your position" and the position in large lime digits, e.g. **#347**
@@ -126,8 +128,9 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
      - "{N} friends joined with your link"
   2. **Post your spot** (Status card): a preview of a portrait 1080×1920 image sized for WhatsApp Status, saying "I'm #347 on Kopamate", the user's nickname and state, "Every corper. One place." and "Join me: [domain]/r/<code>", in the Social Night colours. The image is generated at `/card/<referral code>` (live position, cached 5 minutes; 404 for unknown, banned or unfinished users). **Post to Status** opens the phone's share sheet with the image and the share message; where sharing files isn't supported it downloads the PNG and shows "Card saved. Add it to your WhatsApp Status." Logs `share_clicked` with channel `status_card`.
   3. **Announcement** (set in Admin): pink card with a title, short text and an optional button. Hidden when switched off or the title is empty.
+- **Profile progress card** (under the carousel, hidden at 100%): "Your profile is 50% done", a progress bar and the next step as a button (see "Profile completion" in section 5).
 - **Two stat cards:** "Corpers joined: 4,382" and "{State} is #2 · 280".
-- **New from {state}:** row of the 5 newest users from the user's state (avatars + nicknames), with **See all** linking to `/corpers/[state]`.
+- **New from {state}:** row of the 5 newest users from the user's state (avatars + nicknames + top badge icon), with **See all** linking to `/corpers/[state]`.
 - **Coming soon:** three sections (Contests, Awards, Opportunities), each a heading and a sideways-scrolling row of locked cards (about 220px wide: an illustration banner on top, then icon, title and one-line description, with a small "Coming soon" lock pill over the image). The illustrations are inline SVGs in the Social Night palette (`components/CardArt.tsx`): no image downloads, about 3 KB extra for all 15, cached with the app's JavaScript, and they follow light/dark mode. Tapping a card shows "<title> is coming soon".
   - Contests: Best Khaki Drip, Camp Talent Showdown, Man O' War Challenge, Mammy Market Cook-off, Best CDS Project.
   - Awards: Corper of the Month, Best Platoon, Camp Comedian, Social Night MVP, Most Stylish in {user's state}.
@@ -143,7 +146,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.5 Corpers in a state (`/corpers/[state]`)
 - Back button, state name, "{count} corpers · #{rank} state", "Your state" tag if it's theirs.
-- 3-column grid: avatar (photo or default avatar), nickname, position.
+- 3-column grid: avatar (photo or default avatar), nickname with their top badge icon, position.
 - The current user is highlighted with a lime ring and "(you)".
 - **View only.** No tapping into profiles, no messaging.
 - Paginate or infinite-scroll in pages of 30. Order by position.
@@ -153,23 +156,31 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 - Title "Invite friends" and "Every friend who joins with your link moves you **up 10 places**."
 - Link box showing their link, with **Copy**.
 - **Share on WhatsApp** button.
-- **Joined with your link · {N}:** list of referred users (avatar, nickname, time ago).
-- **Top referrers** with a "Top 10 win prizes" tag: top 10 by completed referrals (avatar, nickname · state, count). Below the list, the user's own row if they're outside the top 10, e.g. "58 · You · 3".
+- **Joined with your link · {N}:** list of referred users (avatar, nickname, top badge icon, time ago).
+- **Top referrers** with a "Top 10 win prizes" tag: top 10 by completed referrals (avatar, nickname · state, top badge icon, count). Below the list, the user's own row if they're outside the top 10, e.g. "58 · You · 3".
 
 ### 4.7 Rewards (`/rewards`)
-- Pink card: "Prizes are coming. For the first 500 signups and the top 10 referrers. Details announced soon." (The admin can edit this text; see Admin.)
-- **Where you stand:**
-  - First 500: ✓ "You're in at #347", or "You're #612. Invite friends to get into the first 500."
-  - Top 10 referrers: "You're #58. Invite more to climb." with an **Invite** link.
-- **Your rewards:** list of rewards the admin has given this user (title, status: pending / sent, date). Empty state: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. We'll message you on WhatsApp."
+Prize amounts stay hidden. In order:
+1. **Countdowns:** "Early Corper badge closes in …" (after the deadline: "Early Corper closed · first rewards are being prepared.") and "Leaderboard closes in …" (after: "Leaderboard closed · winners are being confirmed.").
+2. **Your standing:** national referrer rank, rank in your state, and who to beat next: "3 more friends to pass Kels (#7)" (one more than the person directly above you nationally; on a tie it adds "You're tied, but they got there first."). At #1: "You're leading. Keep inviting to stay on top." Not on the board yet: "Invite your first friend to get on the leaderboard." Then an **Invite friends** button, and the **Get verified to win** card for unverified users.
+3. **Leaderboard** with two tabs: **Nigeria** (top 20 by valid referrals) and **{your state}** (top 10). Rows: rank, avatar, nickname, top badge icon, state, friends joined. Your row is highlighted, or pinned below the list when you're outside it. Cached 30 seconds.
+4. **Mystery prizes:** "Top 10 nationwide", "State Ambassadors", "Early Corpers". Each shows a lock, one line and the admin's reveal text ("Prizes are revealed when the countdown ends."); tapping opens a sheet with how it's decided (no amounts).
+5. **State Ambassador programme** (pink outline) with "Currently leading in {state}: {nickname} with N friends" and a **Learn more** sheet: the top referrer in each state when camp ends becomes that state's Kopamate Ambassador; perks: Kopamate team member (state admin), State Ambassador badge, promotion budget for the state, first access to new features, featured on Kopamate, certificate of recognition; "Ambassadors must be in good standing (no fake referrals). Final selection is confirmed by the Kopamate team."
+6. **State prediction** (`#predict`, section 5).
+7. **Your badges** (badges that qualify for rewards first, tagged "Qualifies for rewards") and **Your rewards:** list of rewards the admin has given this user (title, status: pending / sent, date). Empty state: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. We'll message you on WhatsApp."
+8. **Share:** "You're #4 in Enugu" with Share on WhatsApp ("I'm #4 in Enugu, help me become Ambassador 👑" + referral link) and copy link.
+- Confetti when your national or state referrer rank improved since your last Rewards visit (last seen ranks are kept in localStorage on the device).
 - **This is not a money wallet.** No balances, withdrawals or payments.
 
 ### 4.8 Profile (`/profile`)
 - Large avatar with a camera button to add or change the photo.
+- **Badges:** a row of chips, earned first; locked badges are greyed out with a lock. Tapping a chip opens a sheet with the name, description, and the date earned or how to earn it.
+- **Profile checklist:** the four completion steps (section 5, "Profile completion") with ticks and a percentage. Reaching 100% gives the Profile Complete badge with confetti.
 - **Get verified** card (top of Profile): only verified corpers can win prizes. The user enters their state code (format `EN/26B/1234`) and a photo of their NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. Status shows as "Checking your ID" (pending), the admin's reason (rejected, with a form to try again) or "Verified corper". The state code is locked while pending and once verified. A state code can only be verified on one account.
 - Nickname, "{State} · #{position} · Joined {date}".
 - Editable rows: Nickname, WhatsApp number ("only you can see this", shown masked), State serving in, State code ("Not added" / **Add**).
 - Toggle: **Show me in the Corpers list** ("Others see your nickname and photo only"). On by default.
+- Toggle: **Light mode** (off by default), saved in the `km_theme` cookie (`light` / `dark`) so the server renders the right theme with no flash.
 - For phone users: **Change PIN**.
 - **Log out** button.
 - A small "Delete my account" link at the bottom (with confirmation).
@@ -183,8 +194,10 @@ Only accessible to users whose email or phone is in an `ADMIN_IDS` environment v
 - **User page** (`/admin/users/[id]`): all their details (contact, sign-in method, state and state code, position and position among verified, referrals, who invited them, sign-up number, whether they're hidden from the list). Actions: flag/unflag (flagged users' referrals stop counting), ban/unban (signs them out), reset PIN (shows a temporary PIN once), remove photo, edit nickname/state/state code, approve/reject/remove verification (with the ID card photo while pending), add rewards and mark them sent, see the people they invited, and delete the account (type DELETE to confirm). Admins can't ban or delete themselves.
 - **Verification** (`/admin/verification`): pending requests, highest positions first, 30 at a time, with the ID card photo (served only to admins at `/admin/id-card/[id]`, never cached), state code, whether another account uses the same code, position and referrals. **Approve**, or **Reject** with a reason the user sees. The ID card photo is deleted as soon as either decision is made.
 - **Suspicious** (`/admin/suspicious`): users who referred many people in a short time (5+ in an hour or 15+ in 24 hours, with a Flag button), and 3+ sign-ups from the same network in 7 days (could be a shared camp Wi-Fi).
+- **Badges** (`/admin/badges`): how many people hold each badge; **Run badge backfill** (gives every completed user the auto badges they've earned; revoked badges stay revoked); **Award Prophet badges** (only after the leaderboard closes: gives Prophet to everyone who picked the state with the most completed sign-ups at that moment, every tied state counts); **Download Early Corpers (CSV)** (holders of the badge, not revoked, without flagged, banned and seed accounts: nickname, WhatsApp, state); and **Ambassador candidates**: the top 3 referrers in each state (flagged, banned and seed accounts left out) with an **Award State Ambassador** button.
+- **Users** table also lists each user's badges (revoked ones faded). On the **user page**, a Badges section shows every badge with when and by whom it was given; admins can award manual badges (Prophet, State Ambassador), revoke any badge with a reason, and restore a revoked one.
 - **Rewards** (`/admin/rewards`): download the prize lists as CSV (first 500 **verified** users and top 10 **verified** referrers; flagged, banned and seed accounts left out; with nickname, WhatsApp number and state code), and the rewards waiting to be sent.
-- **Settings** (`/admin/settings`): the prize teaser text shown on Landing, Home and Rewards, whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away.
+- **Settings** (`/admin/settings`): **Countdowns and rewards**: `early_deadline` (default `2026-10-02T23:59:59+01:00`; Early Corper badge closes and predictions lock), `leaderboard_close` (default `2026-10-21T23:59:59+01:00`) and `rewards_reveal_text` (default "Prizes are revealed when the countdown ends."). Times must be ISO 8601 with a time zone, and the leaderboard must close after the Early Corper deadline. Also the prize teaser text shown on Landing, Home and Rewards, whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away.
 
 ---
 
@@ -220,6 +233,25 @@ Short, readable, unique per user, e.g. nickname-based + digits (`ada347`), lower
 
 - **Only verified corpers win.** Prize places are counted among verified users only: "first 500" means the first 500 verified users by position (or by sign-up order in `signup` mode), and "top 10 referrers" means the top 10 verified referrers. Unverified users still have a normal position on the list.
 
+### Profile completion
+Four steps, each worth 25%: **add a photo** · **add your state code** · **make your state prediction** · **get your first friend to join with your link** (one valid referral). Home shows the next undone step as a button (photo and state code → Profile, prediction → `/rewards#predict`, first friend → `/invite`) until 100%. 100% gives the **Profile Complete** badge.
+
+### State prediction
+"Which state will have the most corpers when camp ends?" One vote per user (`state_predictions`), changeable until `early_deadline`, then locked. Rewards shows a searchable list of states; after voting it shows % bars for the top 8 states plus "Your pick" (cached 30 seconds, refreshed on every vote). After the leaderboard closes, the admin awards **Prophet** to everyone who picked the state with the most completed sign-ups.
+
+### Badges
+| Badge | How it's given | Priority | Qualifies for rewards |
+|---|---|---|---|
+| Early Corper (lime) | Auto: finished sign-up on or before `early_deadline` | 50 | Yes |
+| Profile Complete (amber) | Auto: all four profile steps done | 20 | No |
+| First Invite (violet) | Auto: at least one valid referral (same rule as positions) | 30 | No |
+| Prophet (teal) | Manual, in bulk after the leaderboard closes | 40 | No |
+| State Ambassador (pink) | Manual: top referrer in their state, Kopamate team member | 100 | Yes |
+
+- `lib/badges.ts` checks the auto badges after sign-up (for the new user and their referrer), profile changes, photo upload, verification request, a prediction vote, and on every Home visit. The check is one idempotent statement that only adds missing badges and never brings back a revoked one.
+- The highest-priority badge appears as a small icon next to the nickname on Invite, the Rewards leaderboards, the Corpers state grid and Home's newcomers row (fetched in the same query).
+- **Flagged or banned users' badges are hidden everywhere and never count for rewards.** Seed accounts can show badges but are never eligible for rewards (they're left out of every prize list and export).
+
 ### Seed accounts
 - Accounts created by the seed script have `is_seed = true` (100 by default). They count toward "Corpers joined" and state totals, and appear in the Corpers state lists (after ranked users, without a # position) and in "New from {state}". They never get a position, never appear on leaderboards, their referrals don't count, and they can never qualify for prizes.
 
@@ -239,7 +271,7 @@ Short, readable, unique per user, e.g. nickname-based + digits (`ada347`), lower
 
 ## 7. Design system: "Social Night"
 
-Dark by default. Light mode isn't needed in v1.
+Dark by default. **Light mode** can be switched on in Profile (cookie `km_theme`, read in `app/layout.tsx`, which sets `data-theme` on `<html>`).
 
 ### Colours
 | Token | Hex | Use |
@@ -255,6 +287,8 @@ Dark by default. Light mode isn't needed in v1.
 | `pink` | `#FF4FA3` | Accents, prize cards, second headline line |
 
 Text on lime or pink is always `#0E0E10`.
+
+**Light palette** (`[data-theme="light"]` in `globals.css`): `bg` `#F7F6F1`, `surface` `#FFFFFF`, `surface-2` `#EEECE4`, `border` `#DEDBD0`, `text` `#141413`, `text-muted` `#5F5E5A`, `text-faint` `#6B6A65`. Lime stays `#C6F432` for fills (dark text on it); lime **text** uses `#4D6B00` and pink text `#C21C6C`. Every text colour passes WCAG AA (4.5:1) on `bg`, `surface` and `surface-2`; `#7A7973` and `#D6247A` were tried for faint and pink text and fell just short.
 
 Avatar background colours for default avatars (pick from the user ID so it's stable): `#C6F432`, `#FF4FA3`, `#FFB547`, `#8B7BFF`, `#4FD1C5`.
 
@@ -327,8 +361,31 @@ rewards
   sent_at           timestamptz null
 
 settings                                        -- editable from admin
-  key               text pk   -- e.g. 'prize_teaser_text', 'first_n_mode'
+  key               text pk   -- e.g. 'prize_teaser_text', 'first_n_mode', 'early_deadline', 'leaderboard_close', 'rewards_reveal_text'
   value             text
+
+badges
+  slug                   text pk      -- early_corper, profile_complete, first_invite, prophet, state_ambassador
+  name, description      text
+  icon                   text         -- clock | check | link | eye | crown
+  color                  text         -- lime | pink | amber | violet | teal
+  priority               int          -- highest is shown next to the nickname
+  kind                   text         -- 'auto' | 'manual'
+  qualifies_for_rewards  boolean
+
+user_badges
+  user_id           uuid fk users on delete cascade
+  badge_slug        text fk badges
+  awarded_at        timestamptz
+  awarded_by        text         -- 'system' or the admin's user id
+  revoked_at        timestamptz null
+  revoked_reason    text null
+  primary key (user_id, badge_slug)
+
+state_predictions
+  user_id           uuid pk fk users on delete cascade
+  state             text not null
+  created_at        timestamptz
 ```
 
 - Keep a cached `valid_referrals` count on users (or a materialised view) so position queries are fast.

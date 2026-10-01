@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
+import BadgeCelebration from "@/components/BadgeCelebration";
+import BadgeIcon from "@/components/BadgeIcon";
+import EarlyCorperBanner from "@/components/EarlyCorperBanner";
+import { ProfileProgressCard } from "@/components/ProfileProgress";
 import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
 import CountUp from "@/components/CountUp";
@@ -11,7 +15,9 @@ import StatusCardButton from "@/components/StatusCardButton";
 import { ArrowDownIcon, ArrowUpIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getSnapshotPosition, nextGoal } from "@/lib/ranking";
-import { getAnnouncement, getPrizeText, getPublicStats, track } from "@/lib/stats";
+import { getAnnouncement, getEarlyDeadline, getPrizeText, getPublicStats, track } from "@/lib/stats";
+import { checkAutoBadges, getProfileSteps, getUserBadges, topBadge } from "@/lib/badges";
+import type { BadgeInfo } from "@/lib/badge-meta";
 import { referralLink, shareMessage, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import { formatNumber, lagosDate } from "@/lib/util";
@@ -24,19 +30,25 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const { welcome } = await searchParams;
   const today = lagosDate();
 
-  const [rank, stats, prizeText, announcement, snapshot, newcomers] = await Promise.all([
+  // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
+  const badgesReady = checkAutoBadges(user.id);
+  const [rank, stats, prizeText, announcement, snapshot, newcomers, earlyDeadline, steps, badges] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getPrizeText(),
     getAnnouncement(),
     getSnapshotPosition(user.id, today),
-    sql<{ id: string; nickname: string; photo_version: number }[]>`
-      SELECT id, nickname, photo_version FROM users
-      WHERE state = ${user.state} AND id <> ${user.id} AND completed_at IS NOT NULL
-        AND NOT is_banned AND show_in_list
-      ORDER BY completed_at DESC LIMIT 5
+    sql<{ id: string; nickname: string; photo_version: number; top_badge: BadgeInfo | null }[]>`
+      SELECT u.id, u.nickname, u.photo_version, ${topBadge()} FROM users u
+      WHERE u.state = ${user.state} AND u.id <> ${user.id} AND u.completed_at IS NOT NULL
+        AND NOT u.is_banned AND u.show_in_list
+      ORDER BY u.completed_at DESC LIMIT 5
     `,
+    getEarlyDeadline(),
+    badgesReady.then(() => getProfileSteps(user.id)),
+    badgesReady.then(() => getUserBadges(user.id)),
   ]);
+  const profileComplete = badges.find((b) => b.slug === "profile_complete");
 
   const position = rank?.position ?? 0;
   const refs = rank?.refs ?? 0;
@@ -58,12 +70,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <>
       <Confetti fire={celebrate} />
+      {profileComplete && (
+        <BadgeCelebration slug="profile_complete" name="Profile Complete" awardedAt={new Date(profileComplete.awarded_at).toISOString()} />
+      )}
       <header className="flex h-11 items-center justify-between">
         <h1 className="h-display text-2xl">Hi, {user.nickname}</h1>
         <Link href="/profile" aria-label="Your profile">
           <Avatar id={user.id} nickname={user.nickname} photoVersion={user.photo_version} size={40} />
         </Link>
       </header>
+
+      <EarlyCorperBanner deadline={earlyDeadline} hasBadge={badges.some((b) => b.slug === "early_corper")} variant="home" />
 
       <HomeCarousel labels={["Your position", "Post your spot", ...(announcement ? [announcement.title] : [])]}>
         <div className="card flex w-full flex-col gap-3.5 !p-[22px]">
@@ -152,6 +169,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         )}
       </HomeCarousel>
 
+      <ProfileProgressCard steps={steps} />
+
       <section className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1 rounded-[20px] bg-surface p-4">
           <span className="text-[13px] text-muted">Corpers joined</span>
@@ -177,7 +196,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {newcomers.map((n) => (
               <div key={n.id} className="flex w-[56px] shrink-0 flex-col items-center gap-1.5">
                 <Avatar id={n.id} nickname={n.nickname} photoVersion={n.photo_version} size={52} />
-                <span className="w-full truncate text-center text-xs text-muted">{n.nickname}</span>
+                <span className="flex w-full items-center justify-center gap-1 text-xs text-muted">
+                  <span className="truncate">{n.nickname}</span>
+                  <BadgeIcon badge={n.top_badge} size={14} />
+                </span>
               </div>
             ))}
           </div>

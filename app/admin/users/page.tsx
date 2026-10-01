@@ -7,6 +7,7 @@ import { timeAgo } from "@/lib/util";
 import { normalizeNigerianPhone } from "@/lib/validate";
 import { input, PAGE_SIZE } from "../ui";
 import { StatusBadges } from "../badges";
+import BadgeIcon from "@/components/BadgeIcon";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -36,6 +37,7 @@ type Row = {
   is_banned: boolean;
   is_seed: boolean;
   verification_status: string;
+  badges: { slug: string; name: string; icon: string; color: string; revoked: boolean }[];
 };
 
 function filterSql(f: Filter) {
@@ -72,7 +74,12 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
   const rows = await sql<Row[]>`
     ${ranked()}
     SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.completed_at, u.created_at,
-           r.position, r.refs, u.is_flagged, u.is_banned, u.is_seed, u.verification_status
+           r.position, r.refs, u.is_flagged, u.is_banned, u.is_seed, u.verification_status,
+           COALESCE((
+             SELECT jsonb_agg(jsonb_build_object('slug', b.slug, 'name', b.name, 'icon', b.icon, 'color', b.color,
+                                                 'revoked', ub.revoked_at IS NOT NULL) ORDER BY b.priority DESC)
+             FROM user_badges ub JOIN badges b ON b.slug = ub.badge_slug WHERE ub.user_id = u.id
+           ), '[]'::jsonb) AS badges
     FROM users u LEFT JOIN ranked r ON r.id = u.id
     WHERE ${filterSql(filter)}
       AND ${
@@ -124,7 +131,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
       </nav>
 
       <div className="overflow-x-auto rounded-2xl bg-surface">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="text-xs text-muted">
             <tr className="border-b border-surface-2">
               <th className="p-3">User</th>
@@ -132,6 +139,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
               <th className="p-3">State</th>
               <th className="p-3">Pos.</th>
               <th className="p-3">Refs</th>
+              <th className="p-3">Badges</th>
               <th className="p-3">Joined</th>
             </tr>
           </thead>
@@ -151,6 +159,15 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
                 <td className="p-3">{u.state ?? "–"}</td>
                 <td className="p-3">{u.position ?? "–"}</td>
                 <td className="p-3">{u.refs ?? 0}</td>
+                <td className="p-3">
+                  <div className="flex flex-wrap gap-1">
+                    {u.badges.map((b) => (
+                      <span key={b.slug} title={b.revoked ? `${b.name} (revoked)` : b.name} className={b.revoked ? "opacity-30" : ""}>
+                        <BadgeIcon badge={b} size={18} />
+                      </span>
+                    ))}
+                  </div>
+                </td>
                 <td className="p-3 text-muted">{timeAgo(u.completed_at ?? u.created_at)}</td>
               </tr>
             ))}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
+import BadgeIcon from "@/components/BadgeIcon";
 import { ChevronLeft } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getPublicStats } from "@/lib/stats";
@@ -63,9 +64,12 @@ export default async function StatePage({ params, searchParams }: Props) {
             return (
               <li key={m.id} className="flex flex-col items-center gap-1.5">
                 <Avatar id={m.id} nickname={m.nickname} photoVersion={m.photo_version} size={72} ring={me} />
-                <span className={`w-full truncate text-center text-sm font-medium ${me ? "text-lime-ink" : ""}`}>
-                  {m.nickname}
-                  {me ? " (you)" : ""}
+                <span className={`flex w-full items-center justify-center gap-1 text-sm font-medium ${me ? "text-lime-ink" : ""}`}>
+                  <span className="truncate">
+                    {m.nickname}
+                    {me ? " (you)" : ""}
+                  </span>
+                  <BadgeIcon badge={m.top_badge} />
                 </span>
                 {m.position !== null && <span className="text-xs text-faint">#{formatNumber(m.position)}</span>}
               </li>

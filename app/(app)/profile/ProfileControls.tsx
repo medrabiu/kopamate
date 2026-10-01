@@ -363,9 +363,9 @@ export function ShowInListToggle({ on }: { on: boolean }) {
   );
 }
 
-/** Saved on this device only, so it applies before sign-in and on every page. */
-export function LightModeToggle() {
-  const [light, setLight] = useState(false);
+/** Saved in a cookie on this device, so it applies before sign-in and on every page. */
+export function LightModeToggle({ initial }: { initial: boolean }) {
+  const [light, setLight] = useState(initial);
   useEffect(() => setLight(getTheme() === "light"), []);
   return (
     <SwitchRow

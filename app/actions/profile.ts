@@ -9,6 +9,7 @@ import { normalizeNigerianPhone, normalizeStateCode, validateNickname, validateP
 import { isState } from "@/lib/states";
 import { isUniqueViolation, whatsappTaken } from "@/lib/signup";
 import { STATE_CHANGE_DAYS } from "@/lib/config";
+import { checkAutoBadges } from "@/lib/badges";
 
 export type ProfileState = { error?: string; ok?: boolean } | undefined;
 
@@ -69,6 +70,7 @@ export async function updateField(_prev: ProfileState, fd: FormData): Promise<Pr
     default:
       return { error: "Something went wrong. Try again." };
   }
+  await checkAutoBadges(user.id);
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -117,6 +119,7 @@ export async function uploadPhoto(fd: FormData): Promise<ProfileState> {
     UPDATE users SET photo_data = ${b64}, photo_mime = ${mime}, photo_version = photo_version + 1
     WHERE id = ${user.id}
   `;
+  await checkAutoBadges(user.id);
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -144,6 +147,7 @@ export async function requestVerification(_prev: ProfileState, fd: FormData): Pr
       verification_status = 'pending', verification_requested_at = now(), verification_note = NULL
     WHERE id = ${user.id}
   `;
+  await checkAutoBadges(user.id);
   revalidatePath("/", "layout");
   return { ok: true };
 }

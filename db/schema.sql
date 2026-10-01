@@ -88,3 +88,42 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at timestamptz;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_note text;        -- reason shown to the user when rejected
 CREATE UNIQUE INDEX IF NOT EXISTS users_verified_state_code_idx ON users (state_code) WHERE verification_status = 'verified';
 CREATE INDEX IF NOT EXISTS users_verification_pending_idx ON users (verification_requested_at) WHERE verification_status = 'pending';
+
+-- Badges. "auto" badges are given by lib/badges.ts checkAutoBadges; "manual" ones by an admin.
+CREATE TABLE IF NOT EXISTS badges (
+  slug                   text PRIMARY KEY,
+  name                   text NOT NULL,
+  description            text NOT NULL,
+  icon                   text NOT NULL,          -- key into components/BadgeIcon.tsx
+  color                  text NOT NULL,          -- lime | pink | amber | violet | teal
+  priority               int  NOT NULL DEFAULT 0, -- highest is shown next to the nickname
+  kind                   text NOT NULL CHECK (kind IN ('auto', 'manual')),
+  qualifies_for_rewards  boolean NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS user_badges (
+  user_id         uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  badge_slug      text NOT NULL REFERENCES badges(slug),
+  awarded_at      timestamptz NOT NULL DEFAULT now(),
+  awarded_by      text NOT NULL DEFAULT 'system',  -- 'system' or the admin's user id
+  revoked_at      timestamptz,
+  revoked_reason  text,
+  PRIMARY KEY (user_id, badge_slug)
+);
+CREATE INDEX IF NOT EXISTS user_badges_slug_idx ON user_badges (badge_slug) WHERE revoked_at IS NULL;
+
+INSERT INTO badges (slug, name, description, icon, color, priority, kind, qualifies_for_rewards) VALUES
+  ('early_corper', 'Early Corper', 'Joined before 2 Oct', 'clock', 'lime', 50, 'auto', true),
+  ('profile_complete', 'Profile Complete', 'Finished every step of your profile', 'check', 'amber', 20, 'auto', false),
+  ('first_invite', 'First Invite', 'A friend joined with your link', 'link', 'violet', 30, 'auto', false),
+  ('prophet', 'Prophet', 'Predicted the winning state', 'eye', 'teal', 40, 'manual', false),
+  ('state_ambassador', 'State Ambassador', 'Top referrer in their state, Kopamate team member', 'crown', 'pink', 100, 'manual', true)
+ON CONFLICT (slug) DO NOTHING;
+
+-- "Which state will have the most corpers when camp ends?" One vote per user, changeable until early_deadline.
+CREATE TABLE IF NOT EXISTS state_predictions (
+  user_id     uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  state       text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS state_predictions_state_idx ON state_predictions (state);

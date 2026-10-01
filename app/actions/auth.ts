@@ -16,6 +16,7 @@ import {
   whatsappTaken,
 } from "@/lib/signup";
 import { track } from "@/lib/stats";
+import { checkAutoBadges } from "@/lib/badges";
 import { MAX_PIN_ATTEMPTS, PIN_LOCK_MINUTES } from "@/lib/config";
 
 export type FormState = { error?: string; fields?: Record<string, string> } | undefined;
@@ -65,6 +66,8 @@ export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<F
   await createSession(userId);
   await track("signup_completed", userId, { method: "phone", referred: Boolean(referrer) });
   if (referrer) await track("referral_completed", referrer.id, { referred: userId });
+  // Early Corper for the new user; First Invite (and maybe Profile Complete) for whoever invited them.
+  await checkAutoBadges([userId, referrer?.id]);
   revalidateTag("stats");
   redirect("/home?welcome=1");
 }
@@ -100,6 +103,7 @@ export async function finishSignup(_prev: FormState, fd: FormData): Promise<Form
 
   await track("signup_completed", user.id, { method: "google", referred: Boolean(referrer) });
   if (referrer) await track("referral_completed", referrer.id, { referred: user.id });
+  await checkAutoBadges([user.id, referrer?.id]);
   revalidateTag("stats");
   redirect("/home?welcome=1");
 }

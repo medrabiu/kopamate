@@ -58,10 +58,4 @@ export function formatJoined(date: Date | string) {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Africa/Lagos" }).format(d);
 }
 
-const AVATAR_COLORS = ["#C6F432", "#FF4FA3", "#FFB547", "#8B7BFF", "#4FD1C5"];
-
-export function avatarColor(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
+export { avatarColor } from "./avatar";

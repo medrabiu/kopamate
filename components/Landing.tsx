@@ -2,6 +2,7 @@ import Link from "next/link";
 import Avatar from "./Avatar";
 import ComingSoon from "./ComingSoon";
 import CountUp from "./CountUp";
+import EarlyCorperBanner from "./EarlyCorperBanner";
 import HeroArt from "./HeroArt";
 import PrizeCard from "./PrizeCard";
 import { APP_NAME } from "@/lib/config";
@@ -12,9 +13,10 @@ type Props = {
   stats: PublicStats;
   prizeText: string;
   inviter: { id: string; nickname: string; photo_version: number } | null;
+  earlyDeadline: string;
 };
 
-export default function Landing({ stats, prizeText, inviter }: Props) {
+export default function Landing({ stats, prizeText, inviter, earlyDeadline }: Props) {
   const top = stats.states.filter((s) => s.count > 0).slice(0, 5);
 
   return (
@@ -61,6 +63,8 @@ export default function Landing({ stats, prizeText, inviter }: Props) {
         <div className="text-base">corpers have joined</div>
         {stats.today > 0 && <div className="text-sm font-medium text-lime-ink">+{formatNumber(stats.today)} today</div>}
       </section>
+
+      <EarlyCorperBanner deadline={earlyDeadline} variant="landing" />
 
       <Link href="/join" className="btn-primary">
         Join now

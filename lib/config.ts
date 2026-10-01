@@ -39,6 +39,11 @@ export const SESSION_DAYS = 60;
 export const DEFAULT_PRIZE_TEXT =
   "For the first 500 signups and the top 10 referrers. Announced soon.";
 
+/** Defaults for the reward settings an admin can change (Africa/Lagos times). */
+export const DEFAULT_EARLY_DEADLINE = "2026-10-02T23:59:59+01:00";
+export const DEFAULT_LEADERBOARD_CLOSE = "2026-10-21T23:59:59+01:00";
+export const DEFAULT_REWARDS_REVEAL_TEXT = "Prizes are revealed when the countdown ends.";
+
 export const googleEnabled = () =>
   Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
@@ -50,6 +55,6 @@ export function shareMessage(code: string) {
   return `I just joined ${APP_NAME}, the new app for corpers across Nigeria 🇳🇬 There are prizes for the first 500 people. Join with my link: ${referralLink(code)}`;
 }
 
-export function whatsappShareUrl(code: string) {
-  return `https://wa.me/?text=${encodeURIComponent(shareMessage(code))}`;
+export function whatsappShareUrl(code: string, message = shareMessage(code)) {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
 }

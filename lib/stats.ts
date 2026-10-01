@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { sql } from "./db";
 import { STATES } from "./states";
-import { DEFAULT_PRIZE_TEXT } from "./config";
+import { DEFAULT_EARLY_DEADLINE, DEFAULT_LEADERBOARD_CLOSE, DEFAULT_PRIZE_TEXT, DEFAULT_REWARDS_REVEAL_TEXT } from "./config";
 
 export type StateCount = { state: string; count: number; rank: number };
 
@@ -52,6 +52,37 @@ export const getPrizeText = unstable_cache(
   ["prize-text"],
   { revalidate: 60, tags: ["settings"] },
 );
+
+export const REWARD_SETTING_KEYS = ["early_deadline", "leaderboard_close", "rewards_reveal_text"] as const;
+
+export type RewardSettings = {
+  /** ISO time: Early Corper badge closes, predictions lock. */
+  earlyDeadline: string;
+  /** ISO time: leaderboards close, State Ambassadors and Prophets are picked. */
+  leaderboardClose: string;
+  revealText: string;
+};
+
+/** Reward countdowns and the mystery prize text, cached with the other settings. */
+export const getRewardSettings = unstable_cache(
+  async (): Promise<RewardSettings> => {
+    const rows = await sql<{ key: string; value: string }[]>`
+      SELECT key, value FROM settings WHERE key IN ${sql(REWARD_SETTING_KEYS as unknown as string[])}
+    `;
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+    return {
+      earlyDeadline: map.get("early_deadline") || DEFAULT_EARLY_DEADLINE,
+      leaderboardClose: map.get("leaderboard_close") || DEFAULT_LEADERBOARD_CLOSE,
+      revealText: map.get("rewards_reveal_text") || DEFAULT_REWARDS_REVEAL_TEXT,
+    };
+  },
+  ["reward-settings"],
+  { revalidate: 60, tags: ["settings"] },
+);
+
+export const getEarlyDeadline = async () => (await getRewardSettings()).earlyDeadline;
+export const getLeaderboardClose = async () => (await getRewardSettings()).leaderboardClose;
+export const getRewardsRevealText = async () => (await getRewardSettings()).revealText;
 
 /** "position" (default) or "signup": how the first-500 prize is counted. */
 export async function getFirstNMode(): Promise<"position" | "signup"> {

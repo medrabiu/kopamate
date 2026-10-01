@@ -9,6 +9,8 @@ import { normalizeStateCode, validateNickname } from "@/lib/validate";
 import { isState } from "@/lib/states";
 import { randomDigits } from "@/lib/util";
 import { isUniqueViolation } from "@/lib/signup";
+import { awardBadge, checkAutoBadges, restoreBadge, revokeBadge } from "@/lib/badges";
+import { getLeaderboardClose } from "@/lib/stats";
 
 function id(fd: FormData) {
   const v = String(fd.get("id") ?? "");
@@ -192,4 +194,102 @@ export async function resetPin(fd: FormData) {
   `;
   if (!rows[0]) return;
   redirect(`/admin/users/${userId}?pin=${pin}`);
+}
+
+/** ISO 8601 with a time zone, e.g. 2026-10-02T23:59:59+01:00. */
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+
+/** Early Corper deadline, leaderboard close and the mystery prize text. */
+export async function saveRewardSettings(fd: FormData) {
+  await requireAdmin();
+  const early = String(fd.get("early_deadline") ?? "").trim();
+  const close = String(fd.get("leaderboard_close") ?? "").trim();
+  const reveal = String(fd.get("rewards_reveal_text") ?? "").trim().slice(0, 200);
+  for (const v of [early, close]) {
+    if (!ISO_TIME.test(v) || Number.isNaN(Date.parse(v))) redirect("/admin/settings?error=date");
+  }
+  if (Date.parse(close) <= Date.parse(early)) redirect("/admin/settings?error=order");
+  const values: [string, string][] = [
+    ["early_deadline", early],
+    ["leaderboard_close", close],
+  ];
+  if (reveal) values.push(["rewards_reveal_text", reveal]);
+  for (const [key, value] of values) {
+    await sql`
+      INSERT INTO settings (key, value) VALUES (${key}, ${value})
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `;
+  }
+  revalidateTag("settings");
+  revalidatePath("/", "layout");
+  redirect("/admin/settings?saved=1");
+}
+
+function badgesDone() {
+  // Leaderboards and lists carry badges and are cached under "stats".
+  revalidateTag("stats");
+  revalidatePath("/", "layout");
+}
+
+/** Runs the auto-badge check for every completed user. Safe to run again. */
+export async function runBadgeBackfill() {
+  await requireAdmin();
+  const added = await checkAutoBadges("all");
+  badgesDone();
+  redirect(`/admin/badges?backfill=${added.length}`);
+}
+
+/**
+ * After the leaderboard closes: Prophet goes to everyone who picked the state with the most completed
+ * sign-ups right now (every state tied for first counts).
+ */
+export async function awardProphets() {
+  const admin = await requireAdmin();
+  if (Date.now() < new Date(await getLeaderboardClose()).getTime()) redirect("/admin/badges?prophet=early");
+  const rows = await sql<{ user_id: string }[]>`
+    WITH counts AS (
+      SELECT state, count(*) AS n FROM users
+      WHERE completed_at IS NOT NULL AND NOT is_banned AND state IS NOT NULL
+      GROUP BY state
+    ),
+    winners AS (SELECT state FROM counts WHERE n = (SELECT max(n) FROM counts))
+    INSERT INTO user_badges (user_id, badge_slug, awarded_by)
+    SELECT p.user_id, 'prophet', ${admin.id}
+    FROM state_predictions p JOIN users u ON u.id = p.user_id
+    WHERE p.state IN (SELECT state FROM winners) AND NOT u.is_banned AND NOT u.is_flagged
+    ON CONFLICT (user_id, badge_slug) DO NOTHING
+    RETURNING user_id
+  `;
+  badgesDone();
+  redirect(`/admin/badges?prophet=${rows.length}`);
+}
+
+function slugOf(fd: FormData) {
+  const v = String(fd.get("slug") ?? "");
+  if (!/^[a-z_]{1,40}$/.test(v)) throw new Error("Bad badge");
+  return v;
+}
+
+/** Gives a manual badge (Prophet, State Ambassador). Auto badges are given by the system only. */
+export async function adminAwardBadge(fd: FormData) {
+  const admin = await requireAdmin();
+  const userId = id(fd);
+  const slug = slugOf(fd);
+  const [badge] = await sql<{ kind: string }[]>`SELECT kind FROM badges WHERE slug = ${slug}`;
+  if (badge?.kind !== "manual") return;
+  await awardBadge(userId, slug, admin.id);
+  badgesDone();
+}
+
+export async function adminRevokeBadge(fd: FormData) {
+  await requireAdmin();
+  const reason = String(fd.get("reason") ?? "").trim().slice(0, 200) || "Removed by an admin";
+  await revokeBadge(id(fd), slugOf(fd), reason);
+  badgesDone();
+}
+
+export async function adminRestoreBadge(fd: FormData) {
+  await requireAdmin();
+  await restoreBadge(id(fd), slugOf(fd));
+  badgesDone();
 }
