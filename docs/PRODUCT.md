@@ -425,6 +425,15 @@ Use URL-safe slugs for routes (e.g. `akwa-ibom`, `cross-river`, `fct`).
 - PWA manifest and icons so users can add it to their home screen; basic offline page.
 - Works well on screens from 320px wide; designed for 390px.
 
+### Slow connections (most corpers are on 3G in camp)
+- **Server next to the database:** Vercel functions run in the same region as the Supabase database (`vercel.json` `regions`; London `lhr1` for the eu-west-2 database). Change both together, or every query crosses between regions.
+- **Database driver:** `lib/db.ts` keeps exactly one query in flight per connection (`max_pipeline: 0`). Pipelined queries through Supabase's transaction pooler (port 6543) lose their reply and the page hangs forever.
+- **Avatars:** the phone uploads a 400px photo and a 144px thumbnail; avatars shown at 72px or less use the thumbnail (`/api/avatar/<id>?v=<n>&s=sm`), a few KB each.
+- **Status card:** Home shows an HTML preview of the card; the 1080×1920 PNG (~80 KB) downloads only when someone taps Post to Status.
+- **Bookkeeping after the response:** analytics and "last seen" writes run in `after()`, so pages don't wait for them.
+- **Service worker** (`public/sw.js`): offline page; hashed JS/CSS/fonts, app icons and versioned avatars are served from its cache first (capped), so repeat visits barely download anything. Pages and data always come from the network.
+- **Offline banner** when the phone loses its connection, and "Try again" on the error page reloads from the server.
+
 ---
 
 ## 12. Analytics (simple)

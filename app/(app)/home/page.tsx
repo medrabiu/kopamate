@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { after } from "next/server";
 import Avatar from "@/components/Avatar";
 import BadgeCelebration from "@/components/BadgeCelebration";
 import BadgeIcon from "@/components/BadgeIcon";
@@ -12,6 +13,7 @@ import HomeCarousel from "@/components/HomeCarousel";
 import PrizeCard from "@/components/PrizeCard";
 import ShareButtons from "@/components/ShareButtons";
 import StatusCardButton from "@/components/StatusCardButton";
+import StatusCardPreview from "@/components/StatusCardPreview";
 import { ArrowDownIcon, ArrowUpIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getSnapshotPosition, nextGoal } from "@/lib/ranking";
@@ -60,11 +62,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const improved = user.last_seen_position !== null && position > 0 && position < user.last_seen_position;
   const celebrate = welcome === "1" || improved;
   if (user.last_seen_on !== today || user.last_seen_position !== position) {
-    // Run both writes together: one database round trip instead of two.
-    await Promise.all([
-      sql`UPDATE users SET last_seen_on = ${today}::date, last_seen_position = ${position} WHERE id = ${user.id}`,
-      user.last_seen_on !== today ? track("daily_return", user.id) : null,
-    ]);
+    // Bookkeeping runs after the page is sent, so slow connections don't wait on it.
+    after(() =>
+      Promise.all([
+        sql`UPDATE users SET last_seen_on = ${today}::date, last_seen_position = ${position} WHERE id = ${user.id}`,
+        user.last_seen_on !== today ? track("daily_return", user.id) : null,
+      ]),
+    );
   }
 
   return (
@@ -128,14 +132,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
 
         <div className="card flex w-full gap-4 !p-[22px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/card/${user.referral_code}`}
-            alt={`Status card: I'm #${formatNumber(position)} on Kopamate`}
-            width={108}
-            height={192}
-            loading="lazy"
-            className="aspect-[9/16] w-[108px] shrink-0 self-start rounded-xl bg-bg object-cover"
+          <StatusCardPreview
+            position={`#${formatNumber(position)}`}
+            nickname={user.nickname}
+            state={user.state}
+            link={referralLink(user.referral_code).replace(/^https?:\/\//, "")}
           />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <h2 className="h-display text-xl leading-tight">Post your spot</h2>

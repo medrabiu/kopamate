@@ -127,3 +127,7 @@ CREATE TABLE IF NOT EXISTS state_predictions (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS state_predictions_state_idx ON state_predictions (state);
+
+-- Small avatar (144×144) made on the phone at upload, served for avatars shown at 72px or less.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_thumb_data text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_thumb_mime text;

@@ -1,20 +1,65 @@
-// Kopamate service worker: shows an offline page when the network drops.
-const CACHE = "kopamate-v1";
+// Kopamate service worker, tuned for slow and expensive mobile data:
+// - Offline page when the network drops.
+// - Files that never change once published (hashed JS/CSS/fonts under /_next/static, avatars with
+//   ?v=<version>, app icons) are served from this cache first, so repeat visits don't download them
+//   again even when the phone's small browser cache has thrown them out.
+// Pages and data always come from the network, so nobody sees someone else's or stale data.
+const VERSION = "v2";
+const PAGES = `kopamate-pages-${VERSION}`;
+const STATIC = `kopamate-static-${VERSION}`;
+const AVATARS = `kopamate-avatars-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
+const LIMITS = { [STATIC]: 120, [AVATARS]: 200 };
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.add(OFFLINE_URL)));
+  event.waitUntil(caches.open(PAGES).then((cache) => cache.add(OFFLINE_URL)));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+  const keep = [PAGES, STATIC, AVATARS];
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => !keep.includes(k)).map((k) => caches.delete(k)))),
   );
   self.clients.claim();
 });
 
+/** Drops the oldest entries once a cache holds more than its limit (old deploys' files, old photos). */
+async function trim(name) {
+  const cache = await caches.open(name);
+  const keys = await cache.keys();
+  const extra = keys.length - LIMITS[name];
+  for (let i = 0; i < extra; i++) await cache.delete(keys[i]);
+}
+
+async function cacheFirst(request, name) {
+  const cache = await caches.open(name);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const response = await fetch(request);
+  if (response.ok && response.type === "basic") {
+    await cache.put(request, response.clone());
+    trim(name);
+  }
+  return response;
+}
+
 self.addEventListener("fetch", (event) => {
-  if (event.request.mode !== "navigate") return;
-  event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE_URL)));
+  const { request } = event;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    return;
+  }
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+    event.respondWith(cacheFirst(request, STATIC));
+    return;
+  }
+  // Avatar URLs change whenever the photo changes (?v=), so a cached copy is always current.
+  if (url.pathname.startsWith("/api/avatar/") && url.searchParams.has("v")) {
+    event.respondWith(cacheFirst(request, AVATARS));
+  }
 });

@@ -3,10 +3,10 @@ import { cookies } from "next/headers";
 import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "@fontsource/dm-sans/latin-700.css";
-import "@fontsource/bricolage-grotesque/latin-600.css";
 import "@fontsource/bricolage-grotesque/latin-800.css";
 import "./globals.css";
 import { APP_NAME, APP_URL } from "@/lib/config";
+import ConnectionBanner from "@/components/ConnectionBanner";
 import ServiceWorker from "@/components/ServiceWorker";
 import { THEME_COLOR, THEME_COOKIE, themeMigrationScript, type Theme } from "@/lib/theme";
 
@@ -48,6 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-dvh">
         {children}
+        <ConnectionBanner />
         <ServiceWorker />
       </body>
     </html>

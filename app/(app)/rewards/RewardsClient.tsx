@@ -238,10 +238,14 @@ export function StatePrediction({
   function vote(state: string) {
     setError(null);
     start(async () => {
-      const res = await voteState(state);
-      if (res?.error) return setError(res.error);
-      setPick(state);
-      setChoosing(false);
+      try {
+        const res = await voteState(state);
+        if (res?.error) return setError(res.error);
+        setPick(state);
+        setChoosing(false);
+      } catch {
+        setError("Couldn't save your vote. Check your connection and try again.");
+      }
     });
   }
 

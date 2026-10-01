@@ -32,7 +32,7 @@ export async function ipLimited(ipHash: string | null) {
 }
 
 /** The referrer from the km_ref cookie, if it points to a real, active, completed user. */
-export async function referrerFromCookie(excludeUserId?: string): Promise<{ id: string; nickname: string } | null> {
+export async function referrerFromCookie(excludeUserId?: string): Promise<{ id: string; nickname: string; photo_version: number } | null> {
   const code = (await cookies()).get(REF_COOKIE)?.value;
   if (!code) return null;
   return referrerByCode(code, excludeUserId);
@@ -41,8 +41,8 @@ export async function referrerFromCookie(excludeUserId?: string): Promise<{ id: 
 export async function referrerByCode(code: string, excludeUserId?: string) {
   const clean = code.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!clean) return null;
-  const rows = await sql<{ id: string; nickname: string }[]>`
-    SELECT id, nickname FROM users
+  const rows = await sql<{ id: string; nickname: string; photo_version: number }[]>`
+    SELECT id, nickname, photo_version FROM users
     WHERE referral_code = ${clean} AND completed_at IS NOT NULL AND NOT is_banned
   `;
   const r = rows[0];

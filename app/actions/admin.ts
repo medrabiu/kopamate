@@ -80,7 +80,10 @@ export async function renameUser(fd: FormData) {
 
 export async function adminRemovePhoto(fd: FormData) {
   await requireAdmin();
-  await sql`UPDATE users SET photo_data = NULL, photo_mime = NULL, photo_version = 0 WHERE id = ${id(fd)}`;
+  await sql`
+    UPDATE users SET photo_data = NULL, photo_mime = NULL, photo_thumb_data = NULL, photo_thumb_mime = NULL, photo_version = 0
+    WHERE id = ${id(fd)}
+  `;
   done();
 }
 

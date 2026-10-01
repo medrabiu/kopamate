@@ -14,7 +14,21 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const sql = postgres(process.env.DATABASE_URL, { prepare: false, max: 1 });
+// Accept passwords with unencoded special characters (as copied from Supabase); see lib/db.ts.
+function connectionUrl(url) {
+  try {
+    new URL(url);
+    return url;
+  } catch {
+    const m = url.match(/^([a-z]+:\/\/)([^:/@]+):(.*)@([^@]+)$/i);
+    if (!m) return url;
+    let pw = m[3];
+    try { pw = decodeURIComponent(pw); } catch {}
+    return `${m[1]}${m[2]}:${encodeURIComponent(pw)}@${m[4]}`;
+  }
+}
+
+const sql = postgres(connectionUrl(process.env.DATABASE_URL), { prepare: false, max: 1 });
 const schema = readFileSync(new URL("../db/schema.sql", import.meta.url), "utf8");
 
 try {

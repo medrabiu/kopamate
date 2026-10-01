@@ -105,7 +105,12 @@ function sniffImage(bytes: Uint8Array): string | null {
   return null;
 }
 
-/** The phone resizes the photo (max 400×400) before upload, which also strips metadata. */
+const MAX_THUMB_BYTES = 40 * 1024;
+
+/**
+ * The phone resizes the photo (max 400×400) before upload, which also strips metadata, and sends a
+ * 144×144 thumbnail too, so lists on slow connections load a few KB per avatar instead of the full photo.
+ */
 export async function uploadPhoto(fd: FormData): Promise<ProfileState> {
   const user = await me();
   const file = fd.get("photo");
@@ -114,9 +119,18 @@ export async function uploadPhoto(fd: FormData): Promise<ProfileState> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const mime = sniffImage(bytes);
   if (!mime) return { error: "Use a JPG, PNG or WebP photo." };
-  const b64 = Buffer.from(bytes).toString("base64");
+  // The thumbnail is optional: without it, small avatars fall back to the full photo.
+  let thumb: { data: string; mime: string } | null = null;
+  const thumbFile = fd.get("thumb");
+  if (thumbFile instanceof File && thumbFile.size > 0 && thumbFile.size <= MAX_THUMB_BYTES) {
+    const tb = new Uint8Array(await thumbFile.arrayBuffer());
+    const tm = sniffImage(tb);
+    if (tm) thumb = { data: Buffer.from(tb).toString("base64"), mime: tm };
+  }
   await sql`
-    UPDATE users SET photo_data = ${b64}, photo_mime = ${mime}, photo_version = photo_version + 1
+    UPDATE users SET photo_data = ${Buffer.from(bytes).toString("base64")}, photo_mime = ${mime},
+      photo_thumb_data = ${thumb?.data ?? null}, photo_thumb_mime = ${thumb?.mime ?? null},
+      photo_version = photo_version + 1
     WHERE id = ${user.id}
   `;
   await checkAutoBadges(user.id);
@@ -154,7 +168,10 @@ export async function requestVerification(_prev: ProfileState, fd: FormData): Pr
 
 export async function removePhoto() {
   const user = await me();
-  await sql`UPDATE users SET photo_data = NULL, photo_mime = NULL, photo_version = 0 WHERE id = ${user.id}`;
+  await sql`
+    UPDATE users SET photo_data = NULL, photo_mime = NULL, photo_thumb_data = NULL, photo_thumb_mime = NULL, photo_version = 0
+    WHERE id = ${user.id}
+  `;
   revalidatePath("/", "layout");
 }
 

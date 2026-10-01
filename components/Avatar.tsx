@@ -16,7 +16,8 @@ export default function Avatar({ id, nickname, photoVersion = 0, size = 40, ring
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={`/api/avatar/${id}?v=${photoVersion}`}
+        // Avatars up to 72px use the 144px thumbnail (sharp on 2× screens, a few KB on slow data).
+        src={`/api/avatar/${id}?v=${photoVersion}${size <= 72 ? "&s=sm" : ""}`}
         alt=""
         width={size}
         height={size}

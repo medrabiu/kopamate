@@ -90,7 +90,7 @@ export function EditableRow({
   );
 }
 
-async function resizeImage(file: File, max = 400): Promise<Blob> {
+async function resizeImage(file: File, max = 400, quality = 0.8): Promise<Blob> {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -108,8 +108,8 @@ async function resizeImage(file: File, max = 400): Promise<Blob> {
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
     const toBlob = (type: string, q: number) => new Promise<Blob | null>((r) => canvas.toBlob(r, type, q));
-    let blob = await toBlob("image/webp", 0.8);
-    if (!blob || blob.type !== "image/webp") blob = await toBlob("image/jpeg", 0.8);
+    let blob = await toBlob("image/webp", quality);
+    if (!blob || blob.type !== "image/webp") blob = await toBlob("image/jpeg", quality);
     if (!blob) throw new Error("Could not process photo");
     if (blob.size > 280 * 1024) blob = (await toBlob("image/jpeg", 0.6)) ?? blob;
     return blob;
@@ -271,9 +271,10 @@ export function PhotoPicker({ id, nickname, photoVersion }: { id: string; nickna
     setError(null);
     start(async () => {
       try {
-        const blob = await resizeImage(file);
+        const [blob, thumb] = await Promise.all([resizeImage(file), resizeImage(file, 144, 0.75)]);
         const fd = new FormData();
         fd.append("photo", new File([blob], "photo", { type: blob.type }));
+        fd.append("thumb", new File([thumb], "thumb", { type: thumb.type }));
         const res = await uploadPhoto(fd);
         if (res?.error) setError(res.error);
       } catch {
