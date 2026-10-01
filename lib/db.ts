@@ -38,15 +38,21 @@ function createClient() {
  * which also fails `next build`.
  */
 function connectionUrl(raw: string | undefined) {
-  const url = raw?.trim().replace(/^["']|["']$/g, "");
+  // Also forgive quotes, spaces and "DATABASE_URL=" pasted into the value.
+  const url = raw?.trim().replace(/^DATABASE_URL\s*=\s*/, "").replace(/^["']|["']$/g, "").trim();
   if (!url) return url;
-  try {
-    new URL(url);
-    return url;
-  } catch {
-    // scheme://user:password@host...: the host follows the last "@", the user ends at the first ":".
-    const m = url.match(/^([a-z]+:\/\/)([^:/@]+):(.*)@([^@]+)$/i);
-    if (!m) return url;
+  const valid = (u: string) => {
+    try {
+      new URL(u);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  if (valid(url)) return url;
+  // scheme://user:password@host...: the host follows the last "@", the user ends at the first ":".
+  const m = url.match(/^([a-z]+:\/\/)([^:/@]+):(.*)@([^@]+)$/i);
+  if (m) {
     const [, scheme, user, password, rest] = m;
     let decoded = password;
     try {
@@ -54,8 +60,14 @@ function connectionUrl(raw: string | undefined) {
     } catch {
       // A lone "%" means the password wasn't encoded at all.
     }
-    return `${scheme}${user}:${encodeURIComponent(decoded)}@${rest}`;
+    const fixed = `${scheme}${user}:${encodeURIComponent(decoded)}@${rest}`;
+    if (valid(fixed)) return fixed;
   }
+  // Never print the value: it contains the password.
+  throw new Error(
+    "DATABASE_URL is not a valid connection string. Expected postgresql://USER:PASSWORD@HOST:6543/postgres " +
+      "(Supabase: Connect > Transaction pooler), with no spaces and the real password in place of [YOUR-PASSWORD].",
+  );
 }
 
 /** One shared client per server process (survives hot reloads in dev). */

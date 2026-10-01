@@ -4,18 +4,26 @@ export const APP_NAME = "Kopamate";
  * Public address of the app, used in invite links, share previews and Google sign-in.
  * On Vercel's production deployment a missing or localhost APP_URL (e.g. copied from a local .env)
  * falls back to the project's production domain, so shared links never point at localhost.
+ * Common slips are fixed (quotes, spaces, "APP_URL=" pasted into the value, no "https://"); anything
+ * else that isn't a valid address stops the build with a message naming APP_URL.
  */
 function appUrl() {
-  const set = (process.env.APP_URL || "").trim();
+  let set = (process.env.APP_URL || "").trim().replace(/^APP_URL\s*=\s*/, "").replace(/^["']|["']$/g, "").trim();
+  if (set && !/^https?:\/\//i.test(set)) set = `${/^(localhost|127\.0\.0\.1)(:|$)/.test(set) ? "http" : "https"}://${set}`;
   const onVercelProd = process.env.VERCEL_ENV === "production";
   const vercelDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   if (onVercelProd && vercelDomain && (!set || /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(set))) {
     return `https://${vercelDomain}`;
   }
-  return set || "http://localhost:3000";
+  const url = set || "http://localhost:3000";
+  try {
+    return new URL(url).origin;
+  } catch {
+    throw new Error(`APP_URL is not a valid web address (got "${url}"). Set it to the full address, like https://kopamate.ng`);
+  }
 }
 
-export const APP_URL = appUrl().replace(/\/$/, "");
+export const APP_URL = appUrl();
 
 /** How many places each valid referral moves someone up. */
 export const PLACES_PER_REFERRAL = 10;
