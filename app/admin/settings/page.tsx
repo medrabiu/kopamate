@@ -125,7 +125,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
 
       <section className={panel}>
         <h2 className="h-display mb-1 text-lg">Announcement</h2>
-        <p className="mb-3 text-xs text-muted">A pink slide in the carousel at the top of Home. Hidden when switched off or the title is empty.</p>
+        <p className="mb-3 text-xs text-muted">A pink card on Home, under your position. Hidden when switched off or the title is empty.</p>
         <form action={saveAnnouncement} className="flex flex-col gap-3">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="announcement_active" value="1" defaultChecked={announcement.active} className="size-4 accent-lime" />

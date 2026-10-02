@@ -16,22 +16,22 @@ function Bar({ percent }: { percent: number }) {
   );
 }
 
-/** Home: "Your profile is 50% done" with the next step as a button. Hidden at 100%. */
-export function ProfileProgressCard({ steps }: { steps: ProfileSteps }) {
+/** Home: one slim row, "Your profile is 33% done · Add a photo", with a thin bar. Hidden at 100%. */
+export function ProfileProgressRow({ steps }: { steps: ProfileSteps }) {
   const { percent, next } = completion(steps);
   if (!next) return null;
   return (
-    <section className="card flex flex-col gap-3 !p-[18px]">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-bold">Your profile is {percent}% done</h2>
-        <span className="text-xs text-faint">Finish for a badge</span>
-      </div>
-      <Bar percent={percent} />
-      <Link href={next.href} className="flex h-11 items-center justify-between gap-2 rounded-full bg-surface-2 pl-4 pr-3 text-[15px] font-bold">
-        {next.action}
-        <ChevronRight size={18} className="text-lime-ink" />
-      </Link>
-    </section>
+    <Link href={next.href} className="flex items-center gap-3.5 rounded-[20px] bg-surface px-4 py-3">
+      <span className="h-display w-11 shrink-0 text-lg text-lime-ink">{percent}%</span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="truncate text-sm">
+          <span className="font-bold">Profile</span>
+          <span className="text-muted"> · next: {next.action.toLowerCase()}</span>
+        </span>
+        <Bar percent={percent} />
+      </span>
+      <ChevronRight size={18} className="shrink-0 text-lime-ink" />
+    </Link>
   );
 }
 

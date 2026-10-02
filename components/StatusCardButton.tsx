@@ -6,7 +6,17 @@ import { logShare } from "./ShareButtons";
 import { useToast } from "./Toast";
 
 /** Shares the Status card image (native share sheet on phones), or downloads it where file sharing isn't supported. */
-export default function StatusCardButton({ cardUrl, message, fileName }: { cardUrl: string; message: string; fileName: string }) {
+export default function StatusCardButton({
+  cardUrl,
+  message,
+  fileName,
+  className = "btn-primary h-12 text-[15px]",
+}: {
+  cardUrl: string;
+  message: string;
+  fileName: string;
+  className?: string;
+}) {
   const [toast, show] = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -44,7 +54,7 @@ export default function StatusCardButton({ cardUrl, message, fileName }: { cardU
 
   return (
     <>
-      <button type="button" onClick={post} disabled={busy} className="btn-primary h-12 text-[15px]">
+      <button type="button" onClick={post} disabled={busy} className={className}>
         <ShareIcon size={18} />
         {busy ? "Getting card…" : "Post to Status"}
       </button>

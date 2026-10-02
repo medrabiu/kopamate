@@ -119,20 +119,15 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 ### 4.3 Home (`/home`)
 - Header: "Hi, {nickname}" and the user's avatar (links to Profile).
 - **Reward banner** (top, under the header): when the user has unclaimed rewards, a lime banner "🎉 You won ₦X! Claim it" (sum of all unclaimed amounts) linking to Rewards; flagged users see "Your account is under review" instead of "Claim it". Confetti the first time each unclaimed reward is seen on the device (ids kept in localStorage `km_seen_rewards`; blocked storage just skips the confetti). With only hidden rewards: a smaller "🎁 Reward coming, amount revealed soon".
-- **Early Corper banner** (slim, above the carousel, until the deadline): "Early Corper badge closes in …", or "You're an Early Corper · first rewards drop when the countdown ends" with the countdown when the user holds the badge.
-- **Carousel** at the top: full-width slides the user swipes sideways (CSS scroll-snap, no library), with dots underneath that follow the scroll and jump to a slide when tapped. No auto-advance; dot jumps are instant when the user prefers reduced motion. Slides with nothing to show are left out.
-  1. **Your position** (always first):
-     - "Your position" and the position in large lime digits, e.g. **#347**
-     - Change badge: "↑ 20 since yesterday" (hide if no change; show "↓" in muted colour if they dropped)
-     - Progress bar and next goal: "Invite **2 more** to reach the top 300". Goals are the next round hundred (or top 100, top 50, top 10 when closer).
-     - **Share on WhatsApp** button (opens `https://wa.me/?text=...` with the share message, section 6) and a **copy link** icon button.
-     - "{N} friends joined with your link"
-  2. **Post your spot** (Status card): a preview of a portrait 1080×1920 image sized for WhatsApp Status, saying "I'm #347 on Kopamate", the user's nickname and state, "Every corper. One place." and "Join me: [domain]/r/<code>", in the Social Night colours. The image is generated at `/card/<referral code>` (live position, cached 5 minutes; 404 for unknown, banned or unfinished users). **Post to Status** opens the phone's share sheet with the image and the share message; where sharing files isn't supported it downloads the PNG and shows "Card saved. Add it to your WhatsApp Status." Logs `share_clicked` with channel `status_card`.
-  3. **Announcement** (set in Admin): pink card with a title, short text and an optional button. Hidden when switched off or the title is empty.
-- **Profile progress card** (under the carousel, hidden at 100%): "Your profile is 50% done", a progress bar and the next step as a button (see "Profile completion" in section 5).
-- **Two stat cards:** "Corpers joined: 4,382" and "{State} is #2 · 280".
-- **New from {state}:** row of the 5 newest users from the user's state (avatars + nicknames + top badge icon), with **See all** linking to `/corpers/[state]`.
-- **Coming soon:** three sections (Contests, Awards, Opportunities), each a heading and a sideways-scrolling row of locked cards (about 220px wide: an illustration banner on top, then icon, title and one-line description, with a small "Coming soon" lock pill over the image). The illustrations are inline SVGs in the Social Night palette (`components/CardArt.tsx`): no image downloads, about 3 KB extra for all 15, cached with the app's JavaScript, and they follow light/dark mode. Tapping a card shows "<title> is coming soon".
+- **Your position** (one card, no carousel):
+  - "Your position" and the position in large lime digits, e.g. **#347**, with a change badge: "↑ 20 since yesterday" (hidden if no change; "↓" in muted colour if they dropped).
+  - Progress bar and next goal: "Invite **2 more** to reach the top 300". Goals are the next round hundred (or top 100, top 50, top 10 when closer).
+  - Two buttons side by side: **WhatsApp** (opens `https://wa.me/?text=...` with the share message, section 6) and **Post to Status**. Post to Status shares a portrait 1080×1920 image sized for WhatsApp Status, saying "I'm #347 on Kopamate", the user's nickname and state, "Every corper. One place." and "Join me: [domain]/r/<code>", in the Social Night colours. The image is generated at `/card/<referral code>` (live position, cached 5 minutes; 404 for unknown, banned or unfinished users) and opens the phone's share sheet with the image and the share message; where sharing files isn't supported it downloads the PNG and shows "Card saved. Add it to your WhatsApp Status." Logs `share_clicked` with channel `status_card`.
+  - Footer: "{N} friends joined · Invite" (links to Invite) and, until the deadline, "Early Corper {countdown}".
+- **Announcement** (set in Admin): pink card under the position card with a title, short text and an optional button. Hidden when switched off or the title is empty.
+- **Profile progress row** (hidden at 100%): one slim row, "33% · Profile · next: add a photo" with a thin bar, linking to the next step (see "Profile completion" in section 5).
+- **New from {state}:** a sideways row of the 5 newest users from the user's state (avatars + nicknames + top badge icon; tapping opens their profile sheet), with "{count} corpers ›" linking to `/corpers/[state]`.
+- **Coming soon:** three tiles (Contests, Awards, Opportunities, each "5 coming"). Tapping a tile opens a sheet listing what's planned, each with a small illustration (inline SVGs in the Social Night palette, `components/CardArt.tsx`: no image downloads, about 3 KB for all 15, follow light/dark mode), title and one line.
   - Contests: Best Khaki Drip, Camp Talent Showdown, Man O' War Challenge, Mammy Market Cook-off, Best CDS Project.
   - Awards: Corper of the Month, Best Platoon, Camp Comedian, Social Night MVP, Most Stylish in {user's state}.
   - Opportunities: Jobs from ex-corpers, Remote gigs, Retention at your PPA, Skills and SAED, Scholarships and grants.

@@ -64,7 +64,7 @@ export default function Landing({ stats, prizeText, inviter, earlyDeadline }: Pr
         {stats.today > 0 && <div className="text-sm font-medium text-lime-ink">+{formatNumber(stats.today)} today</div>}
       </section>
 
-      <EarlyCorperBanner deadline={earlyDeadline} variant="landing" />
+      <EarlyCorperBanner deadline={earlyDeadline} />
 
       <Link href="/join" className="btn-primary">
         Join now

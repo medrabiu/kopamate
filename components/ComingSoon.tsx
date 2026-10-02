@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import CardArt, { type ArtKey } from "./CardArt";
 import { BriefcaseIcon, LockIcon, MedalIcon, TrophyIcon } from "./icons";
+import Sheet from "./Sheet";
 import { useToast } from "./Toast";
 
 const TILES = ["Contests", "Awards", "Opportunities"];
@@ -47,11 +49,12 @@ function sections(state: string | null) {
 }
 
 /**
- * "Coming soon" cards.
- * `grid`: three small tiles (landing). `rows`: a sideways-scrolling row of locked cards per section (home).
+ * "Coming soon".
+ * `grid`: three small tiles (landing). `tiles`: three tiles in a card (home); each opens a sheet listing what's planned.
  */
-export default function ComingSoon(props: { layout: "grid" } | { layout: "rows"; state: string | null }) {
+export default function ComingSoon(props: { layout: "grid" } | { layout: "tiles"; state: string | null }) {
   const [toast, show] = useToast();
+  const [open, setOpen] = useState<string | null>(null);
 
   if (props.layout === "grid") {
     return (
@@ -75,39 +78,52 @@ export default function ComingSoon(props: { layout: "grid" } | { layout: "rows";
     );
   }
 
+  const all = sections(props.state);
+  const current = all.find((s) => s.heading === open);
   return (
-    <>
-      {sections(props.state).map(({ heading, Icon, items }) => (
-        <section key={heading} className="flex flex-col gap-3" aria-label={`${heading}, coming soon`}>
-          <h2 className="h-display text-xl">{heading}</h2>
-          <div className="no-scrollbar -mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-5 px-5 overscroll-x-contain">
-            {items.map(({ title, text, art }) => (
-              <button
-                key={title}
-                type="button"
-                onClick={() => show(`${title} is coming soon`)}
-                className="relative flex w-[220px] shrink-0 snap-start flex-col overflow-hidden rounded-[18px] bg-surface text-left"
-              >
-                <span className="block h-[110px] w-full">
+    <section className="flex flex-col gap-3" aria-labelledby="soon-title">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="soon-title" className="h-display text-xl">
+          Coming soon
+        </h2>
+        <span className="flex items-center gap-1 text-xs text-faint">
+          <LockIcon size={12} strokeWidth={2.5} />
+          Tap to see what&apos;s planned
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2.5">
+        {all.map(({ heading, Icon, items }) => (
+          <button
+            key={heading}
+            type="button"
+            onClick={() => setOpen(heading)}
+            className="flex flex-col gap-2 rounded-[18px] bg-surface px-3 py-3.5 text-left"
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
+              <Icon size={18} />
+            </span>
+            <span className="text-sm font-bold">{heading}</span>
+            <span className="-mt-1.5 text-xs text-muted">{items.length} coming</span>
+          </button>
+        ))}
+      </div>
+      <Sheet open={current !== undefined} onClose={() => setOpen(null)} title={current ? `${current.heading} · coming soon` : "Coming soon"}>
+        {current && (
+          <ul className="flex flex-col gap-2.5">
+            {current.items.map(({ title, text, art }) => (
+              <li key={title} className="flex items-center gap-3">
+                <span className="block size-16 shrink-0 overflow-hidden rounded-2xl">
                   <CardArt art={art} />
                 </span>
-                <span className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full bg-bg/85 px-2 py-1 text-[11px] font-bold text-ink backdrop-blur-sm">
-                  <LockIcon size={11} strokeWidth={2.5} />
-                  Coming soon
+                <span className="min-w-0">
+                  <span className="block font-bold leading-snug">{title}</span>
+                  <span className="mt-0.5 block text-[13px] leading-snug text-muted">{text}</span>
                 </span>
-                <span className="flex items-start gap-2.5 p-3.5">
-                  <Icon size={18} className="mt-0.5 shrink-0 text-pink-ink" />
-                  <span className="min-w-0">
-                    <span className="block font-bold leading-snug">{title}</span>
-                    <span className="mt-0.5 block text-[13px] leading-snug text-muted">{text}</span>
-                  </span>
-                </span>
-              </button>
+              </li>
             ))}
-          </div>
-        </section>
-      ))}
-      {toast}
-    </>
+          </ul>
+        )}
+      </Sheet>
+    </section>
   );
 }
