@@ -11,7 +11,7 @@ import { getRewardSettings } from "@/lib/stats";
 import { getUserBadges } from "@/lib/badges";
 import { referralLink, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
-import { formatJoined } from "@/lib/util";
+import YourRewards, { type MyReward, type SavedBank } from "./YourRewards";
 import { AmbassadorCard, Leaderboard, MysteryPrizes, RankConfetti, type BoardRow } from "./RewardsClient";
 
 export const metadata: Metadata = { title: "Rewards" };
@@ -28,14 +28,22 @@ function toBoard(r: ReferrerRow, rank: number): BoardRow {
 export default async function RewardsPage() {
   const user = await requireUser();
   const state = user.state ?? "";
-  const [settings, standing, national, stateBoard, badges, rewards] = await Promise.all([
+  const [settings, standing, national, stateBoard, badges, rewards, saved] = await Promise.all([
     getRewardSettings(),
     getReferrerStanding(user.id),
     getNationalLeaderboard(),
     getStateLeaderboard(state),
     getUserBadges(user.id),
-    sql<{ id: string; title: string; description: string | null; status: string; created_at: Date }[]>`
-      SELECT id, title, description, status, created_at FROM rewards WHERE user_id = ${user.id} ORDER BY created_at DESC
+    // Payout details are private: this page (the owner's own) and the admin are the only places that read them.
+    sql<MyReward[]>`
+      SELECT id, title, description, kind, status, amount_ngn, admin_note, paid_at::text AS paid_at, created_at::text AS created_at,
+             payout_bank, payout_account_number, payout_account_name, payout_phone
+      FROM rewards WHERE user_id = ${user.id}
+      ORDER BY (status = 'unclaimed') DESC, created_at DESC
+    `,
+    sql<SavedBank[]>`
+      SELECT payout_bank AS bank, payout_account_number AS account_number, payout_account_name AS account_name
+      FROM users WHERE id = ${user.id}
     `,
   ]);
 
@@ -220,38 +228,25 @@ export default async function RewardsPage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-2.5">
-        <h2 className="h-display text-xl">Your rewards</h2>
+      <section id="your-rewards" className="flex scroll-mt-4 flex-col gap-2.5" aria-labelledby="your-rewards-title">
+        <h2 id="your-rewards-title" className="h-display text-xl">
+          Your rewards
+        </h2>
         {rewards.length === 0 ? (
           <div className="flex flex-col items-center gap-2.5 rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-7 text-center">
             <GiftIcon size={32} strokeWidth={1.8} className="text-faint" />
             <p className="font-bold">Rewards you win show up here</p>
             <p className="text-sm leading-normal text-muted">
-              Prizes are sent as airtime, data or bank transfer. We&apos;ll message you on WhatsApp.
+              Prizes are sent as airtime, data or bank transfer. You&apos;ll claim them here and we&apos;ll message you on WhatsApp.
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-2.5">
-            {rewards.map((r) => (
-              <li key={r.id} className="flex items-center gap-3.5 rounded-[18px] bg-surface p-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
-                  <GiftIcon size={20} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold">{r.title}</div>
-                  {r.description && <div className="text-sm text-muted">{r.description}</div>}
-                  <div className="text-xs text-faint">{formatJoined(r.created_at)}</div>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                    r.status === "sent" ? "bg-lime text-on-accent" : "bg-surface-2 text-muted"
-                  }`}
-                >
-                  {r.status === "sent" ? "Sent" : "Pending"}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <YourRewards
+            rewards={rewards}
+            savedBank={saved[0] ?? { bank: null, account_number: null, account_name: null }}
+            whatsapp={user.whatsapp_e164}
+            underReview={user.is_flagged}
+          />
         )}
       </section>
 

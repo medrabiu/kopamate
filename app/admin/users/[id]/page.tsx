@@ -8,8 +8,11 @@ import { ranked } from "@/lib/ranking";
 import { STATES } from "@/lib/states";
 import { formatJoined, timeAgo } from "@/lib/util";
 import BadgeChip from "@/components/BadgeChip";
+import { awardReward } from "@/app/actions/admin-rewards";
+import { getBudget, getMoneySettings } from "@/lib/rewards";
+import { formatNgn, KIND_LABEL, maskAccount, REWARD_KINDS } from "@/lib/reward-meta";
+import { Notice, RewardActions, StatusPill, type AdminReward } from "../../rewards/parts";
 import {
-  addReward,
   adminAwardBadge,
   adminDeleteUser,
   adminRestoreBadge,
@@ -17,7 +20,6 @@ import {
   adminRemovePhoto,
   adminUpdateUser,
   approveVerification,
-  markRewardSent,
   rejectVerification,
   resetPin,
   revokeVerification,
@@ -63,14 +65,15 @@ export default async function AdminUserPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ pin?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const admin = await requireAdmin();
   const { id } = await params;
-  const { pin } = await searchParams;
+  const sp = await searchParams;
+  const { pin } = sp;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
-  const [rows, referred, rewards, badges] = await Promise.all([
+  const [rows, referred, rewards, badges, settings, events] = await Promise.all([
     sql<Detail[]>`
       ${ranked()}
       SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.state_code, u.referral_code, u.photo_version,
@@ -87,8 +90,18 @@ export default async function AdminUserPage({
       SELECT id, nickname, completed_at, is_flagged, is_banned FROM users
       WHERE referred_by = ${id} ORDER BY created_at DESC LIMIT 50
     `,
-    sql<{ id: string; title: string; description: string | null; status: string; created_at: Date }[]>`
-      SELECT id, title, description, status, created_at FROM rewards WHERE user_id = ${id} ORDER BY created_at DESC
+    sql<
+      (AdminReward & {
+        description: string | null;
+        payout_bank: string | null;
+        payout_account_number: string | null;
+        payout_account_name: string | null;
+        payout_phone: string | null;
+      })[]
+    >`
+      SELECT id, title, description, kind, status, amount_ngn, admin_note, payment_reference, paid_at, created_at,
+             payout_bank, payout_account_number, payout_account_name, payout_phone
+      FROM rewards WHERE user_id = ${id} ORDER BY created_at DESC
     `,
     sql<
       {
@@ -107,7 +120,16 @@ export default async function AdminUserPage({
       FROM badges b LEFT JOIN user_badges ub ON ub.badge_slug = b.slug AND ub.user_id = ${id}
       ORDER BY b.priority DESC
     `,
+    getMoneySettings(),
+    sql<{ reward_id: string; actor: string; action: string; detail: Record<string, unknown> | null; created_at: Date }[]>`
+      SELECT e.reward_id, e.actor, e.action, e.detail, e.created_at
+      FROM reward_events e JOIN rewards r ON r.id = e.reward_id
+      WHERE r.user_id = ${id} ORDER BY e.created_at DESC LIMIT 100
+    `,
   ]);
+  const budget = await getBudget(settings);
+  const userTotal = rewards.reduce((s, r) => s + (r.status !== "rejected" ? r.amount_ngn ?? 0 : 0), 0);
+  const back = `/admin/users/${id}`;
   const u = rows[0];
   if (!u) notFound();
   const isSelf = u.id === admin.id;
@@ -117,6 +139,7 @@ export default async function AdminUserPage({
       <Link href="/admin/users" className="text-sm text-muted hover:text-ink">
         ← All users
       </Link>
+      <Notice params={sp} />
 
       {pin && /^\d{4}$/.test(pin) && (
         <p role="status" className="rounded-2xl border border-lime p-4 text-sm">
@@ -313,32 +336,85 @@ export default async function AdminUserPage({
 
       <section className="grid gap-6 md:grid-cols-2">
         <div className={panel}>
-          <h2 className="h-display mb-3 text-lg">Rewards</h2>
+          <h2 className="h-display mb-1 text-lg">Rewards</h2>
+          <p className="mb-3 text-xs text-muted">
+            Awarded to them: {formatNgn(userTotal)}
+            {settings.cap ? ` · per-user cap ${formatNgn(settings.cap)}` : " · no per-user cap"} · budget left {formatNgn(budget.remaining)}
+          </p>
           {rewards.length > 0 && (
-            <ul className="mb-4 flex flex-col gap-2 text-sm">
-              {rewards.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-3">
-                  <span>
-                    <b>{r.title}</b> <span className="text-muted">· {timeAgo(r.created_at)}</span>
-                    {r.description && <span className="block text-xs text-muted">{r.description}</span>}
-                  </span>
-                  {r.status === "pending" ? (
-                    <form action={markRewardSent}>
-                      <input type="hidden" name="id" value={r.id} />
-                      <button className={btn}>Mark sent</button>
-                    </form>
-                  ) : (
-                    <span className="text-xs text-muted">Sent</span>
-                  )}
-                </li>
-              ))}
+            <ul className="mb-4 flex flex-col divide-y divide-surface-2 text-sm">
+              {rewards.map((r) => {
+                const history = events.filter((e) => e.reward_id === r.id);
+                return (
+                  <li key={r.id} className="flex flex-col gap-1.5 py-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <b>{r.title}</b>
+                      <StatusPill status={r.status} />
+                      <span>{r.amount_ngn ? formatNgn(r.amount_ngn) : "No amount"}</span>
+                      <span className="text-muted">
+                        {KIND_LABEL[r.kind]} · {timeAgo(r.created_at)}
+                      </span>
+                    </div>
+                    {r.description && <span className="text-xs text-muted">{r.description}</span>}
+                    {(r.payout_account_number || r.payout_phone) && (
+                      <span className="text-xs">
+                        Pays to:{" "}
+                        {r.payout_phone
+                          ? r.payout_phone.replace("+234", "0")
+                          : `${maskAccount(r.payout_bank, r.payout_account_number)} · ${r.payout_account_name}`}{" "}
+                        <Link href="/admin/rewards" className="text-muted underline">
+                          full details in Payouts
+                        </Link>
+                      </span>
+                    )}
+                    <RewardActions r={r} back={back} />
+                    {history.length > 0 && (
+                      <details className="text-xs text-muted">
+                        <summary className="cursor-pointer">History ({history.length})</summary>
+                        <ul className="mt-1 flex flex-col gap-0.5">
+                          {history.map((e, i) => (
+                            <li key={i}>
+                              {formatJoined(e.created_at)} {timeAgo(e.created_at)} ·{" "}
+                              {e.actor === "user" ? "user" : e.actor === admin.id ? "you" : "an admin"} · {e.action.replace("_", " ")}
+                              {e.detail ? ` · ${JSON.stringify(e.detail)}` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
-          <form action={addReward} className="flex flex-col gap-2">
-            <input type="hidden" name="id" value={u.id} />
-            <input name="title" required maxLength={80} placeholder="₦1,000 airtime" className={input} />
-            <input name="description" maxLength={200} placeholder="Note (optional)" className={input} />
-            <button className={`${btn} self-start`}>Add reward</button>
+          <form action={awardReward} className="flex flex-col gap-2">
+            <input type="hidden" name="user_id" value={u.id} />
+            <input type="hidden" name="back" value={back} />
+            {(u.is_seed || u.is_flagged || u.is_banned || u.verification_status !== "verified") && (
+              <p className="rounded-lg border border-pink px-3 py-2 text-xs">
+                {u.is_seed
+                  ? "Seed account: never eligible for prizes. Only award it for testing."
+                  : u.is_flagged || u.is_banned
+                    ? "Flagged or banned: they can't claim until this is lifted."
+                    : "Not verified yet. The Rewards page tells users only verified corpers win."}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <select name="kind" defaultValue="cash" aria-label="Paid as" className={input}>
+                {REWARD_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {KIND_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+              <input name="amount" inputMode="numeric" placeholder="₦ amount (optional)" aria-label="Amount in naira" className={`${input} w-40`} />
+            </div>
+            <input name="title" required maxLength={80} placeholder="Title, e.g. Top referrer prize" aria-label="Title" className={input} />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="show" value="1" className="size-4 accent-lime" />
+              Show amount to user (needs an amount; off means hidden until you reveal it)
+            </label>
+            <button className={`${btn} self-start`}>Award reward</button>
           </form>
         </div>
 

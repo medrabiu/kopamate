@@ -87,21 +87,6 @@ export async function adminRemovePhoto(fd: FormData) {
   done();
 }
 
-export async function addReward(fd: FormData) {
-  await requireAdmin();
-  const title = String(fd.get("title") ?? "").trim().slice(0, 80);
-  const description = String(fd.get("description") ?? "").trim().slice(0, 200) || null;
-  if (!title) return;
-  await sql`INSERT INTO rewards (user_id, title, description) VALUES (${id(fd)}, ${title}, ${description})`;
-  done();
-}
-
-export async function markRewardSent(fd: FormData) {
-  await requireAdmin();
-  await sql`UPDATE rewards SET status = 'sent', sent_at = now() WHERE id = ${id(fd)}`;
-  done();
-}
-
 export async function saveSettings(fd: FormData) {
   await requireAdmin();
   const prize = String(fd.get("prize_teaser_text") ?? "").trim().slice(0, 300);

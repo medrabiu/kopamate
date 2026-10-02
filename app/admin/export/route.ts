@@ -12,9 +12,9 @@ function csv(rows: Record<string, unknown>[]) {
   const cols = Object.keys(rows[0]);
   const esc = (v: unknown) => {
     const s = v == null ? "" : String(v);
-    // Prevent spreadsheet formula injection from nicknames.
-    const safe = /^[=+\-@]/.test(s) ? `'${s}` : s;
-    return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+    // Prevent spreadsheet formula injection from nicknames, account names and other typed text.
+    const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+    return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
   };
   return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
 }
@@ -27,7 +27,18 @@ export async function GET(req: Request) {
 
   let rows: Record<string, unknown>[];
   let name: string;
-  if (list === "early") {
+  if (list === "payouts") {
+    // Claimed and processing rewards with payout details, for paying them. Admin only, never cached.
+    name = "payouts";
+    rows = await sql`
+      SELECT u.nickname, u.whatsapp_e164 AS whatsapp, r.kind, r.amount_ngn AS amount, r.status,
+             r.payout_bank AS bank, r.payout_account_number AS account_number, r.payout_account_name AS account_name,
+             r.payout_phone AS phone, r.id AS reward_id
+      FROM rewards r JOIN users u ON u.id = r.user_id
+      WHERE r.status IN ('claimed', 'processing')
+      ORDER BY r.status DESC, r.claimed_at
+    `;
+  } else if (list === "early") {
     // Early Corpers holding the badge (not revoked); flagged, banned and seed accounts left out.
     name = "early-corpers";
     rows = await sql`

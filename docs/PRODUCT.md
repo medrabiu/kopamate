@@ -118,6 +118,7 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.3 Home (`/home`)
 - Header: "Hi, {nickname}" and the user's avatar (links to Profile).
+- **Reward banner** (top, under the header): when the user has unclaimed rewards, a lime banner "🎉 You won ₦X! Claim it" (sum of all unclaimed amounts) linking to Rewards; flagged users see "Your account is under review" instead of "Claim it". Confetti the first time each unclaimed reward is seen on the device (ids kept in localStorage `km_seen_rewards`; blocked storage just skips the confetti). With only hidden rewards: a smaller "🎁 Reward coming, amount revealed soon".
 - **Early Corper banner** (slim, above the carousel, until the deadline): "Early Corper badge closes in …", or "You're an Early Corper · first rewards drop when the countdown ends" with the countdown when the user holds the badge.
 - **Carousel** at the top: full-width slides the user swipes sideways (CSS scroll-snap, no library), with dots underneath that follow the scroll and jump to a slide when tapped. No auto-advance; dot jumps are instant when the user prefers reduced motion. Slides with nothing to show are left out.
   1. **Your position** (always first):
@@ -160,16 +161,37 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 - **Top referrers** with a "Top 10 win prizes" tag: top 10 by completed referrals (avatar, nickname · state, top badge icon, count). Below the list, the user's own row if they're outside the top 10, e.g. "58 · You · 3".
 
 ### 4.7 Rewards (`/rewards`)
-Prize amounts stay hidden. In order:
+Prize amounts on the mystery cards stay hidden; amounts the user has actually won show under "Your rewards". In order:
 1. **Countdowns:** "Early Corper badge closes in …" (after the deadline: "Early Corper closed · first rewards are being prepared.") and "Leaderboard closes in …" (after: "Leaderboard closed · winners are being confirmed.").
 2. **Your standing:** national referrer rank, rank in your state, and who to beat next: "3 more friends to pass Kels (#7)" (one more than the person directly above you nationally; on a tie it adds "You're tied, but they got there first."). At #1: "You're leading. Keep inviting to stay on top." Not on the board yet: "Invite your first friend to get on the leaderboard." Then an **Invite friends** button, and the **Get verified to win** card for unverified users.
 3. **Leaderboard** with two tabs: **Nigeria** (top 20 by valid referrals) and **{your state}** (top 10). Rows: rank, avatar, nickname, top badge icon, state, friends joined. Your row is highlighted, or pinned below the list when you're outside it. Cached 30 seconds.
 4. **Mystery prizes:** "Top 10 nationwide", "State Ambassadors", "Early Corpers". Each shows a lock, one line and the admin's reveal text ("Prizes are revealed when the countdown ends."); tapping opens a sheet with how it's decided (no amounts).
 5. **State Ambassador programme** (pink outline) with "Currently leading in {state}: {nickname} with N friends" and a **Learn more** sheet: the top referrer in each state when camp ends becomes that state's Kopamate Ambassador; perks: Kopamate team member (state admin), State Ambassador badge, promotion budget for the state, first access to new features, featured on Kopamate, certificate of recognition; "Ambassadors must be in good standing (no fake referrals). Final selection is confirmed by the Kopamate team."
-6. **Your badges** (badges that qualify for rewards first, tagged "Qualifies for rewards") and **Your rewards:** list of rewards the admin has given this user (title, status: pending / sent, date). Empty state: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. We'll message you on WhatsApp."
+6. **Your badges** (badges that qualify for rewards first, tagged "Qualifies for rewards") and **Your rewards** (anchor `#your-rewards`): one card per reward, unclaimed first, with the title, the amount and the state:
+   - hidden: "🎁 You won a reward! Amount revealed soon". No action.
+   - unclaimed: "You won ₦X" (plus "airtime"/"data" for those kinds) and a **Claim ₦X** button.
+   - claimed: "Claimed · payments go out within 72 hours", where it's going (bank and last 4 digits + account name, or the phone number) and **Edit details**.
+   - processing: "Payment in progress". Details are locked.
+   - paid: "Paid ✓ {date}".
+   - rejected: "Not approved." and the admin's note.
+   - Flagged users see "Under review" instead of Claim / Edit details.
+   Empty state: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. You'll claim them here and we'll message you on WhatsApp."
 7. **Share:** "You're #4 in Enugu" with Share on WhatsApp ("I'm #4 in Enugu, help me become Ambassador 👑" + referral link) and copy link.
 - Confetti when your national or state referrer rank improved since your last Rewards visit (last seen ranks are kept in localStorage on the device).
-- **This is not a money wallet.** No balances, withdrawals or payments.
+- **This is not a money wallet.** No balances or withdrawals: users claim individual rewards the admin has given them, and the admin pays them by hand.
+
+#### Claiming a reward
+- A bottom sheet opened from **Claim** or **Edit details**. Only the owner can claim, only from *unclaimed*, and flagged users can't ("Under review"). Banned users are signed out anyway.
+- **Cash:** bank (Access, Fidelity, First Bank, FCMB, GTBank, Kuda, Moniepoint, OPay, PalmPay, Polaris, Stanbic IBTC, Sterling, UBA, Union, Wema, Zenith, or Other with the name typed in, 2–40 characters), account number (exactly 10 digits) and account name (2–80 characters). Note: "The account name must match your name. Payments go out within 72 hours." The last bank details used are remembered on the user (private columns) to prefill the next cash claim.
+- **Airtime / data:** a phone number, prefilled with their WhatsApp number and normalised like sign-up (`normalizeNigerianPhone`).
+- Details can be changed while the reward is *claimed*, and lock as soon as the admin starts processing (checked again on the server, so a stale form can't sneak a change in).
+- The form keeps what the user typed when the server rejects it.
+
+#### Reward lifecycle
+`hidden → unclaimed → claimed → processing → paid`. Any of *unclaimed*, *claimed* or *processing* can be **rejected** by the admin (a note is required and shown to the user); a rejected reward can be **reopened**, which clears the old payout details and puts it back to *unclaimed* (or *hidden* if it has no amount). Only *hidden* and *unclaimed* rewards can be deleted. Revealing (*hidden → unclaimed*) needs an amount; without one the admin gets "Set an amount before revealing this reward". Title, kind and amount can be edited while *hidden* or *unclaimed*; once claimed the amount is locked (reject and award a new one to change it). Every status change, amount or title edit, reveal and payout details edit writes a row to `reward_events` (the user's own edits store only the bank and last 4 digits, never the full account number).
+
+#### Migration of old rewards
+`db/schema.sql` moves rewards from the old `pending`/`sent` statuses once (safe to run again): `pending` → `hidden` with no amount (the admin sets an amount, then reveals it before the user can claim), `sent` → `paid` with `paid_at = sent_at` and `payment_reference = 'legacy'` (amount stays empty and the budget tracker lists these separately). `sent_at` is kept for history. Run `npm run db:migrate` at the same time as deploying this code: the old code writes `pending`/`sent`, which the new status check rejects.
 
 ### 4.8 Profile (`/profile`)
 - Large avatar with a camera button to add or change the photo.
@@ -188,15 +210,27 @@ Prize amounts stay hidden. In order:
 
 ### 4.9 Admin (`/admin`)
 Only accessible to users whose email or phone is in an `ADMIN_IDS` environment variable. Simple and functional, no need to match the full design. Split into separate pages (tabs at the top) so each page runs only a few queries:
-- **Overview** (`/admin`): corpers joined (public number, including seed accounts), real users, seed accounts, signups today, real signups per day (last 14 days), top states, % from referrals, average referrals per referrer, verified count. Shortcuts to waiting verification requests and rewards to send.
-- **Users** (`/admin/users`): search by nickname, phone, email, state code or referral code; filters (real, seed, pending check, verified, flagged, banned, unfinished, all); 50 per page with Newer/Older. Each row opens the user's page.
-- **User page** (`/admin/users/[id]`): all their details (contact, sign-in method, state and state code, position and position among verified, referrals, who invited them, sign-up number, whether they're hidden from the list). Actions: flag/unflag (flagged users' referrals stop counting), ban/unban (signs them out), reset PIN (shows a temporary PIN once), remove photo, edit nickname/state/state code, approve/reject/remove verification (with the ID card photo while pending), add rewards and mark them sent, see the people they invited, and delete the account (type DELETE to confirm). Admins can't ban or delete themselves.
+- **Overview** (`/admin`): corpers joined (public number, including seed accounts), real users, seed accounts, signups today, real signups per day (last 14 days), top states, % from referrals, average referrals per referrer, verified count. Shortcuts to waiting verification requests and payouts to send (claimed + processing).
+- **Users** (`/admin/users`): search by nickname, phone, email, state code or referral code; filters (real, seed, pending check, verified, flagged, banned, unfinished, all); 50 per page with Newer/Older. Each row opens the user's page. Tick users and choose **Award selected** to give them all the same reward (bulk award, below).
+- **User page** (`/admin/users/[id]`): all their details (contact, sign-in method, state and state code, position and position among verified, referrals, who invited them, sign-up number, whether they're hidden from the list). Actions: flag/unflag (flagged users' referrals stop counting), ban/unban (signs them out), reset PIN (shows a temporary PIN once), remove photo, edit nickname/state/state code, approve/reject/remove verification (with the ID card photo while pending), award a reward (kind, title, optional amount and "Show amount to user"; warns about seed, flagged or unverified accounts), see and act on their rewards with each one's history, see the people they invited, and delete the account (type DELETE to confirm). Admins can't ban or delete themselves.
 - **Verification** (`/admin/verification`): pending requests, highest positions first, 30 at a time, with the ID card photo (served only to admins at `/admin/id-card/[id]`, never cached), state code, whether another account uses the same code, position and referrals. **Approve**, or **Reject** with a reason the user sees. The ID card photo is deleted as soon as either decision is made.
 - **Suspicious** (`/admin/suspicious`): users who referred many people in a short time (5+ in an hour or 15+ in 24 hours, with a Flag button), and 3+ sign-ups from the same network in 7 days (could be a shared camp Wi-Fi).
 - **Badges** (`/admin/badges`): how many people hold each badge; **Run badge backfill** (gives every completed user the auto badges they've earned; revoked badges stay revoked); **Award Prophet badges** (only after the leaderboard closes: gives Prophet to everyone who picked the state with the most completed sign-ups at that moment, every tied state counts); **Download Early Corpers (CSV)** (holders of the badge, not revoked, without flagged, banned and seed accounts: nickname, WhatsApp, state); and **Ambassador candidates**: the top 3 referrers in each state (flagged, banned and seed accounts left out) with an **Award State Ambassador** button.
 - **Users** table also lists each user's badges (revoked ones faded). On the **user page**, a Badges section shows every badge with when and by whom it was given; admins can award manual badges (Prophet, State Ambassador), revoke any badge with a reason, and restore a revoked one.
-- **Rewards** (`/admin/rewards`): download the prize lists as CSV (first 500 **verified** users and top 10 **verified** referrers; flagged, banned and seed accounts left out; with nickname, WhatsApp number and state code), and the rewards waiting to be sent.
-- **Settings** (`/admin/settings`): **Countdowns and rewards**: `early_deadline` (default `2026-10-02T23:59:59+01:00`; Early Corper badge closes), `leaderboard_close` (default `2026-10-21T23:59:59+01:00`) and `rewards_reveal_text` (default "Prizes are revealed when the countdown ends."). Times must be ISO 8601 with a time zone, and the leaderboard must close after the Early Corper deadline. Also the prize teaser text shown on Landing, Home and Rewards, whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away.
+- **Rewards** (`/admin/rewards`), top to bottom:
+  - **Budget tracker:** Budget (`rewards_budget_ngn`), Awarded (sum of `amount_ngn` on every reward that isn't rejected, hidden ones included), Claimed, Processing, Paid, Remaining (budget − awarded, red when negative) and a bar (bright = paid, faded = awarded). Notes "N rewards have no amount yet" (hidden/unclaimed without an amount) and how many were paid before amounts existed (legacy). Also shown on every bulk-award confirmation screen, as it would be after the award.
+  - **Award** shortcuts: Top referrers, All Early Corpers, Pick users.
+  - **Payouts to send** (claimed + processing): nickname, WhatsApp, kind, amount, and bank / account number / account name (cash) or phone (airtime, data), each with a Copy button. **Start processing** (claimed → processing, locks the user's details), **Mark paid** (processing → paid; payment reference required), **Reject** (note required). **Download payouts (CSV)**: nickname, whatsapp, kind, amount, status, bank, account_number, account_name, phone, reward_id, with the same formula-injection protection as the other exports.
+  - **Awarded, not claimed yet** (hidden + unclaimed), grouped by award batch: edit title/kind/amount inline, **Reveal amount**, **Delete**, **Reject**; per batch **Reveal all hidden rewards in this batch** (reveals the ones with an amount and says how many still need one).
+  - **Rejected** with the note and **Reopen**; **Recently paid** (last 30, with reference).
+  - **Prize lists** as CSV (first 500 **verified** users and top 10 **verified** referrers; flagged, banned and seed accounts left out; with nickname, WhatsApp number and state code).
+- **Award prizes** (`/admin/rewards/award`): three bulk awards, each ending on a confirmation screen (recipients, amount each, total ₦, budget after this award, per-user cap warnings) before anything is saved. Flagged, banned and seed accounts are always skipped, and the screen says how many were skipped and why.
+  - **Top referrers**, nationwide or for one state, top N (1–100) in leaderboard order. An editable prize table, one amount per rank, prefilled from the `prize_presets` setting (`top_referrers` nationwide, `top_state_referrers` per state, falling back to the nationwide one); **Save as preset** stores the table. With "Verified corpers only" (on by default) unverified referrers are passed over and the next verified one moves up. Titles get the rank added ("Top referrer prize · #3").
+  - **All Early Corpers** (badge holders, not revoked; "Verified corpers only" on by default) and **Selected users** (ticked in Users), each with one amount for everyone.
+  - Kind (cash, airtime, data), title and **Show amount to user** (off: rewards start hidden and are revealed later as a batch; on: every recipient needs an amount). Empty amounts are allowed only while hidden.
+  - Rewards created together share a `batch_id`. Submitting the same confirmation twice doesn't award twice, and anyone flagged or banned since the confirmation screen is skipped when saving.
+  - The budget and per-user cap only **warn**, on the confirmation screen and after saving; they never block.
+- **Settings** (`/admin/settings`): **Countdowns and rewards**: `early_deadline` (default `2026-10-02T23:59:59+01:00`; Early Corper badge closes), `leaderboard_close` (default `2026-10-21T23:59:59+01:00`) and `rewards_reveal_text` (default "Prizes are revealed when the countdown ends."). Times must be ISO 8601 with a time zone, and the leaderboard must close after the Early Corper deadline. Also the prize teaser text shown on Landing, Home and Rewards, whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away. **Reward money:** total budget (`rewards_budget_ngn`, default 200000), per-user cap (`max_claim_per_user_ngn`, empty = no cap; the admin is warned when an award or amount edit pushes someone's non-rejected total above it) and the top-referrer presets (`prize_presets`, JSON, default `{"top_referrers":[30000,20000,15000,10000,10000,5000,5000,5000,5000,5000]}`; edited as comma-separated amounts).
 
 ---
 
@@ -355,12 +389,31 @@ rewards
   user_id           uuid fk
   title             text
   description       text null
-  status            text  -- 'pending' | 'sent'
+  kind              text  -- 'cash' | 'airtime' | 'data'
+  amount_ngn        int null (> 0)
+  status            text  -- 'hidden' | 'unclaimed' | 'claimed' | 'processing' | 'paid' | 'rejected'
+  batch_id          text null     -- rewards awarded together (revealed together)
+  payout_bank, payout_account_number, payout_account_name, payout_phone   text null  -- private
+  claimed_at, processing_at, paid_at, rejected_at   timestamptz null
+  payment_reference text null     -- required to mark paid
+  admin_note        text null     -- shown to the user when rejected
   created_at        timestamptz
-  sent_at           timestamptz null
+  sent_at           timestamptz null  -- legacy only, no longer written
+
+reward_events                                   -- audit trail
+  id                bigserial pk
+  reward_id         uuid fk rewards on delete cascade
+  actor             text          -- 'user' or the admin's user id
+  action            text          -- awarded, edited, revealed, claimed, details_edited, processing, paid, rejected, reopened
+  detail            jsonb
+  created_at        timestamptz
+
+users (reward columns)
+  payout_bank, payout_account_number, payout_account_name   text null  -- last cash claim, to prefill; private
 
 settings                                        -- editable from admin
-  key               text pk   -- e.g. 'prize_teaser_text', 'first_n_mode', 'early_deadline', 'leaderboard_close', 'rewards_reveal_text'
+  key               text pk   -- e.g. 'prize_teaser_text', 'first_n_mode', 'early_deadline', 'leaderboard_close', 'rewards_reveal_text',
+                              --      'rewards_budget_ngn', 'max_claim_per_user_ngn', 'prize_presets'
   value             text
 
 badges
@@ -395,6 +448,7 @@ state_predictions
 ## 9. Privacy, safety and fairness
 
 - **Public info is only:** nickname, photo (or default avatar), state, position. **WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
+- **Payout details** (bank, account number, account name, payout phone, on `rewards` and the remembered ones on `users`) are read only on the owner's own Rewards page and in admin (Payouts, the user page, the payouts CSV). No other query, page or API selects them; Home only reads reward ids, statuses and amounts.
 - Show a short privacy notice (linked from sign-up): what we collect, why (account, prizes, anti-fraud), that we don't sell data, and how to delete your account. Keep in line with Nigeria's Data Protection Act.
 - Users can hide themselves from the Corpers list and delete their account.
 - **Anti-fraud:**

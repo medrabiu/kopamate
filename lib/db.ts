@@ -35,3 +35,22 @@ function createClient() {
 
 /** One shared client per server process (survives hot reloads in dev). */
 export const sql = globalThis.__kopamateSql ?? (globalThis.__kopamateSql = createClient());
+
+/**
+ * Runs `fn` in a transaction on one reserved connection. Use this, not sql.begin: with max_pipeline 0,
+ * postgres.js never reserves the connection for sql.begin and every call fails with UNSAFE_TRANSACTION.
+ */
+export async function transaction<T>(fn: (tx: postgres.ReservedSql) => Promise<T>): Promise<T> {
+  const tx = await sql.reserve();
+  try {
+    await tx`BEGIN`;
+    const result = await fn(tx);
+    await tx`COMMIT`;
+    return result;
+  } catch (err) {
+    await tx`ROLLBACK`.catch(() => {});
+    throw err;
+  } finally {
+    tx.release();
+  }
+}

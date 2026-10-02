@@ -55,9 +55,9 @@ CREATE TABLE IF NOT EXISTS rewards (
   user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title        text NOT NULL,
   description  text,
-  status       text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent')),
+  status       text NOT NULL DEFAULT 'hidden',   -- allowed values: see rewards_status_check_v2 below
   created_at   timestamptz NOT NULL DEFAULT now(),
-  sent_at      timestamptz
+  sent_at      timestamptz                       -- legacy: when an old 'sent' reward was sent; no longer written
 );
 CREATE INDEX IF NOT EXISTS rewards_user_idx ON rewards (user_id);
 
@@ -131,3 +131,59 @@ CREATE INDEX IF NOT EXISTS state_predictions_state_idx ON state_predictions (sta
 -- Small avatar (144×144) made on the phone at upload, served for avatars shown at 72px or less.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_thumb_data text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_thumb_mime text;
+
+-- Reward claims and payouts.
+-- Lifecycle: hidden → unclaimed → claimed → processing → paid; unclaimed/claimed/processing → rejected; rejected → unclaimed.
+-- payout_* columns are private: read only on the owner's Rewards page and in admin.
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'cash' CHECK (kind IN ('cash', 'airtime', 'data'));
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS amount_ngn int CHECK (amount_ngn IS NULL OR amount_ngn > 0);
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS payout_bank text;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS payout_account_number text;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS payout_account_name text;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS payout_phone text;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS claimed_at timestamptz;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS processing_at timestamptz;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS paid_at timestamptz;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS payment_reference text;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS admin_note text;          -- reason shown to the user when rejected
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS rejected_at timestamptz;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS batch_id text;            -- rewards awarded together, revealed together
+
+-- Old statuses: 'pending' (not sent yet) becomes 'hidden' (admin sets an amount, then reveals);
+-- 'sent' becomes 'paid' with reference 'legacy'. Amounts stay empty. Runs once; later runs find nothing to change.
+ALTER TABLE rewards DROP CONSTRAINT IF EXISTS rewards_status_check;
+UPDATE rewards SET status = 'hidden' WHERE status = 'pending';
+UPDATE rewards SET status = 'paid', paid_at = sent_at, payment_reference = 'legacy' WHERE status = 'sent';
+ALTER TABLE rewards ALTER COLUMN status SET DEFAULT 'hidden';
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'rewards_status_check_v2' AND conrelid = 'rewards'::regclass) THEN
+    ALTER TABLE rewards ADD CONSTRAINT rewards_status_check_v2
+      CHECK (status IN ('hidden', 'unclaimed', 'claimed', 'processing', 'paid', 'rejected'));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS rewards_status_idx ON rewards (status);
+CREATE INDEX IF NOT EXISTS rewards_batch_idx ON rewards (batch_id) WHERE batch_id IS NOT NULL;
+
+-- Audit trail: one row per status change, amount edit, reveal and payout details edit.
+CREATE TABLE IF NOT EXISTS reward_events (
+  id          bigserial PRIMARY KEY,
+  reward_id   uuid NOT NULL REFERENCES rewards(id) ON DELETE CASCADE,
+  actor       text NOT NULL,                    -- 'user' or the admin's user id
+  action      text NOT NULL,
+  detail      jsonb,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS reward_events_reward_idx ON reward_events (reward_id, created_at);
+
+-- Last bank details a user claimed with, to prefill their next claim. Private, same rule as payout_*.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_bank text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_account_number text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_account_name text;
+
+-- Reward money settings (editable in admin). Empty max_claim_per_user_ngn means no cap.
+INSERT INTO settings (key, value) VALUES
+  ('rewards_budget_ngn', '200000'),
+  ('max_claim_per_user_ngn', ''),
+  ('prize_presets', '{"top_referrers":[30000,20000,15000,10000,10000,5000,5000,5000,5000,5000]}')
+ON CONFLICT (key) DO NOTHING;

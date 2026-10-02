@@ -21,20 +21,24 @@ export default function PrivacyPage() {
         <li>Your nickname, the state you&apos;re serving in, and a photo if you add one.</li>
         <li>Your WhatsApp number, and your email if you sign in with Google.</li>
         <li>Your state code, only if you choose to add it.</li>
+        <li>
+          If you claim a prize: your bank name, account number and account name, or the phone number for airtime or
+          data. We keep your last bank details to fill in your next claim.
+        </li>
         <li>Who invited you and who you invited.</li>
         <li>A scrambled (hashed) version of your network address, to stop fake sign-ups.</li>
       </ul>
 
       <h2 className="h-display text-xl">What other users see</h2>
       <p className="text-muted">
-        Only your nickname, photo, state and position. Your WhatsApp number, email and state code are never shown to
-        anyone else. You can hide yourself from the Corpers list in your profile.
+        Only your nickname, photo, state and position. Your WhatsApp number, email, state code and bank details are never
+        shown to anyone else. You can hide yourself from the Corpers list in your profile.
       </p>
 
       <h2 className="h-display text-xl">Why we collect it</h2>
       <p className="text-muted">
-        To run your account, count referrals fairly, stop fake accounts, and contact you on WhatsApp if you win a
-        prize. We don&apos;t sell your data.
+        To run your account, count referrals fairly, stop fake accounts, and contact you on WhatsApp and pay you if you
+        win a prize. We don&apos;t sell your data.
       </p>
 
       <h2 className="h-display text-xl">Your choices</h2>

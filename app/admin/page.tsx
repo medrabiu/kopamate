@@ -31,7 +31,7 @@ export default async function AdminOverviewPage() {
              count(*) FILTER (WHERE is_seed)::int AS seed,
              count(*) FILTER (WHERE verification_status = 'verified')::int AS verified,
              count(*) FILTER (WHERE verification_status = 'pending')::int AS pending_verification,
-             (SELECT count(*)::int FROM rewards WHERE status = 'pending') AS pending_rewards
+             (SELECT count(*)::int FROM rewards WHERE status IN ('claimed', 'processing')) AS pending_rewards
       FROM users WHERE NOT is_banned
     `,
     sql<{ day: string; n: number }[]>`
@@ -60,7 +60,7 @@ export default async function AdminOverviewPage() {
           )}
           {o.pending_rewards > 0 && (
             <Link href="/admin/rewards" className="rounded-2xl border border-pink px-4 py-3 text-sm font-bold">
-              {o.pending_rewards} {o.pending_rewards === 1 ? "reward" : "rewards"} to send
+              {o.pending_rewards} {o.pending_rewards === 1 ? "payout" : "payouts"} to send
             </Link>
           )}
         </section>

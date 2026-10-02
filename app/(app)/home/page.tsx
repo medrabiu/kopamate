@@ -11,6 +11,7 @@ import Confetti from "@/components/Confetti";
 import CountUp from "@/components/CountUp";
 import HomeCarousel from "@/components/HomeCarousel";
 import PrizeCard from "@/components/PrizeCard";
+import RewardBanner from "@/components/RewardBanner";
 import ShareButtons from "@/components/ShareButtons";
 import StatusCardButton from "@/components/StatusCardButton";
 import StatusCardPreview from "@/components/StatusCardPreview";
@@ -34,7 +35,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, prizeText, announcement, snapshot, newcomers, earlyDeadline, steps, badges] = await Promise.all([
+  const [rank, stats, prizeText, announcement, snapshot, newcomers, earlyDeadline, steps, badges, myRewards] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getPrizeText(),
@@ -49,7 +50,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getEarlyDeadline(),
     badgesReady.then(() => getProfileSteps(user.id)),
     badgesReady.then(() => getUserBadges(user.id)),
+    // Rewards waiting for the user (no payout details here).
+    sql<{ id: string; status: "hidden" | "unclaimed"; amount_ngn: number | null }[]>`
+      SELECT id, status, amount_ngn FROM rewards WHERE user_id = ${user.id} AND status IN ('hidden', 'unclaimed')
+    `,
   ]);
+  const unclaimed = myRewards.filter((r) => r.status === "unclaimed");
   const profileComplete = badges.find((b) => b.slug === "profile_complete");
 
   const position = rank?.position ?? 0;
@@ -83,6 +89,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <Avatar id={user.id} nickname={user.nickname} photoVersion={user.photo_version} size={40} />
         </Link>
       </header>
+
+      <RewardBanner
+        unclaimedIds={unclaimed.map((r) => r.id)}
+        unclaimedTotal={unclaimed.reduce((s, r) => s + (r.amount_ngn ?? 0), 0)}
+        hiddenCount={myRewards.length - unclaimed.length}
+        underReview={user.is_flagged}
+      />
 
       <EarlyCorperBanner deadline={earlyDeadline} hasBadge={badges.some((b) => b.slug === "early_corper")} variant="home" />
 
