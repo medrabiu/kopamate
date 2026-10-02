@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Avatar from "@/components/Avatar";
 import BadgeIcon from "@/components/BadgeIcon";
 import Confetti from "@/components/Confetti";
+import { PersonButton } from "@/components/PersonSheet";
 import Sheet from "@/components/Sheet";
 import ShareButtons from "@/components/ShareButtons";
 import { CheckIcon, ChevronRight, CrownIcon, LockIcon } from "@/components/icons";
@@ -21,17 +22,19 @@ export type BoardRow = {
 
 function Row({ r, me, last }: { r: BoardRow; me: boolean; last?: boolean }) {
   return (
-    <li className={`flex h-14 items-center gap-3 ${last ? "" : "border-b border-surface-2"}`} aria-current={me ? "true" : undefined}>
-      <span className={`h-display w-7 shrink-0 text-center ${r.rank <= 3 ? "text-lime-ink" : "text-faint"}`}>{r.rank || "–"}</span>
-      <Avatar id={r.id} nickname={r.nickname} photoVersion={r.photo_version} size={36} ring={me} />
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className={`flex min-w-0 items-center gap-1.5 ${me ? "font-bold text-lime-ink" : "font-medium"}`}>
-          <span className="truncate">{me ? "You" : r.nickname}</span>
-          <BadgeIcon badge={r.top_badge} />
+    <li className={last ? "" : "border-b border-surface-2"} aria-current={me ? "true" : undefined}>
+      <PersonButton id={r.id} label={r.nickname} className="flex h-14 w-full items-center gap-3">
+        <span className={`h-display w-7 shrink-0 text-center ${r.rank <= 3 ? "text-lime-ink" : "text-faint"}`}>{r.rank || "–"}</span>
+        <Avatar id={r.id} nickname={r.nickname} photoVersion={r.photo_version} size={36} ring={me} />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className={`flex min-w-0 items-center gap-1.5 ${me ? "font-bold text-lime-ink" : "font-medium"}`}>
+            <span className="truncate">{me ? "You" : r.nickname}</span>
+            <BadgeIcon badge={r.top_badge} />
+          </span>
+          {r.state && <span className="truncate text-xs text-muted">{r.state}</span>}
         </span>
-        {r.state && <span className="truncate text-xs text-muted">{r.state}</span>}
-      </span>
-      <span className="font-bold tabular-nums">{r.refs}</span>
+        <span className="font-bold tabular-nums">{r.refs}</span>
+      </PersonButton>
     </li>
   );
 }

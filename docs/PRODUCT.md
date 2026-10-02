@@ -140,17 +140,19 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.4 Corpers (`/corpers`)
 - Title "Corpers", and "{total} joined across {n} states".
-- Search box to filter states.
-- List of all states sorted by count, showing rank, name, count and a chevron. The user's own state is highlighted with a "You" tag.
-- States with zero signups are listed at the bottom.
+- **Your state** card (lime outline, links to the state page): state name, "#{rank} of 37 states", the top 5 corpers there as overlapping avatars and "{count} corpers serving here".
+- **All states:** search box to filter states, then one card listing every state sorted by count: rank, name, a bar showing its size next to the biggest state (lime for yours, pink for the rest), count and a chevron. The user's own state has a "You" tag. States with zero signups are listed at the bottom, greyed out.
 
 ### 4.5 Corpers in a state (`/corpers/[state]`)
-- Back button, state name, "{count} corpers · #{rank} state", "Your state" tag if it's theirs.
+- Back button, then a header card: state name, "{count} corpers" and "#{rank} of 37 states"; lime outline and a "Your state" label if it's theirs. "Tap anyone to see their profile." under it.
 - 3-column grid: avatar (photo or default avatar), nickname with their top badge icon, position.
 - The current user is highlighted with a lime ring and "(you)".
-- **View only.** No tapping into profiles, no messaging.
 - Paginate or infinite-scroll in pages of 30. Order by position.
 - Users who chose "hide me" don't appear.
+- No messaging.
+
+### Profile sheet (anywhere in the signed-in app)
+Tapping a person opens a bottom sheet with their public profile: avatar, nickname, state, join date, "Verified corper" (and "You" on your own), position, friends invited, number of badges and the badge chips, plus "See corpers in {state}" (hidden when already on that page). It works in the state grid, Home's "New from {state}" row, the Rewards leaderboard and Invite's friends list. The profile is fetched when tapped from `/api/person/[id]` (signed-in users only; 404 for unknown, banned or unfinished accounts; kept for the visit) and never includes WhatsApp numbers, emails, state codes, payout details or anything else private. Flagged users' badges stay hidden, as everywhere.
 
 ### 4.6 Invite (`/invite`)
 - Title "Invite friends" and "Every friend who joins with your link moves you **up 10 places**."
@@ -441,7 +443,7 @@ state_predictions
 
 ## 9. Privacy, safety and fairness
 
-- **Public info is only:** nickname, photo (or default avatar), state, position. **WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
+- **Public info is only:** nickname, photo (or default avatar), state, position, plus on the profile sheet the join date, friends invited, badges and whether they're verified. **WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
 - **Payout details** (bank, account number, account name, payout phone, on `rewards` and the remembered ones on `users`) are read only on the owner's own Rewards page and in admin (Payouts, the user page, the payouts CSV). No other query, page or API selects them; Home only reads reward ids, statuses and amounts.
 - Show a short privacy notice (linked from sign-up): what we collect, why (account, prizes, anti-fraud), that we don't sell data, and how to delete your account. Keep in line with Nigeria's Data Protection Act.
 - Users can hide themselves from the Corpers list and delete their account.

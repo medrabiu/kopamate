@@ -4,6 +4,7 @@ import { useState } from "react";
 import Avatar from "@/components/Avatar";
 import BadgeIcon from "@/components/BadgeIcon";
 import Sheet from "@/components/Sheet";
+import { PersonButton } from "@/components/PersonSheet";
 import { ChevronRight } from "@/components/icons";
 import type { BadgeInfo } from "@/lib/badge-meta";
 
@@ -64,13 +65,15 @@ export default function FriendsJoined({ friends }: { friends: Friend[] }) {
       <Sheet open={open} onClose={() => setOpen(false)} title={`Friends who joined · ${friends.length}`}>
         <ul className="-mt-1 max-h-[60vh] overflow-y-auto">
           {friends.map((f, i) => (
-            <li key={f.id} className={`flex h-14 items-center gap-3 ${i < friends.length - 1 ? "border-b border-surface-2" : ""}`}>
-              <Avatar id={f.id} nickname={f.nickname} photoVersion={f.photo_version} size={40} />
-              <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
-                <span className="truncate">{f.nickname}</span>
-                <BadgeIcon badge={f.top_badge} />
-              </span>
-              <span className="shrink-0 text-[13px] text-faint">{f.ago}</span>
+            <li key={f.id} className={i < friends.length - 1 ? "border-b border-surface-2" : ""}>
+              <PersonButton id={f.id} label={f.nickname} className="flex h-14 w-full items-center gap-3">
+                <Avatar id={f.id} nickname={f.nickname} photoVersion={f.photo_version} size={40} />
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
+                  <span className="truncate">{f.nickname}</span>
+                  <BadgeIcon badge={f.top_badge} />
+                </span>
+                <span className="shrink-0 text-[13px] text-faint">{f.ago}</span>
+              </PersonButton>
             </li>
           ))}
         </ul>

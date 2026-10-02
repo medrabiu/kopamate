@@ -10,6 +10,7 @@ import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
 import CountUp from "@/components/CountUp";
 import HomeCarousel from "@/components/HomeCarousel";
+import { PersonButton } from "@/components/PersonSheet";
 import RewardBanner from "@/components/RewardBanner";
 import ShareButtons from "@/components/ShareButtons";
 import StatusCardButton from "@/components/StatusCardButton";
@@ -206,13 +207,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
           <div className="flex gap-3 overflow-x-auto">
             {newcomers.map((n) => (
-              <div key={n.id} className="flex w-[56px] shrink-0 flex-col items-center gap-1.5">
+              <PersonButton key={n.id} id={n.id} label={n.nickname} className="flex w-[56px] shrink-0 flex-col items-center gap-1.5">
                 <Avatar id={n.id} nickname={n.nickname} photoVersion={n.photo_version} size={52} />
                 <span className="flex w-full items-center justify-center gap-1 text-xs text-muted">
                   <span className="truncate">{n.nickname}</span>
                   <BadgeIcon badge={n.top_badge} size={14} />
                 </span>
-              </div>
+              </PersonButton>
             ))}
           </div>
         </section>

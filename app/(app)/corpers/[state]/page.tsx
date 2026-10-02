@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import BadgeIcon from "@/components/BadgeIcon";
+import { PersonButton } from "@/components/PersonSheet";
 import { ChevronLeft } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getPublicStats } from "@/lib/stats";
@@ -38,16 +39,22 @@ export default async function StatePage({ params, searchParams }: Props) {
           <ChevronLeft size={24} />
         </Link>
       </div>
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="h-display text-[34px] leading-none">{state}</h1>
+      <section className={`card flex items-center justify-between gap-3 !p-[18px] ${isMine ? "border-[1.5px] border-lime" : ""}`}>
+        <div className="flex min-w-0 flex-col gap-1">
+          {isMine && <span className="text-[13px] font-bold uppercase tracking-wider text-lime-ink">Your state</span>}
+          <h1 className="h-display truncate text-[32px] leading-none">{state}</h1>
           <p className="text-[15px] text-muted">
             {formatNumber(info?.count ?? 0)} {info?.count === 1 ? "corper" : "corpers"}
-            {info && info.count > 0 ? ` · #${info.rank} state` : ""}
           </p>
         </div>
-        {isMine && <span className="rounded-full bg-lime px-3 py-1.5 text-xs font-bold text-on-accent">Your state</span>}
-      </div>
+        {info && info.count > 0 && (
+          <div className="shrink-0 text-right">
+            <div className="h-display text-[32px] leading-none text-pink-ink">#{info.rank}</div>
+            <div className="mt-1 text-xs text-muted">of {stats.states.length} states</div>
+          </div>
+        )}
+      </section>
+      {shown.length > 0 && <p className="-mt-2 text-sm text-faint">Tap anyone to see their profile.</p>}
 
       {shown.length === 0 ? (
         <div className="rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-8 text-center">
@@ -62,16 +69,18 @@ export default async function StatePage({ params, searchParams }: Props) {
           {shown.map((m) => {
             const me = m.id === user.id;
             return (
-              <li key={m.id} className="flex flex-col items-center gap-1.5">
-                <Avatar id={m.id} nickname={m.nickname} photoVersion={m.photo_version} size={72} ring={me} />
-                <span className={`flex w-full items-center justify-center gap-1 text-sm font-medium ${me ? "text-lime-ink" : ""}`}>
-                  <span className="truncate">
-                    {m.nickname}
-                    {me ? " (you)" : ""}
+              <li key={m.id}>
+                <PersonButton id={m.id} label={m.nickname} className="flex w-full flex-col items-center gap-1.5 rounded-2xl py-1 active:bg-surface">
+                  <Avatar id={m.id} nickname={m.nickname} photoVersion={m.photo_version} size={72} ring={me} />
+                  <span className={`flex w-full items-center justify-center gap-1 text-sm font-medium ${me ? "text-lime-ink" : ""}`}>
+                    <span className="truncate">
+                      {m.nickname}
+                      {me ? " (you)" : ""}
+                    </span>
+                    <BadgeIcon badge={m.top_badge} />
                   </span>
-                  <BadgeIcon badge={m.top_badge} />
-                </span>
-                {m.position !== null && <span className="text-xs text-faint">#{formatNumber(m.position)}</span>}
+                  {m.position !== null && <span className="text-xs text-faint">#{formatNumber(m.position)}</span>}
+                </PersonButton>
               </li>
             );
           })}
