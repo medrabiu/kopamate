@@ -1,9 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import "@fontsource/dm-sans/latin-400.css";
-import "@fontsource/dm-sans/latin-500.css";
-import "@fontsource/dm-sans/latin-700.css";
-import "@fontsource/bricolage-grotesque/latin-800.css";
 import "./globals.css";
 import { APP_NAME, APP_URL } from "@/lib/config";
 import ConnectionBanner from "@/components/ConnectionBanner";

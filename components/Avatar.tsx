@@ -31,7 +31,7 @@ export default function Avatar({ id, nickname, photoVersion = 0, size = 40, ring
   return (
     <div
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center rounded-full font-display font-extrabold text-on-accent ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-full font-display font-bold text-on-accent ${className}`}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.4), background: avatarColor(id), ...ringStyle }}
     >
       {letter}

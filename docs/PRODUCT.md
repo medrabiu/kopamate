@@ -59,7 +59,7 @@ Claude Code may adjust these if there's a good reason, but should keep the app l
   - Google provider
   - Credentials provider for **phone number + 4-digit PIN** (PIN hashed with bcrypt/argon2)
 - **Image storage** for profile photos: Supabase Storage (or Vercel Blob). Resize and compress on upload (max 400×400, WebP, under 60 KB).
-- **Fonts:** Bricolage Grotesque (headings, numbers) and DM Sans (body), via `next/font/google`.
+- **Fonts:** the phone's own system font, the same stack x.com falls back to (San Francisco on iPhone, Roboto on Android, Segoe UI on Windows). Nothing to download.
 - **Scheduled job** (Vercel Cron) once a day to snapshot positions.
 
 **Why no SMS codes:** SMS verification costs money per message. v1 uses phone + PIN and relies on unique WhatsApp numbers, rate limits and admin review to catch fake accounts. Design the code so an OTP step can be added later.
@@ -317,8 +317,8 @@ Text on lime or pink is always `#0E0E10`.
 Avatar background colours for default avatars (pick from the user ID so it's stable): `#C6F432`, `#FF4FA3`, `#FFB547`, `#8B7BFF`, `#4FD1C5`.
 
 ### Typography
-- **Bricolage Grotesque** (weights 600, 800): headings, big numbers, ranks, wordmark.
-- **DM Sans** (400, 500, 700): everything else.
+- **System font stack** everywhere in the app: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`. Headings, big numbers and ranks use it in bold (700) with tight letter spacing; body text at 400/500/700. x.com's own font (Chirp) is licensed to X only, so this is its fallback stack.
+- The generated images (WhatsApp Status card, link previews, app icons) still embed Bricolage Grotesque 800 and DM Sans 700 from `@fontsource`, since images can't use the phone's fonts.
 - Position number on Home: ~72px, weight 800, lime. Landing counter: ~64px.
 
 ### Shapes and components
@@ -327,7 +327,7 @@ Avatar background colours for default avatars (pick from the user ID so it's sta
 - Inputs: height 52px, radius 14px, `surface` background, `border` outline.
 - Bottom nav: 76px high, 5 equal tabs, icon + label.
 - Icons: simple outline icons (e.g. Lucide). **No emoji in the UI** (emoji are fine in the WhatsApp share message).
-- **Default avatar:** coloured circle with the first letter of the nickname in Bricolage Grotesque 800, dark text.
+- **Default avatar:** coloured circle with the first letter of the nickname in bold, dark text.
 - Minimum touch target 44px. Text contrast at least WCAG AA.
 
 ### Motion

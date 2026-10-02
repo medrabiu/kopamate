@@ -17,8 +17,13 @@
   /* Text sitting on a lime or pink fill */
   --color-on-accent: #0e0e10;
 
-  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  /*
+   * The phone's own font, the same stack x.com falls back to (its Chirp font is licensed to X only):
+   * San Francisco on iPhone, Roboto on Android, Segoe UI on Windows. Nothing to download.
+   * The share images (/card, link previews, icons) still embed DM Sans and Bricolage from @fontsource.
+   */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-sans);
 }
 
 /*
@@ -90,7 +95,7 @@ textarea {
     display: none;
   }
   .h-display {
-    @apply font-display font-extrabold tracking-tight;
+    @apply font-display font-bold tracking-tight;
   }
 }
 
