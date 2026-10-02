@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
-import { APP_NAME, APP_URL } from "@/lib/config";
+import { APP_NAME, APP_URL, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/config";
 import ConnectionBanner from "@/components/ConnectionBanner";
 import ServiceWorker from "@/components/ServiceWorker";
 import { THEME_COLOR, THEME_COOKIE, themeMigrationScript, type Theme } from "@/lib/theme";
@@ -12,16 +12,35 @@ async function currentTheme(): Promise<Theme> {
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  title: { default: `${APP_NAME}: every corper, one place`, template: `%s · ${APP_NAME}` },
-  description: "Join corpers across Nigeria. Climb the list, invite friends and be first in line for contests, awards and prizes.",
+  title: { default: SITE_TITLE, template: `%s · ${APP_NAME}` },
+  description: SITE_DESCRIPTION,
   applicationName: APP_NAME,
+  keywords: [
+    "NYSC",
+    "NYSC app",
+    "corps members",
+    "corpers",
+    "NYSC corpers",
+    "NYSC orientation camp",
+    "service year",
+    "corpers in Nigeria",
+    "NYSC state code",
+    "CDS",
+    "SAED",
+  ],
+  category: "social networking",
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
+  formatDetection: { telephone: false },
   appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" },
   openGraph: {
     type: "website",
     siteName: APP_NAME,
-    title: `${APP_NAME}: every corper, one place`,
-    description: "Join corpers across Nigeria. Prizes for the first 500 people.",
+    locale: "en_NG",
+    url: "/",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
+  twitter: { card: "summary_large_image", title: SITE_TITLE, description: SITE_DESCRIPTION },
 };
 
 export async function generateViewport(): Promise<Viewport> {

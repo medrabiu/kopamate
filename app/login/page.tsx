@@ -7,7 +7,7 @@ import { ChevronLeft } from "@/components/icons";
 import { Divider, GoogleButton } from "@/components/forms";
 import LoginForm from "./LoginForm";
 
-export const metadata: Metadata = { title: "Log in" };
+export const metadata: Metadata = { title: "Log in", robots: { index: false, follow: true } };
 export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {

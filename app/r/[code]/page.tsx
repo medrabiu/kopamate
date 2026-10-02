@@ -24,8 +24,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { code } = await params;
   const inviter = await findInviter(code);
   const title = inviter ? `${inviter.nickname} invited you to ${APP_NAME}` : `${APP_NAME}: every corper, one place`;
-  const description = "Join corpers across Nigeria. Prizes for the first 500 people.";
-  return { title: { absolute: title }, description, openGraph: { title, description }, twitter: { card: "summary_large_image", title, description } };
+  const description = "The free app for NYSC corps members across Nigeria. Find corpers in your state, earn badges and win prizes.";
+  return {
+    title: { absolute: title },
+    description,
+    // Thousands of invite links share the landing page: send search engines to / instead.
+    alternates: { canonical: "/" },
+    robots: { index: false, follow: true },
+    openGraph: { title, description },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 /**

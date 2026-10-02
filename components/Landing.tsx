@@ -2,12 +2,69 @@ import Link from "next/link";
 import CountUp from "./CountUp";
 import EarlyCorperBanner from "./EarlyCorperBanner";
 import { CheckIcon, GiftIcon, LockIcon, MedalIcon, ShieldIcon, TrophyIcon, UsersIcon } from "./icons";
-import { APP_NAME } from "@/lib/config";
+import { APP_NAME, APP_URL, SITE_DESCRIPTION } from "@/lib/config";
 import { STATES } from "@/lib/states";
 import type { PublicStats } from "@/lib/stats";
 import { formatNumber } from "@/lib/util";
 
 type Props = { stats: PublicStats; earlyDeadline: string };
+
+/** Shown on the page and given to search engines as FAQ structured data, so both always match. */
+const FAQ = [
+  {
+    q: `What is ${APP_NAME}?`,
+    a: `${APP_NAME} is a free app for NYSC corps members across Nigeria. You can find corpers serving in your state, earn badges for your service year, and win prizes, contests and awards made for corpers.`,
+  },
+  {
+    q: `Is ${APP_NAME} an official NYSC app?`,
+    a: `No. ${APP_NAME} is an independent app for corps members and is not affiliated with the National Youth Service Corps.`,
+  },
+  { q: `Is ${APP_NAME} free?`, a: "Yes. Signing up and using the app is free." },
+  {
+    q: "Who can join?",
+    a: "Corps members serving in any of Nigeria's 36 states and the FCT. Sign up with your phone number or Google in about 20 seconds.",
+  },
+  {
+    q: "How do prizes work?",
+    a: "When you win, the reward shows up in the app. You claim it there and get it as a bank transfer, airtime or data. Only verified corpers can win.",
+  },
+  {
+    q: "How do I get verified?",
+    a: "Add your state code and a photo of your NYSC ID card in your profile. Our team checks it and deletes the photo once it's done.",
+  },
+  {
+    q: "Can other people see my phone number?",
+    a: "No. Other corpers only see your nickname, photo, state, position and badges. Your phone number, email and state code stay private.",
+  },
+];
+
+/** Organization, WebSite, WebApplication and FAQ structured data for search results. */
+function structuredData() {
+  const org = { "@type": "Organization", "@id": `${APP_URL}/#org`, name: APP_NAME, url: APP_URL, logo: `${APP_URL}/icons/512` };
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      org,
+      { "@type": "WebSite", "@id": `${APP_URL}/#website`, name: APP_NAME, url: APP_URL, description: SITE_DESCRIPTION, inLanguage: "en-NG", publisher: { "@id": org["@id"] } },
+      {
+        "@type": "WebApplication",
+        name: APP_NAME,
+        url: APP_URL,
+        description: SITE_DESCRIPTION,
+        applicationCategory: "SocialNetworkingApplication",
+        operatingSystem: "Web, Android, iOS",
+        browserRequirements: "Requires a modern web browser",
+        audience: { "@type": "Audience", audienceType: "NYSC corps members", geographicArea: { "@type": "Country", name: "Nigeria" } },
+        offers: { "@type": "Offer", price: "0", priceCurrency: "NGN" },
+        publisher: { "@id": org["@id"] },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: FAQ.map(({ q, a }) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+      },
+    ],
+  };
+}
 
 const FEATURES = [
   {
@@ -57,6 +114,11 @@ export default function Landing({ stats, earlyDeadline }: Props) {
 
   return (
     <div className="min-h-dvh">
+      <script
+        type="application/ld+json"
+        // JSON with "<" escaped, so nothing in it can close the script tag.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData()).replace(/</g, "\\u003c") }}
+      />
       <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1040px] items-center justify-between px-5">
           <span className="h-display text-xl">{APP_NAME}</span>
@@ -79,7 +141,7 @@ export default function Landing({ stats, earlyDeadline }: Props) {
               For NYSC corps members across Nigeria
             </span>
             <h1 className="h-display text-[40px] leading-[1.05] md:text-[56px]">
-              The home for every corper in Nigeria.
+              The home for every NYSC corper in Nigeria.
             </h1>
             <p className="max-w-[34rem] text-[17px] leading-relaxed text-muted">
               {APP_NAME} brings corpers from every state into one place. Find people serving near you, earn badges for your
@@ -195,6 +257,26 @@ export default function Landing({ stats, earlyDeadline }: Props) {
               </li>
             ))}
           </ul>
+        </section>
+
+        {/* Questions people search for; the same list is in the structured data above. */}
+        <section className="flex flex-col gap-6" aria-labelledby="faq-title">
+          <h2 id="faq-title" className="h-display text-[28px] leading-tight md:text-[36px]">
+            Questions corpers ask
+          </h2>
+          <div className="divide-y divide-line rounded-3xl border border-line">
+            {FAQ.map(({ q, a }) => (
+              <details key={q} className="group px-5 py-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold [&::-webkit-details-marker]:hidden">
+                  <h3>{q}</h3>
+                  <span aria-hidden="true" className="shrink-0 text-xl leading-none text-muted transition-transform group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+                <p className="mt-2 leading-relaxed text-muted">{a}</p>
+              </details>
+            ))}
+          </div>
         </section>
 
         {/* Closing call to action */}

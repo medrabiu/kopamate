@@ -3,7 +3,11 @@ import Link from "next/link";
 import { APP_NAME } from "@/lib/config";
 import { ChevronLeft } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Privacy notice" };
+export const metadata: Metadata = {
+  title: "Privacy notice",
+  description: "What Kopamate collects from NYSC corps members, why, who can see it, and how to delete your account.",
+  alternates: { canonical: "/privacy" },
+};
 
 export default function PrivacyPage() {
   return (

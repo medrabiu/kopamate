@@ -1,5 +1,10 @@
 export const APP_NAME = "Kopamate";
 
+/** What search engines and link previews show for the site. */
+export const SITE_TITLE = `${APP_NAME}: the app for NYSC corps members in Nigeria`;
+export const SITE_DESCRIPTION =
+  `${APP_NAME} is the free app for NYSC corps members across Nigeria. Find corpers serving in your state, earn badges for your service year, and win prizes, contests and awards made for corpers.`;
+
 /**
  * Public address of the app, used in invite links, share previews and Google sign-in.
  * On Vercel's production deployment a missing or localhost APP_URL (e.g. copied from a local .env)

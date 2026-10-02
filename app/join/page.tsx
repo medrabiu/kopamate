@@ -7,7 +7,11 @@ import { googleEnabled } from "@/lib/config";
 import { ChevronLeft } from "@/components/icons";
 import { FinishForm, PhoneSignupForm } from "./JoinForm";
 
-export const metadata: Metadata = { title: "Join" };
+export const metadata: Metadata = {
+  title: "Join free",
+  description: "Join Kopamate in 20 seconds with your phone number or Google. Free for NYSC corps members in every state.",
+  alternates: { canonical: "/join" },
+};
 export const dynamic = "force-dynamic";
 
 export default async function JoinPage() {
