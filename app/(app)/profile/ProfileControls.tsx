@@ -1,8 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import Avatar from "@/components/Avatar";
-import { CameraIcon, CheckIcon } from "@/components/icons";
+import Sheet from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { CameraIcon, ChevronRight, ClockIcon, ShieldIcon } from "@/components/icons";
 import IdCardGuide from "@/components/IdCardGuide";
 import { PhoneInput, StateSelect } from "@/components/forms";
 import {
@@ -43,14 +46,12 @@ export function EditableRow({
   }, [state]);
 
   return (
-    <div className="border-b border-surface-2 py-3">
+    <div className="px-4 py-3">
       {!open ? (
-        <div className="flex min-h-9 items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-[13px] text-faint">{label}</div>
-            <div className={`truncate text-base font-medium ${muted ? "text-faint" : ""}`}>{display}</div>
-          </div>
-          <button type="button" onClick={() => setOpen(true)} className="py-2.5 text-sm font-bold text-lime-ink">
+        <div className="flex min-h-8 items-center gap-3">
+          <span className="shrink-0 text-[15px] text-muted">{label}</span>
+          <span className={`min-w-0 flex-1 truncate text-right text-[15px] font-medium ${muted ? "text-faint" : ""}`}>{display}</span>
+          <button type="button" onClick={() => setOpen(true)} className="-my-2 py-2 pl-1 text-sm font-bold text-lime-ink">
             {actionLabel}
           </button>
         </div>
@@ -148,6 +149,7 @@ type Verification = { status: "none" | "pending" | "verified" | "rejected"; note
 /** Get verified for prizes: state code + a photo of the NYSC ID card, checked by an admin. */
 export function VerificationCard({ status, note, stateCode }: Verification) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(requestVerification, undefined);
+  const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
@@ -156,27 +158,33 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
 
-  if (status === "verified") {
-    return (
-      <section id="verify" className="card flex items-center gap-3.5">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-on-accent">
-          <CheckIcon size={20} strokeWidth={2.5} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="font-bold">Verified corper</div>
-          <div className="text-sm text-muted">You can win prizes. State code {stateCode}</div>
-        </div>
-      </section>
-    );
-  }
+  // Links to /profile#verify (Rewards, Home, the checklist) open the form straight away.
+  const canSend = status === "none" || status === "rejected";
+  useEffect(() => {
+    if (!canSend) return;
+    const check = () => {
+      if (window.location.hash === "#verify" || window.location.hash === "#state-code") setOpen(true);
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, [canSend]);
+  useEffect(() => {
+    if (state?.ok) setOpen(false);
+  }, [state]);
+
+  if (status === "verified") return null;
 
   if (status === "pending" || state?.ok) {
     return (
-      <section id="verify" className="card flex flex-col gap-1">
-        <div className="font-bold">Checking your ID</div>
-        <p className="text-sm leading-normal text-muted">
-          We&apos;ve got your state code and ID card. We&apos;ll check them soon and your photo is deleted once we&apos;re done.
-        </p>
+      <section id="verify" className="card flex scroll-mt-5 items-center gap-3.5 !p-4">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lime-ink">
+          <ClockIcon size={20} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="font-bold">Checking your ID</div>
+          <div className="text-sm leading-snug text-muted">We&apos;ll check it soon, then delete the photo.</div>
+        </div>
       </section>
     );
   }
@@ -206,69 +214,94 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
   }
 
   return (
-    <section id="verify" className="card flex flex-col gap-3">
-      <div>
-        <h2 className="h-display text-xl">Get verified</h2>
-        <p className="mt-1 text-sm leading-normal text-muted">
-          Only verified corpers can win prizes. Add your state code and a clear photo of your NYSC ID card. Only our team sees it,
-          and we delete the photo once we&apos;ve checked it.
+    <>
+      <button
+        id="verify"
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex scroll-mt-5 items-center gap-3.5 rounded-[20px] border-[1.5px] border-lime px-4 py-3.5 text-left"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-on-accent">
+          <ShieldIcon size={20} strokeWidth={2.2} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold">{status === "rejected" ? "Verification needs another try" : "Get verified to win"}</span>
+          <span className="block text-sm leading-snug text-muted">
+            {status === "rejected" && note ? note : "Add your state code and NYSC ID card. Only verified corpers win prizes."}
+          </span>
+        </span>
+        <ChevronRight size={20} className="shrink-0 text-lime-ink" />
+      </button>
+
+      <Sheet
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          // Clear #verify so the same link opens the sheet again.
+          if (window.location.hash) history.replaceState(null, "", window.location.pathname + window.location.search);
+        }}
+        title="Get verified"
+      >
+        <p className="-mt-1 text-sm leading-normal text-muted">
+          Only our team sees your ID card, and we delete the photo once we&apos;ve checked it.
         </p>
-      </div>
-      {status === "rejected" && note && (
-        <p role="alert" className="rounded-2xl border border-pink/40 bg-pink/10 px-4 py-3 text-sm text-pink-ink">
-          {note}
-        </p>
-      )}
-      <form action={submit} className="flex flex-col gap-3">
-        <label htmlFor="v-code" className="label">
-          State code
-        </label>
-        <input
-          id="v-code"
-          name="state_code"
-          defaultValue={stateCode ?? ""}
-          maxLength={16}
-          placeholder="EN/26B/1234"
-          autoCapitalize="characters"
-          required
-          className="field"
-        />
-        <span className="label">NYSC ID card</span>
-        {!preview && <IdCardGuide />}
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-[14px] border-[1.5px] border-dashed border-line p-3 text-center">
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="Your ID card" className="max-h-48 rounded-lg object-contain" />
-          ) : (
-            <>
-              <CameraIcon size={24} className="text-faint" />
-              <span className="text-sm font-medium">{busy ? "Preparing photo…" : "Take or choose a photo"}</span>
-            </>
-          )}
-          {preview && <span className="text-xs text-faint">Tap to change</span>}
-          <input type="file" accept="image/*" className="sr-only" onChange={onPick} />
-        </label>
-        {(error || state?.error) && <p className="text-sm text-pink-ink">{error || state?.error}</p>}
-        <button type="submit" disabled={pending || busy} className="btn-primary h-12 text-[15px]">
-          {pending ? "Sending…" : "Send for checking"}
-        </button>
-      </form>
-    </section>
+        {status === "rejected" && note && (
+          <p role="alert" className="rounded-2xl border border-pink/40 bg-pink/10 px-4 py-3 text-sm text-pink-ink">
+            {note}
+          </p>
+        )}
+        <form action={submit} className="flex flex-col gap-3">
+          <label htmlFor="v-code" className="label">
+            State code
+          </label>
+          <input
+            id="v-code"
+            name="state_code"
+            defaultValue={stateCode ?? ""}
+            maxLength={16}
+            placeholder="EN/26B/1234"
+            autoCapitalize="characters"
+            required
+            className="field"
+          />
+          <span className="label">NYSC ID card</span>
+          {!preview && <IdCardGuide />}
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-[14px] border-[1.5px] border-dashed border-line p-3 text-center">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="Your ID card" className="max-h-48 rounded-lg object-contain" />
+            ) : (
+              <>
+                <CameraIcon size={24} className="text-faint" />
+                <span className="text-sm font-medium">{busy ? "Preparing photo…" : "Take or choose a photo"}</span>
+              </>
+            )}
+            {preview && <span className="text-xs text-faint">Tap to change</span>}
+            <input type="file" accept="image/*" className="sr-only" onChange={onPick} />
+          </label>
+          {(error || state?.error) && <p className="text-sm text-pink-ink">{error || state?.error}</p>}
+          <button type="submit" disabled={pending || busy} className="btn-primary h-12 text-[15px]">
+            {pending ? "Sending…" : "Send for checking"}
+          </button>
+        </form>
+      </Sheet>
+    </>
   );
 }
 
+/** Avatar with a camera button. With a photo already, the button offers "Choose a new photo" or "Remove photo". */
 export function PhotoPicker({ id, nickname, photoVersion }: { id: string; nickname: string; photoVersion: number }) {
   const input = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [toast, show] = useToast();
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/")) return setError("Choose an image file.");
-    if (file.size > 5 * 1024 * 1024) return setError("That photo is over 5 MB. Try a smaller one.");
-    setError(null);
+    if (!file.type.startsWith("image/")) return show("Choose an image file.");
+    if (file.size > 5 * 1024 * 1024) return show("That photo is over 5 MB. Try a smaller one.");
     start(async () => {
       try {
         const [blob, thumb] = await Promise.all([resizeImage(file), resizeImage(file, 144, 0.75)]);
@@ -276,38 +309,46 @@ export function PhotoPicker({ id, nickname, photoVersion }: { id: string; nickna
         fd.append("photo", new File([blob], "photo", { type: blob.type }));
         fd.append("thumb", new File([thumb], "thumb", { type: thumb.type }));
         const res = await uploadPhoto(fd);
-        if (res?.error) setError(res.error);
+        show(res?.error ?? "Photo updated");
       } catch {
-        setError("Couldn't upload that photo. Try another.");
+        show("Couldn't upload that photo. Try another.");
       }
     });
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative">
-        <div className={pending ? "opacity-50" : ""}>
-          <Avatar id={id} nickname={nickname} photoVersion={photoVersion} size={104} />
-        </div>
+    <div className="relative shrink-0">
+      <div className={pending ? "animate-pulse opacity-50" : ""}>
+        <Avatar id={id} nickname={nickname} photoVersion={photoVersion} size={76} />
+      </div>
+      <button
+        type="button"
+        onClick={() => (photoVersion > 0 ? setMenu(true) : input.current?.click())}
+        aria-label={photoVersion > 0 ? "Change photo" : "Add a photo"}
+        disabled={pending}
+        className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border-[3px] border-surface bg-pink text-on-accent"
+      >
+        <CameraIcon size={15} strokeWidth={2.4} />
+      </button>
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      <Sheet open={menu} onClose={() => setMenu(false)} title="Profile photo">
         <button
           type="button"
-          onClick={() => input.current?.click()}
-          aria-label={photoVersion > 0 ? "Change photo" : "Add a photo"}
-          className="absolute -bottom-0.5 -right-0.5 flex size-10 items-center justify-center rounded-full border-[3px] border-bg bg-pink text-on-accent"
+          onClick={() => {
+            setMenu(false);
+            input.current?.click();
+          }}
+          className="btn-primary h-12 text-[15px]"
         >
-          <CameraIcon size={18} strokeWidth={2.2} />
+          Choose a new photo
         </button>
-        <input ref={input} type="file" accept="image/*" className="hidden" onChange={onPick} />
-      </div>
-      {pending && <p className="text-sm text-muted">Uploading…</p>}
-      {error && <p className="text-sm text-pink-ink">{error}</p>}
-      {photoVersion > 0 && !pending && (
-        <form action={removePhoto}>
-          <button type="submit" className="text-xs text-faint underline">
+        <form action={removePhoto} onSubmit={() => setMenu(false)}>
+          <button type="submit" className="btn-secondary h-12 text-[15px]">
             Remove photo
           </button>
         </form>
-      )}
+      </Sheet>
+      {toast}
     </div>
   );
 }
@@ -328,9 +369,9 @@ function SwitchRow({
   onToggle: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 border-b border-surface-2 py-3 last:border-b-0">
+    <div className="flex items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <div id={id} className="text-base font-medium">
+        <div id={id} className="text-[15px] font-medium">
           {title}
         </div>
         <div className="text-[13px] text-faint">{hint}</div>
@@ -390,14 +431,12 @@ export function ChangePinRow() {
     if (state?.ok) setOpen(false);
   }, [state]);
   return (
-    <div className="border-b border-surface-2 py-3">
+    <div className="px-4 py-3">
       {!open ? (
-        <div className="flex min-h-9 items-center gap-3">
-          <div className="flex-1">
-            <div className="text-[13px] text-faint">PIN</div>
-            <div className="text-base font-medium">{state?.ok ? "PIN changed" : "••••"}</div>
-          </div>
-          <button type="button" onClick={() => setOpen(true)} className="py-2.5 text-sm font-bold text-lime-ink">
+        <div className="flex min-h-8 items-center gap-3">
+          <span className="shrink-0 text-[15px] text-muted">PIN</span>
+          <span className="flex-1 text-right text-[15px] font-medium">{state?.ok ? "PIN changed" : "••••"}</span>
+          <button type="button" onClick={() => setOpen(true)} className="-my-2 py-2 pl-1 text-sm font-bold text-lime-ink">
             Change
           </button>
         </div>
@@ -426,17 +465,26 @@ export function ChangePinRow() {
   );
 }
 
-export function AccountActions() {
+/** Admin link (admins only) and Log out in one card; "Delete my account" stays small underneath. */
+export function AccountActions({ admin }: { admin: boolean }) {
   const [confirming, setConfirming] = useState(false);
   return (
-    <div className="mt-2 flex flex-col gap-4">
-      <form action={logout}>
-        <button type="submit" className="btn-secondary">
-          Log out
-        </button>
-      </form>
+    <div className="flex flex-col gap-4">
+      <div className="divide-y divide-surface-2 rounded-[20px] bg-surface">
+        {admin && (
+          <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 text-[15px] font-medium">
+            <span className="flex-1">Open admin</span>
+            <ChevronRight size={18} className="text-faint" />
+          </Link>
+        )}
+        <form action={logout}>
+          <button type="submit" className="w-full px-4 py-3.5 text-left text-[15px] font-bold text-pink-ink">
+            Log out
+          </button>
+        </form>
+      </div>
       {!confirming ? (
-        <button type="button" onClick={() => setConfirming(true)} className="text-center text-xs text-faint underline">
+        <button type="button" onClick={() => setConfirming(true)} className="self-center py-2 text-xs text-faint underline">
           Delete my account
         </button>
       ) : (

@@ -154,19 +154,13 @@ Mockups of every screen are on the design canvas: https://claude.ai/artifact/25h
 
 ### 4.6 Invite (`/invite`)
 - Title "Invite friends" and "Every friend who joins with your link moves you **up 10 places**."
-- Link box showing their link, with **Copy**.
-- **Share on WhatsApp** button.
-- **Joined with your link · {N}:** list of referred users (avatar, nickname, top badge icon, time ago).
-- **Top referrers** with a "Top 10 win prizes" tag: top 10 by completed referrals (avatar, nickname · state, top badge icon, count). Below the list, the user's own row if they're outside the top 10, e.g. "58 · You · 3".
+- **Progress card:** "{N} friends joined" in large lime type (valid referrals, the count that ranks you; "No friends yet" at 0), "You've moved up {N × 10} places", a progress bar and the next goal: "2 more to pass Kels (#7)" (to pass the person just above you nationally), "Invite 1 friend to get on the leaderboard", or "You're #1 nationwide. Keep going to stay on top." Then **Share on WhatsApp** and one slim row with the link, **Copy** and (where the phone supports it) a share icon for other apps.
+- **Friends who joined:** a card with up to 4 overlapping avatars (+N for the rest) and "{latest} joined {time ago} · N others". Tapping it or **See all** opens a bottom sheet with everyone (avatar, nickname, top badge icon, time ago; latest 100). Empty: "No one yet. Post your link on your WhatsApp Status to get your first friend in."
+- **Rank card** (pink outline) linking to Rewards, where the full leaderboard lives: "#{rank} nationwide · #{state rank} in {state}" (or "Not on the leaderboard yet") and "Top 10 verified referrers win prizes." plus "See the leaderboard." or, for unverified users, "Get verified in Profile to qualify."
 
 ### 4.7 Rewards (`/rewards`)
-Prize amounts on the mystery cards stay hidden; amounts the user has actually won show under "Your rewards". In order:
-1. **Countdowns:** "Early Corper badge closes in …" (after the deadline: "Early Corper closed · first rewards are being prepared.") and "Leaderboard closes in …" (after: "Leaderboard closed · winners are being confirmed.").
-2. **Your standing:** national referrer rank, rank in your state, and who to beat next: "3 more friends to pass Kels (#7)" (one more than the person directly above you nationally; on a tie it adds "You're tied, but they got there first."). At #1: "You're leading. Keep inviting to stay on top." Not on the board yet: "Invite your first friend to get on the leaderboard." Then an **Invite friends** button, and the **Get verified to win** card for unverified users.
-3. **Leaderboard** with two tabs: **Nigeria** (top 20 by valid referrals) and **{your state}** (top 10). Rows: rank, avatar, nickname, top badge icon, state, friends joined. Your row is highlighted, or pinned below the list when you're outside it. Cached 30 seconds.
-4. **Mystery prizes:** "Top 10 nationwide", "State Ambassadors", "Early Corpers". Each shows a lock, one line and the admin's reveal text ("Prizes are revealed when the countdown ends."); tapping opens a sheet with how it's decided (no amounts).
-5. **State Ambassador programme** (pink outline) with "Currently leading in {state}: {nickname} with N friends" and a **Learn more** sheet: the top referrer in each state when camp ends becomes that state's Kopamate Ambassador; perks: Kopamate team member (state admin), State Ambassador badge, promotion budget for the state, first access to new features, featured on Kopamate, certificate of recognition; "Ambassadors must be in good standing (no fake referrals). Final selection is confirmed by the Kopamate team."
-6. **Your badges** (badges that qualify for rewards first, tagged "Qualifies for rewards") and **Your rewards** (anchor `#your-rewards`): one card per reward, unclaimed first, with the title, the amount and the state:
+Prize amounts on the prize rows stay hidden; amounts the user has actually won show under "Your rewards". In order:
+1. **Your rewards** (anchor `#your-rewards`; only when the user has won something, because that's what they come here for): one card per reward, unclaimed first, with the title, the amount and the state:
    - hidden: "🎁 You won a reward! Amount revealed soon". No action.
    - unclaimed: "You won ₦X" (plus "airtime"/"data" for those kinds) and a **Claim ₦X** button.
    - claimed: "Claimed · payments go out within 72 hours", where it's going (bank and last 4 digits + account name, or the phone number) and **Edit details**.
@@ -174,8 +168,12 @@ Prize amounts on the mystery cards stay hidden; amounts the user has actually wo
    - paid: "Paid ✓ {date}".
    - rejected: "Not approved." and the admin's note.
    - Flagged users see "Under review" instead of Claim / Edit details.
-   Empty state: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. You'll claim them here and we'll message you on WhatsApp."
-7. **Share:** "You're #4 in Enugu" with Share on WhatsApp ("I'm #4 in Enugu, help me become Ambassador 👑" + referral link) and copy link.
+2. **Get verified to win** (unverified users; lime outline, links to the verify sheet at `/profile#verify`): "Only verified corpers win prizes.", "Checking your ID" while pending, or "Your verification needs another try."
+3. **Your standing** (one card): national and state referrer rank side by side; who to beat next: "3 more friends to pass Kels (#7)" (one more than the person directly above you nationally; on a tie it adds "You're tied, but they got there first."), "You're leading. Keep inviting to stay on top." at #1, or "Invite your first friend to get on the leaderboard."; "{N} friends joined with your link" with a small **Invite** button. Under a divider, the two countdowns: "Early Corper badge closes in …" (after: "Early Corper closed · first rewards are being prepared.") and "Leaderboard closes in …" (after: "Leaderboard closed · winners are being confirmed.").
+4. **Leaderboard** with two tabs: **Nigeria** (top 20 by valid referrals; the first 10 shown, **Show top 20** for the rest) and **{your state}** (top 10). Rows: rank, avatar, nickname, top badge icon, state, friends joined. Your row is highlighted, or pinned below the list when you're outside it. Cached 30 seconds.
+5. **Prizes** ("Amounts revealed later"): one card with three rows: **Top 10 nationwide**, **State Ambassadors** (crown, "Currently leading in {state}: {nickname} with N friends") and **Early Corpers** (tagged "You have the badge" for holders). The admin's reveal text sits under the card. Each row opens a sheet with how it's decided (no amounts); the Ambassador sheet adds the perks (Kopamate team member (state admin), State Ambassador badge, promotion budget for the state, first access to new features, featured on Kopamate, certificate of recognition), "Ambassadors must be in good standing (no fake referrals). Final selection is confirmed by the Kopamate team.", who's leading, and Share on WhatsApp ("I'm #4 in Enugu, help me become Ambassador 👑" + referral link) with copy link.
+6. Empty state at the bottom when nothing has been won yet: "Rewards you win show up here. Prizes are sent as airtime, data or bank transfer. You'll claim them here and we'll message you on WhatsApp."
+- Badges live on Profile only; sharing lives on Invite, Home and the Ambassador sheet.
 - Confetti when your national or state referrer rank improved since your last Rewards visit (last seen ranks are kept in localStorage on the device).
 - **This is not a money wallet.** No balances or withdrawals: users claim individual rewards the admin has given them, and the admin pays them by hand.
 
@@ -193,17 +191,14 @@ Prize amounts on the mystery cards stay hidden; amounts the user has actually wo
 `db/schema.sql` moves rewards from the old `pending`/`sent` statuses once (safe to run again): `pending` → `hidden` with no amount (the admin sets an amount, then reveals it before the user can claim), `sent` → `paid` with `paid_at = sent_at` and `payment_reference = 'legacy'` (amount stays empty and the budget tracker lists these separately). `sent_at` is kept for history. Run `npm run db:migrate` at the same time as deploying this code: the old code writes `pending`/`sent`, which the new status check rejects.
 
 ### 4.8 Profile (`/profile`)
-- Large avatar with a camera button to add or change the photo.
-- **Badges:** a row of chips, earned first; locked badges are greyed out with a lock. Tapping a chip opens a sheet with the name, description, and the date earned or how to earn it.
-- **Profile checklist:** the three completion steps (section 5, "Profile completion") with ticks and a percentage. Reaching 100% gives the Profile Complete badge with confetti.
-- **Get verified** card (top of Profile): only verified corpers can win prizes. The user enters their state code (format `EN/26B/1234`) and a photo of their NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. Status shows as "Checking your ID" (pending), the admin's reason (rejected, with a form to try again) or "Verified corper". The state code is locked while pending and once verified. A state code can only be verified on one account.
-- Nickname, "{State} · #{position} · Joined {date}".
-- Editable rows: Nickname, WhatsApp number ("only you can see this", shown masked), State serving in, State code ("Not added" / **Add**).
-- Toggle: **Show me in the Corpers list** ("Others see your nickname and photo only"). On by default.
-- Toggle: **Light mode** (off by default), saved in the `km_theme` cookie (`light` / `dark`) so the server renders the right theme with no flash.
-- For phone users: **Change PIN**.
-- **Log out** button.
-- A small "Delete my account" link at the bottom (with confirmation).
+Top to bottom:
+- **Header card:** avatar (camera button: picks a photo, or with a photo already, a sheet with "Choose a new photo" / "Remove photo"; upload results show as a toast), nickname, "{State} · Joined {date}", a "Verified corper" tag once verified, and three numbers: position, friends (valid referrals) and badges ("2/5").
+- **Get verified** (hidden once verified): a one-line card, "Get verified to win" (or "Verification needs another try" with the admin's reason). It opens a bottom sheet with the state code (format `EN/26B/1234`) and a photo of the NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. While pending the card reads "Checking your ID". Links to `/profile#verify` (Rewards, the Home progress card, the checklist) open the sheet directly. A state code can only be verified on one account, and this sheet is the only place to enter it.
+- **Complete your profile:** the three completion steps (section 5, "Profile completion") with ticks and a percentage; "Add your state code" opens the verify sheet. Hidden at 100% (reaching it gives the Profile Complete badge with confetti).
+- **Badges:** one sideways-scrolling row of chips, earned first; locked badges are greyed out with a lock. Tapping a chip opens a sheet with the name, description, and the date earned or how to earn it.
+- **Account** (grouped card, label left, value right, inline edit): Nickname, WhatsApp (masked), State serving in, and Change PIN for phone users. Under it: "Only you can see your WhatsApp number (and state code)."
+- **Preferences** (grouped card): **Show me in the Corpers list** ("Others see your nickname and photo only", on by default) and **Light mode** (off by default, saved in the `km_theme` cookie as `light` / `dark` so the server renders the right theme with no flash).
+- A card with **Open admin** (admins only) and **Log out**, then a small "Delete my account" link (type DELETE to confirm).
 - **State code:** optional, free text in the format like `EN/26B/1234`; validate the pattern loosely; never shown publicly in v1.
 - Changing state should be allowed but limited (e.g. once every 30 days) so people can't game state rankings.
 

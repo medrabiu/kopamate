@@ -27,6 +27,6 @@ export type StepKey = "photo" | "stateCode" | "friend";
 /** Profile-completion steps, in order. Each is worth the same share of 100%. */
 export const PROFILE_STEPS: { key: StepKey; label: string; action: string; href: string }[] = [
   { key: "photo", label: "Add a photo", action: "Add a photo", href: "/profile#photo" },
-  { key: "stateCode", label: "Add your state code", action: "Add your state code", href: "/profile#state-code" },
+  { key: "stateCode", label: "Add your state code", action: "Add your state code", href: "/profile#verify" },
   { key: "friend", label: "Get your first friend to join with your link", action: "Invite a friend", href: "/invite" },
 ];

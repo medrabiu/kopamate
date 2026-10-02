@@ -15,16 +15,25 @@ const formatDate = (iso: string) =>
  * A row of badge chips. Earned badges come first; locked ones are greyed out.
  * Tapping a chip opens a sheet with the name, description and date earned (or how to earn it).
  */
-export default function BadgeShelf({ badges, showLocked = true }: { badges: ShelfBadge[]; showLocked?: boolean }) {
+export default function BadgeShelf({
+  badges,
+  showLocked = true,
+  row = false,
+}: {
+  badges: ShelfBadge[];
+  showLocked?: boolean;
+  /** One sideways-scrolling row instead of wrapping lines. */
+  row?: boolean;
+}) {
   const [open, setOpen] = useState<ShelfBadge | null>(null);
   const shown = showLocked ? badges : badges.filter((b) => b.awarded_at);
   const sorted = [...shown].sort((a, b) => Number(Boolean(b.awarded_at)) - Number(Boolean(a.awarded_at)));
 
   return (
     <>
-      <ul className="flex flex-wrap gap-2">
+      <ul className={row ? "no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5" : "flex flex-wrap gap-2"}>
         {sorted.map((b) => (
-          <li key={b.slug}>
+          <li key={b.slug} className="shrink-0">
             <BadgeChip badge={b} locked={!b.awarded_at} onClick={() => setOpen(b)} />
           </li>
         ))}

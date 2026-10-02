@@ -5,6 +5,7 @@ import Avatar from "@/components/Avatar";
 import BadgeIcon from "@/components/BadgeIcon";
 import Confetti from "@/components/Confetti";
 import Sheet from "@/components/Sheet";
+import ShareButtons from "@/components/ShareButtons";
 import { CheckIcon, ChevronRight, CrownIcon, LockIcon } from "@/components/icons";
 import type { BadgeInfo } from "@/lib/badge-meta";
 
@@ -52,9 +53,12 @@ export function Leaderboard({
   userId: string;
 }) {
   const [tab, setTab] = useState<"nigeria" | "state">("nigeria");
-  const rows = tab === "nigeria" ? national : state;
+  const [expanded, setExpanded] = useState(false);
+  const all = tab === "nigeria" ? national : state;
+  const rows = expanded ? all : all.slice(0, 10);
   const me = tab === "nigeria" ? meNational : meState;
   const inList = rows.some((r) => r.id === userId);
+  const more = all.length - rows.length;
   const tabs = [
     { key: "nigeria" as const, label: "Nigeria" },
     { key: "state" as const, label: stateName || "My state" },
@@ -96,6 +100,11 @@ export function Leaderboard({
             ))}
           </ol>
         )}
+        {more > 0 && (
+          <button type="button" onClick={() => setExpanded(true)} className="py-1 text-sm font-bold text-lime-ink">
+            Show top {all.length}
+          </button>
+        )}
         {!inList && (
           <ol className="rounded-2xl border-[1.5px] border-lime px-4">
             <Row r={me} me last />
@@ -106,101 +115,106 @@ export function Leaderboard({
   );
 }
 
-type Prize = { key: string; title: string; line: string; details: string[] };
+export type Prize = {
+  key: string;
+  title: string;
+  line: string;
+  details: string[];
+  /** Small tag on the row, e.g. "You have the badge". */
+  tag?: string;
+};
 
-/** Mystery prize cards: no amounts until the reveal. */
-export function MysteryPrizes({ prizes, revealText }: { prizes: Prize[]; revealText: string }) {
+const PERKS = [
+  "Kopamate team member (state admin)",
+  "State Ambassador badge",
+  "Promotion budget for your state",
+  "First access to new features",
+  "Featured on Kopamate",
+  "Certificate of recognition",
+];
+
+/**
+ * Every prize in one card: Top 10, State Ambassadors, Early Corpers. No amounts until the reveal.
+ * Each row opens a sheet with how it's decided; the Ambassador sheet adds the perks, who's leading and a share button.
+ */
+export function Prizes({
+  prizes,
+  revealText,
+  leading,
+  share,
+}: {
+  prizes: Prize[];
+  revealText: string;
+  leading: string;
+  share: { link: string; whatsappUrl: string; message: string };
+}) {
   const [open, setOpen] = useState<Prize | null>(null);
   return (
     <section className="flex flex-col gap-2.5" aria-labelledby="prizes-title">
-      <h2 id="prizes-title" className="h-display text-xl">
-        Prizes
-      </h2>
-      <ul className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="prizes-title" className="h-display text-xl">
+          Prizes
+        </h2>
+        <span className="flex items-center gap-1 text-xs text-faint">
+          <LockIcon size={12} strokeWidth={2.5} />
+          Amounts revealed later
+        </span>
+      </div>
+      <ul className="divide-y divide-surface-2 rounded-[20px] bg-surface">
         {prizes.map((p) => (
           <li key={p.key}>
-            <button
-              type="button"
-              onClick={() => setOpen(p)}
-              className="flex w-full items-center gap-3.5 rounded-[18px] bg-surface p-4 text-left"
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
-                <LockIcon size={18} strokeWidth={2.4} />
+            <button type="button" onClick={() => setOpen(p)} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left">
+              <span
+                className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+                  p.key === "ambassadors" ? "bg-pink text-on-accent" : "bg-surface-2 text-pink-ink"
+                }`}
+              >
+                {p.key === "ambassadors" ? <CrownIcon size={18} strokeWidth={2.4} /> : <LockIcon size={18} strokeWidth={2.4} />}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-bold">{p.title}</span>
-                <span className="block text-sm text-muted">{p.line}</span>
-                <span className="mt-0.5 block text-xs text-faint">{revealText}</span>
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="font-bold">{p.title}</span>
+                  {p.tag && <span className="rounded-full bg-lime px-2 py-0.5 text-[11px] font-bold text-on-accent">{p.tag}</span>}
+                </span>
+                <span className="block text-sm leading-snug text-muted">{p.key === "ambassadors" ? leading : p.line}</span>
               </span>
               <ChevronRight size={18} className="shrink-0 text-faint" />
             </button>
           </li>
         ))}
       </ul>
+      <p className="px-1 text-xs text-faint">{revealText}</p>
+
       <Sheet open={open !== null} onClose={() => setOpen(null)} title={open?.title ?? "Prize"}>
         {open && (
           <div className="flex flex-col gap-3">
-            <span className="flex items-center gap-2 self-start rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold">
-              <LockIcon size={13} strokeWidth={2.5} />
-              Mystery prize
-            </span>
             {open.details.map((d) => (
               <p key={d} className="text-[15px] leading-normal">
                 {d}
               </p>
             ))}
-            <p className="text-sm text-muted">{revealText}</p>
+            {open.key === "ambassadors" && (
+              <>
+                <ul className="flex flex-col gap-2">
+                  {PERKS.map((perk) => (
+                    <li key={perk} className="flex items-start gap-2.5 text-[15px]">
+                      <CheckIcon size={18} strokeWidth={2.5} className="mt-0.5 shrink-0 text-lime-ink" />
+                      {perk}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm font-medium text-pink-ink">{leading}</p>
+                <ShareButtons variant="compact" link={share.link} whatsappUrl={share.whatsappUrl} message={share.message} />
+              </>
+            )}
+            {open.key !== "ambassadors" && (
+              <span className="flex items-center gap-2 self-start rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold">
+                <LockIcon size={13} strokeWidth={2.5} />
+                {revealText}
+              </span>
+            )}
           </div>
         )}
-      </Sheet>
-    </section>
-  );
-}
-
-/** State Ambassador programme card with a "Learn more" sheet. */
-export function AmbassadorCard({ leading }: { leading: string }) {
-  const [open, setOpen] = useState(false);
-  const perks = [
-    "Kopamate team member (state admin)",
-    "State Ambassador badge",
-    "Promotion budget for your state",
-    "First access to new features",
-    "Featured on Kopamate",
-    "Certificate of recognition",
-  ];
-  return (
-    <section className="flex flex-col gap-2.5 rounded-[20px] border-[1.5px] border-pink px-[18px] py-4" aria-labelledby="amb-title">
-      <div className="flex items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pink text-on-accent">
-          <CrownIcon size={18} strokeWidth={2.4} />
-        </span>
-        <h2 id="amb-title" className="h-display text-lg leading-tight">
-          State Ambassador programme
-        </h2>
-      </div>
-      <p className="text-[15px] leading-normal">
-        The top referrer in each state when camp ends becomes that state&apos;s Kopamate Ambassador.
-      </p>
-      <p className="text-sm font-medium text-pink-ink">{leading}</p>
-      <button type="button" onClick={() => setOpen(true)} className="btn-secondary h-11 text-[15px]">
-        Learn more
-      </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title="State Ambassadors">
-        <p className="text-[15px] leading-normal">
-          The top referrer in each state when camp ends becomes that state&apos;s Kopamate Ambassador.
-        </p>
-        <ul className="flex flex-col gap-2">
-          {perks.map((p) => (
-            <li key={p} className="flex items-start gap-2.5 text-[15px]">
-              <CheckIcon size={18} strokeWidth={2.5} className="mt-0.5 shrink-0 text-lime-ink" />
-              {p}
-            </li>
-          ))}
-        </ul>
-        <p className="text-sm leading-normal text-muted">
-          Ambassadors must be in good standing (no fake referrals). Final selection is confirmed by the Kopamate team.
-        </p>
-        <p className="text-sm font-medium text-pink-ink">{leading}</p>
       </Sheet>
     </section>
   );

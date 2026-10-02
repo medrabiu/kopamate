@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import BadgeCelebration from "@/components/BadgeCelebration";
-import BadgeChip from "@/components/BadgeChip";
 import Countdown, { Deadline } from "@/components/Countdown";
-import ShareButtons from "@/components/ShareButtons";
-import { ChevronRight, ClockIcon, GiftIcon, TrophyIcon } from "@/components/icons";
+import { ChevronRight, ClockIcon, GiftIcon, ShieldIcon, TrophyIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getNationalLeaderboard, getReferrerStanding, getStateLeaderboard, type ReferrerRow } from "@/lib/ranking";
 import { getRewardSettings } from "@/lib/stats";
@@ -12,7 +10,7 @@ import { getUserBadges } from "@/lib/badges";
 import { referralLink, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import YourRewards, { type MyReward, type SavedBank } from "./YourRewards";
-import { AmbassadorCard, Leaderboard, MysteryPrizes, RankConfetti, type BoardRow } from "./RewardsClient";
+import { Leaderboard, Prizes, RankConfetti, type BoardRow } from "./RewardsClient";
 
 export const metadata: Metadata = { title: "Rewards" };
 
@@ -107,8 +105,25 @@ export default async function RewardsPage() {
     },
   ];
 
-  const sortedBadges = [...badges].sort((a, b) => Number(b.qualifies_for_rewards) - Number(a.qualifies_for_rewards));
+  const hasEarly = badges.some((b) => b.slug === "early_corper");
+  const tagged = prizes.map((p) => (p.key === "early" && hasEarly ? { ...p, tag: "You have the badge" } : p));
   const profileComplete = badges.find((b) => b.slug === "profile_complete");
+  const closedRow = (text: string) => <p className="flex-1 text-sm text-muted">{text}</p>;
+
+  const yourRewards =
+    rewards.length > 0 ? (
+      <section id="your-rewards" className="flex scroll-mt-4 flex-col gap-2.5" aria-labelledby="your-rewards-title">
+        <h2 id="your-rewards-title" className="h-display text-xl">
+          Your rewards
+        </h2>
+        <YourRewards
+          rewards={rewards}
+          savedBank={saved[0] ?? { bank: null, account_number: null, account_name: null }}
+          whatsapp={user.whatsapp_e164}
+          underReview={user.is_flagged}
+        />
+      </section>
+    ) : null;
 
   return (
     <>
@@ -118,71 +133,74 @@ export default async function RewardsPage() {
       )}
       <h1 className="h-display text-[28px]">Rewards</h1>
 
-      {/* 1. Countdowns */}
-      <section className="card flex flex-col gap-0 !py-1.5" aria-label="Countdowns">
-        {earlyOpen && (
-          <div className="flex min-h-13 items-center gap-3 border-b border-surface-2 py-2">
-            <ClockIcon size={20} className="shrink-0 text-lime-ink" />
-            <Deadline to={settings.earlyDeadline} after={<p className="flex-1 text-sm font-medium">Early Corper closed · first rewards are being prepared.</p>}>
-              <p className="flex-1 text-sm font-medium">Early Corper badge closes in</p>
-              <Countdown to={settings.earlyDeadline} className="h-display text-lg text-lime-ink" />
-            </Deadline>
-          </div>
-        )}
-        {!earlyOpen && (
-          <div className="flex min-h-13 items-center gap-3 border-b border-surface-2 py-2">
-            <ClockIcon size={20} className="shrink-0 text-faint" />
-            <p className="flex-1 text-sm font-medium">Early Corper closed · first rewards are being prepared.</p>
-          </div>
-        )}
-        <div className="flex min-h-13 items-center gap-3 py-2">
-          <TrophyIcon size={20} className="shrink-0 text-pink-ink" />
-          <Deadline to={settings.leaderboardClose} after={<p className="flex-1 text-sm font-medium">Leaderboard closed · winners are being confirmed.</p>}>
-            <p className="flex-1 text-sm font-medium">Leaderboard closes in</p>
-            <Countdown to={settings.leaderboardClose} className="h-display text-lg text-pink-ink" />
-          </Deadline>
-        </div>
-      </section>
-
-      {/* 2. Your standing */}
-      <section className="card flex flex-col gap-3" aria-labelledby="standing-title">
-        <h2 id="standing-title" className="h-display text-xl">
-          Your standing
-        </h2>
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="rounded-2xl bg-surface-2 p-3.5">
-            <div className="text-[13px] text-muted">Nigeria</div>
-            <div className="h-display text-[32px] leading-tight text-lime-ink">{me ? `#${me.rank}` : "–"}</div>
-          </div>
-          <div className="rounded-2xl bg-surface-2 p-3.5">
-            <div className="truncate text-[13px] text-muted">{state}</div>
-            <div className="h-display text-[32px] leading-tight text-pink-ink">{me ? `#${me.state_rank}` : "–"}</div>
-          </div>
-        </div>
-        <p className="text-[15px] font-medium">{beat}</p>
-        <p className="text-sm text-muted">{me ? `${friends(me.refs)} joined with your link` : "No friends have joined with your link yet"}</p>
-        <Link href="/invite" className="btn-primary h-12 text-[15px]">
-          Invite friends
-        </Link>
-      </section>
+      {/* What you've won comes first: that's what people open this page for. */}
+      {yourRewards}
 
       {!verified && (
-        <Link href="/profile#verify" className="flex items-center gap-3.5 rounded-[18px] border-[1.5px] border-lime p-4">
-          <div className="min-w-0 flex-1">
-            <div className="font-bold">{user.verification_status === "pending" ? "Verification in progress" : "Get verified to win"}</div>
-            <div className="text-sm text-muted">
+        <Link href="/profile#verify" className="flex items-center gap-3.5 rounded-[20px] border-[1.5px] border-lime px-4 py-3.5">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-on-accent">
+            <ShieldIcon size={20} strokeWidth={2.2} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">{user.verification_status === "pending" ? "Checking your ID" : "Get verified to win"}</span>
+            <span className="block text-sm leading-snug text-muted">
               {user.verification_status === "pending"
-                ? "We're checking your ID. You'll qualify once you're verified."
+                ? "You'll qualify for prizes once you're verified."
                 : user.verification_status === "rejected"
-                  ? "Your verification needs another try. Open Profile to see why."
-                  : "Add your state code and NYSC ID card in Profile. Only verified corpers win prizes."}
-            </div>
-          </div>
+                  ? "Your verification needs another try."
+                  : "Only verified corpers win prizes."}
+            </span>
+          </span>
           <ChevronRight size={20} className="shrink-0 text-lime-ink" />
         </Link>
       )}
 
-      {/* 3. Leaderboard */}
+      {/* Standing, with the countdowns underneath */}
+      <section className="card flex flex-col gap-4 !p-[18px]" aria-labelledby="standing-title">
+        <h2 id="standing-title" className="h-display text-lg">
+          Your standing
+        </h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-2xl bg-surface-2/60 px-3.5 py-3">
+            <div className="text-[13px] text-muted">Nigeria</div>
+            <div className="h-display text-[30px] leading-tight text-lime-ink">{me ? `#${me.rank}` : "–"}</div>
+          </div>
+          <div className="rounded-2xl bg-surface-2/60 px-3.5 py-3">
+            <div className="truncate text-[13px] text-muted">{state}</div>
+            <div className="h-display text-[30px] leading-tight text-pink-ink">{me ? `#${me.state_rank}` : "–"}</div>
+          </div>
+        </div>
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium leading-snug">{beat}</p>
+            <p className="mt-0.5 text-sm text-muted">{me ? `${friends(me.refs)} joined with your link` : "No friends have joined yet"}</p>
+          </div>
+          <Link href="/invite" className="shrink-0 rounded-full bg-lime px-4 py-2 text-sm font-bold text-on-accent">
+            Invite
+          </Link>
+        </div>
+        <div className="flex flex-col border-t border-surface-2 pt-1">
+          <div className="flex min-h-11 items-center gap-3">
+            <ClockIcon size={18} className={`shrink-0 ${earlyOpen ? "text-lime-ink" : "text-faint"}`} />
+            {earlyOpen ? (
+              <Deadline to={settings.earlyDeadline} after={closedRow("Early Corper closed · first rewards are being prepared.")}>
+                <p className="flex-1 text-sm">Early Corper badge closes in</p>
+                <Countdown to={settings.earlyDeadline} className="h-display text-[15px] text-lime-ink" />
+              </Deadline>
+            ) : (
+              closedRow("Early Corper closed · first rewards are being prepared.")
+            )}
+          </div>
+          <div className="flex min-h-11 items-center gap-3">
+            <TrophyIcon size={18} className="shrink-0 text-pink-ink" />
+            <Deadline to={settings.leaderboardClose} after={closedRow("Leaderboard closed · winners are being confirmed.")}>
+              <p className="flex-1 text-sm">Leaderboard closes in</p>
+              <Countdown to={settings.leaderboardClose} className="h-display text-[15px] text-pink-ink" />
+            </Deadline>
+          </div>
+        </div>
+      </section>
+
       <Leaderboard
         national={national.map((r) => toBoard(r, r.rank))}
         state={stateBoard.map((r) => toBoard(r, r.state_rank))}
@@ -192,77 +210,22 @@ export default async function RewardsPage() {
         userId={user.id}
       />
 
-      {/* 4. Mystery prizes */}
-      <MysteryPrizes prizes={prizes} revealText={settings.revealText} />
+      <Prizes
+        prizes={tagged}
+        revealText={settings.revealText}
+        leading={leading}
+        share={{ link: referralLink(user.referral_code), whatsappUrl: whatsappShareUrl(user.referral_code, shareText), message: shareText }}
+      />
 
-      {/* 5. State Ambassador programme */}
-      <AmbassadorCard leading={leading} />
-
-      {/* 6. Your badges and rewards */}
-      <section className="flex flex-col gap-2.5" aria-labelledby="your-badges">
-        <h2 id="your-badges" className="h-display text-xl">
-          Your badges
-        </h2>
-        {sortedBadges.length === 0 ? (
-          <p className="text-sm text-muted">
-            No badges yet. See how to earn them on your{" "}
-            <Link href="/profile" className="font-bold text-lime-ink">
-              Profile
-            </Link>
-            .
+      {rewards.length === 0 && (
+        <section className="flex flex-col items-center gap-2 rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-6 text-center">
+          <GiftIcon size={28} strokeWidth={1.8} className="text-faint" />
+          <p className="font-bold">Rewards you win show up here</p>
+          <p className="text-sm leading-normal text-muted">
+            Prizes are sent as airtime, data or bank transfer. You&apos;ll claim them here and we&apos;ll message you on WhatsApp.
           </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {sortedBadges.map((b) => (
-              <li key={b.slug} className="flex items-center gap-3 rounded-[18px] bg-surface px-3.5 py-3">
-                <BadgeChip badge={b} />
-                <span className="min-w-0 flex-1 truncate text-sm text-muted">{b.description}</span>
-                {b.qualifies_for_rewards && (
-                  <span className="shrink-0 rounded-full border border-pink px-2 py-0.5 text-[11px] font-bold text-pink-ink">
-                    Qualifies for rewards
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section id="your-rewards" className="flex scroll-mt-4 flex-col gap-2.5" aria-labelledby="your-rewards-title">
-        <h2 id="your-rewards-title" className="h-display text-xl">
-          Your rewards
-        </h2>
-        {rewards.length === 0 ? (
-          <div className="flex flex-col items-center gap-2.5 rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-7 text-center">
-            <GiftIcon size={32} strokeWidth={1.8} className="text-faint" />
-            <p className="font-bold">Rewards you win show up here</p>
-            <p className="text-sm leading-normal text-muted">
-              Prizes are sent as airtime, data or bank transfer. You&apos;ll claim them here and we&apos;ll message you on WhatsApp.
-            </p>
-          </div>
-        ) : (
-          <YourRewards
-            rewards={rewards}
-            savedBank={saved[0] ?? { bank: null, account_number: null, account_name: null }}
-            whatsapp={user.whatsapp_e164}
-            underReview={user.is_flagged}
-          />
-        )}
-      </section>
-
-      {/* 7. Share */}
-      <section className="card flex flex-col gap-3 !p-[18px]" aria-labelledby="share-title">
-        <h2 id="share-title" className="h-display text-lg leading-tight">
-          {me ? `You're #${me.state_rank} in ${state}` : `Lead ${state}`}
-        </h2>
-        <p className="text-sm text-muted">Ask friends to join with your link and help you become {state}&apos;s Ambassador.</p>
-        <ShareButtons
-          variant="compact"
-          link={referralLink(user.referral_code)}
-          whatsappUrl={whatsappShareUrl(user.referral_code, shareText)}
-          message={shareText}
-        />
-      </section>
+        </section>
+      )}
     </>
   );
 }
