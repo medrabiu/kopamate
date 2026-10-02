@@ -2,23 +2,26 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { sql } from "./db";
 import { STATES } from "./states";
-import { DEFAULT_EARLY_DEADLINE, DEFAULT_LEADERBOARD_CLOSE, DEFAULT_PRIZE_TEXT, DEFAULT_REWARDS_REVEAL_TEXT } from "./config";
+import { DEFAULT_EARLY_DEADLINE, DEFAULT_LEADERBOARD_CLOSE, DEFAULT_REWARDS_REVEAL_TEXT } from "./config";
 
 export type StateCount = { state: string; count: number; rank: number };
 
 export type PublicStats = {
   total: number;
   today: number;
+  /** Corpers whose NYSC ID an admin has checked. */
+  verified: number;
   states: StateCount[]; // every state, sorted by count (zeros last, alphabetical)
   activeStates: number;
 };
 
 async function loadStats(): Promise<PublicStats> {
-  const [totals] = await sql<{ total: number; today: number }[]>`
+  const [totals] = await sql<{ total: number; today: number; verified: number }[]>`
     SELECT count(*)::int AS total,
            count(*) FILTER (
              WHERE (completed_at AT TIME ZONE 'Africa/Lagos')::date = (now() AT TIME ZONE 'Africa/Lagos')::date
-           )::int AS today
+           )::int AS today,
+           count(*) FILTER (WHERE verification_status = 'verified')::int AS verified
     FROM users WHERE completed_at IS NOT NULL AND NOT is_banned
   `;
   const rows = await sql<{ state: string; count: number }[]>`
@@ -34,6 +37,7 @@ async function loadStats(): Promise<PublicStats> {
   return {
     total: totals?.total ?? 0,
     today: totals?.today ?? 0,
+    verified: totals?.verified ?? 0,
     states,
     activeStates: states.filter((s) => s.count > 0).length,
   };
@@ -46,12 +50,6 @@ export async function getSetting(key: string): Promise<string | null> {
   const rows = await sql<{ value: string }[]>`SELECT value FROM settings WHERE key = ${key}`;
   return rows[0]?.value ?? null;
 }
-
-export const getPrizeText = unstable_cache(
-  async () => (await getSetting("prize_teaser_text")) || DEFAULT_PRIZE_TEXT,
-  ["prize-text"],
-  { revalidate: 60, tags: ["settings"] },
-);
 
 export const REWARD_SETTING_KEYS = ["early_deadline", "leaderboard_close", "rewards_reveal_text"] as const;
 

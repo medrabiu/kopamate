@@ -89,14 +89,7 @@ export async function adminRemovePhoto(fd: FormData) {
 
 export async function saveSettings(fd: FormData) {
   await requireAdmin();
-  const prize = String(fd.get("prize_teaser_text") ?? "").trim().slice(0, 300);
   const mode = fd.get("first_n_mode") === "signup" ? "signup" : "position";
-  if (prize) {
-    await sql`
-      INSERT INTO settings (key, value) VALUES ('prize_teaser_text', ${prize})
-      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-    `;
-  }
   await sql`
     INSERT INTO settings (key, value) VALUES ('first_n_mode', ${mode})
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value

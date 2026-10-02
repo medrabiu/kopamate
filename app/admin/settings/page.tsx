@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/session";
-import { getAnnouncementSettings, getFirstNMode, getPrizeText, getRewardSettings } from "@/lib/stats";
+import { getAnnouncementSettings, getFirstNMode, getRewardSettings } from "@/lib/stats";
 import { saveAnnouncement, saveRewardSettings, saveSettings } from "@/app/actions/admin";
 import { saveMoneySettings } from "@/app/actions/admin-rewards";
 import { getMoneySettings } from "@/lib/rewards";
@@ -22,8 +22,7 @@ const lagosTime = (iso: string) =>
 export default async function AdminSettingsPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string }> }) {
   await requireAdmin();
   const { error, saved } = await searchParams;
-  const [prizeText, mode, announcement, rewards, money] = await Promise.all([
-    getPrizeText(),
+  const [mode, announcement, rewards, money] = await Promise.all([
     getFirstNMode(),
     getAnnouncementSettings(),
     getRewardSettings(),
@@ -99,17 +98,6 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       <section className={panel}>
         <h2 className="h-display mb-3 text-lg">Prizes</h2>
         <form action={saveSettings} className="flex flex-col gap-3">
-          <label className="text-sm text-muted" htmlFor="prize">
-            Prize text (shown on the landing page)
-          </label>
-          <textarea
-            id="prize"
-            name="prize_teaser_text"
-            defaultValue={prizeText}
-            rows={2}
-            maxLength={300}
-            className="rounded-lg border border-line bg-bg p-3 text-sm"
-          />
           <label className="flex items-center gap-2 text-sm">
             First 500 is counted by
             <select name="first_n_mode" defaultValue={mode} className={input}>

@@ -30,10 +30,10 @@ A mobile-first web app for Nigerian corps members (NYSC). It's **the real app, l
 - Landing page with live total signups and top states
 - Sign up with Google, or with phone number + PIN
 - Referral links, positions, and "moves up 10 places" logic
-- Home page (position, share, progress, state stats, new joiners, coming soon, prize teaser)
+- Home page (position, share, progress, state stats, new joiners, coming soon)
 - Corpers browse page (by state → grid of profiles, view only)
 - Invite page (link, who joined with your link, top referrers leaderboard)
-- Rewards page (prize teaser, where you stand, list of rewards won)
+- Rewards page (prizes, where you stand, list of rewards won)
 - Profile page (edit details, optional photo and state code, hide from list, log out)
 - Admin page (only for the owner)
 - Installable as a PWA (add to home screen)
@@ -86,19 +86,17 @@ Bottom navigation (logged in): **Home · Corpers · Invite · Rewards · Profile
 
 Mockups of every screen are on the design canvas: https://claude.ai/artifact/25hndDPcRgZU3RW6FpCBbU (private; the owner may need to share it or send screenshots). **Match the mockups.**
 
-### 4.1 Landing (`/`)
-- Top bar: `Kopamate` wordmark; **Log in** link.
-- **If the visitor arrived through a referral link:** a card at the top saying "**Chidi** invited you to join" with Chidi's avatar.
-- **Hero illustration** (`components/HeroArt.tsx`): three corpers in khaki at a social night under string lights, one holding up a phone showing "#1". Inline SVG rendered with the page (no image request, about 1.5 KB gzipped), follows light/dark mode, no NYSC branding.
-- Pill: "For corps members across Nigeria".
-- Headline: "Every corper. / One place." (second line in pink).
-- Subtext: "Join early, climb the list, and be first in line for contests, awards and prizes."
-- **Live counter card:** total signups (large number), "corpers have joined", and "+N today".
-- **Early Corper countdown** (lime outline, above Join now): "Early Corper badge closes in 1d 09:42:17" and "Early Corpers qualify for the first rewards drop." Disappears when the deadline passes.
-- **Join now** button (lime, full width).
-- **Top states:** top 5 states by signups, with counts.
-- **Coming soon:** 3 locked cards: Contests, Awards, Opportunities.
-- **Prize teaser** (pink outline): "Prizes are coming. For the first 500 signups and the top 10 referrers. Announced soon."
+### 4.1 Landing (`/` and invite links `/r/[code]`)
+A real landing page that says what Kopamate is, with live numbers. No referral or "climb the list" talk; invite links show the same page (the inviter is still credited through the cookie, and their name appears only in the link preview). Mobile-first single column; from tablet width the hero splits into two columns.
+- **Sticky top bar:** `Kopamate` wordmark, **Log in** and a lime **Join** button.
+- **Hero:** pill "For NYSC corps members across Nigeria"; headline "The home for every corper in Nigeria."; "Kopamate brings corpers from every state into one place. Find people serving near you, earn badges for your service year, and win prizes, contests and awards made for corpers."; **Join free** and **Log in** buttons; "Takes 20 seconds. Phone number or Google."
+- **Kopamate right now** (live, cached 30 seconds): corpers joined (counts up), states with corpers "of 37 states", joined today, verified corpers; then the top 5 states with bars and counts.
+- **Early Corper countdown** (lime outline) until the deadline: "Early Corper badge closes in …" and "Early Corpers qualify for the first rewards drop."
+- **Built for service year:** four features: find corpers in your state (tap to see profiles and badges); win real prizes (cash, airtime and data, claimed in the app); earn badges (Early Corper, State Ambassador…); contests, awards and opportunities (coming soon).
+- **How it works:** 1. Sign up in 20 seconds (phone or Google, free). 2. Pick your state (state code and NYSC ID card to get verified). 3. Join in (meet corpers, earn badges, claim prizes).
+- **Your details stay yours:** phone number never shown; prizes to verified corpers only, checked by ID; hide yourself or delete your account any time.
+- **Closing call to action** (lime outline): "Join {total} corpers on Kopamate", "Free, and it takes 20 seconds.", **Join free**.
+- **Footer:** "Kopamate is an independent app for corps members. Not affiliated with NYSC.", Privacy, Log in.
 - Also needs Open Graph tags and a preview image so the link looks good when shared on WhatsApp (see section 6).
 
 ### 4.2 Sign up (`/join`)
@@ -221,7 +219,7 @@ Only accessible to users whose email or phone is in an `ADMIN_IDS` environment v
   - Kind (cash, airtime, data), title and **Show amount to user** (off: rewards start hidden and are revealed later as a batch; on: every recipient needs an amount). Empty amounts are allowed only while hidden.
   - Rewards created together share a `batch_id`. Submitting the same confirmation twice doesn't award twice, and anyone flagged or banned since the confirmation screen is skipped when saving.
   - The budget and per-user cap only **warn**, on the confirmation screen and after saving; they never block.
-- **Settings** (`/admin/settings`): **Countdowns and rewards**: `early_deadline` (default `2026-10-02T23:59:59+01:00`; Early Corper badge closes), `leaderboard_close` (default `2026-10-21T23:59:59+01:00`) and `rewards_reveal_text` (default "Prizes are revealed when the countdown ends."). Times must be ISO 8601 with a time zone, and the leaderboard must close after the Early Corper deadline. Also the prize teaser text shown on Landing, whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away. **Reward money:** total budget (`rewards_budget_ngn`, default 200000), per-user cap (`max_claim_per_user_ngn`, empty = no cap; the admin is warned when an award or amount edit pushes someone's non-rejected total above it) and the top-referrer presets (`prize_presets`, JSON, default `{"top_referrers":[30000,20000,15000,10000,10000,5000,5000,5000,5000,5000]}`; edited as comma-separated amounts).
+- **Settings** (`/admin/settings`): **Countdowns and rewards**: `early_deadline` (default `2026-10-02T23:59:59+01:00`; Early Corper badge closes), `leaderboard_close` (default `2026-10-21T23:59:59+01:00`) and `rewards_reveal_text` (default "Prizes are revealed when the countdown ends."). Times must be ISO 8601 with a time zone, and the leaderboard must close after the Early Corper deadline. Also whether "first 500" is counted by position or sign-up order, and the Home **announcement**: on/off, title (max 60 characters), text (200), button label (24) and button link (300; must start with `/` or `https://`). Stored in `settings` as `announcement_active` ("1"/"0"), `announcement_title`, `announcement_body`, `announcement_button_label`, `announcement_button_url`. Changes show on Home right away. **Reward money:** total budget (`rewards_budget_ngn`, default 200000), per-user cap (`max_claim_per_user_ngn`, empty = no cap; the admin is warned when an award or amount edit pushes someone's non-rejected total above it) and the top-referrer presets (`prize_presets`, JSON, default `{"top_referrers":[30000,20000,15000,10000,10000,5000,5000,5000,5000,5000]}`; edited as comma-separated amounts).
 
 ---
 
@@ -405,7 +403,7 @@ users (reward columns)
   payout_bank, payout_account_number, payout_account_name   text null  -- last cash claim, to prefill; private
 
 settings                                        -- editable from admin
-  key               text pk   -- e.g. 'prize_teaser_text', 'first_n_mode', 'early_deadline', 'leaderboard_close', 'rewards_reveal_text',
+  key               text pk   -- e.g. 'first_n_mode', 'early_deadline', 'leaderboard_close', 'rewards_reveal_text',
                               --      'rewards_budget_ngn', 'max_claim_per_user_ngn', 'prize_presets'
   value             text
 
@@ -502,7 +500,7 @@ Admin overview should show: signups per day, % of signups that came from referra
 - [ ] A second account with the same WhatsApp number is rejected.
 - [ ] Google sign-up asks for WhatsApp number and state before the account is complete.
 - [ ] Returning phone users can log in with number + PIN.
-- [ ] Home shows position, daily change, next goal, share buttons, state stats, new joiners, coming soon and prize teaser.
+- [ ] Home shows position, daily change, next goal, share buttons, new joiners and coming soon.
 - [ ] Corpers page lists all states by count; each state page shows a view-only grid; hidden users don't appear.
 - [ ] Invite page shows the user's link, who joined with it, and the top 10 referrers.
 - [ ] Rewards page shows where the user stands and any rewards given by the admin.
