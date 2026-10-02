@@ -10,7 +10,6 @@ import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
 import CountUp from "@/components/CountUp";
 import HomeCarousel from "@/components/HomeCarousel";
-import PrizeCard from "@/components/PrizeCard";
 import RewardBanner from "@/components/RewardBanner";
 import ShareButtons from "@/components/ShareButtons";
 import StatusCardButton from "@/components/StatusCardButton";
@@ -18,7 +17,7 @@ import StatusCardPreview from "@/components/StatusCardPreview";
 import { ArrowDownIcon, ArrowUpIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getSnapshotPosition, nextGoal } from "@/lib/ranking";
-import { getAnnouncement, getEarlyDeadline, getPrizeText, getPublicStats, track } from "@/lib/stats";
+import { getAnnouncement, getEarlyDeadline, getPublicStats, track } from "@/lib/stats";
 import { checkAutoBadges, getProfileSteps, getUserBadges, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
 import { referralLink, shareMessage, whatsappShareUrl } from "@/lib/config";
@@ -35,10 +34,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, prizeText, announcement, snapshot, newcomers, earlyDeadline, steps, badges, myRewards] = await Promise.all([
+  const [rank, stats, announcement, snapshot, newcomers, earlyDeadline, steps, badges, myRewards] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
-    getPrizeText(),
     getAnnouncement(),
     getSnapshotPosition(user.id, today),
     sql<{ id: string; nickname: string; photo_version: number; top_badge: BadgeInfo | null }[]>`
@@ -221,7 +219,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )}
 
       <ComingSoon layout="rows" state={user.state} />
-      <PrizeCard text={prizeText} href="/rewards" />
     </>
   );
 }

@@ -100,7 +100,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
         <h2 className="h-display mb-3 text-lg">Prizes</h2>
         <form action={saveSettings} className="flex flex-col gap-3">
           <label className="text-sm text-muted" htmlFor="prize">
-            Prize text (shown on Landing, Home and Rewards)
+            Prize text (shown on the landing page)
           </label>
           <textarea
             id="prize"
