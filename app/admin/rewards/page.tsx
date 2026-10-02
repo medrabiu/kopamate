@@ -110,7 +110,7 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
         {payouts.length === 0 ? (
           <p className="text-sm text-muted">Nothing to pay right now.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-surface-2">
+          <ul className="flex flex-col divide-y divide-line">
             {payouts.map((p) => (
               <li key={p.id} className="flex flex-col gap-2 py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -176,7 +176,7 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
               const total = rows.reduce((s, r) => s + (r.amount_ngn ?? 0), 0);
               return (
                 <div key={batch || "single"} className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-surface-2 pb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2">
                     <div className="text-sm">
                       <b>{batch ? `Award of ${formatJoined(rows[rows.length - 1].created_at)}` : "Single awards"}</b>
                       <span className="text-muted">
@@ -193,7 +193,7 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
                       </form>
                     )}
                   </div>
-                  <ul className="flex flex-col divide-y divide-surface-2">
+                  <ul className="flex flex-col divide-y divide-line">
                     {rows.map((r) => (
                       <li key={r.id} className="flex flex-col gap-1.5 py-2 text-sm">
                         <div className="flex flex-wrap items-center gap-2">
@@ -217,7 +217,7 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
       {rejected.length > 0 && (
         <section className={panel}>
           <h2 className="h-display mb-3 text-lg">Rejected</h2>
-          <ul className="flex flex-col divide-y divide-surface-2">
+          <ul className="flex flex-col divide-y divide-line">
             {rejected.map((r) => (
               <li key={r.id} className="flex flex-col gap-1.5 py-2 text-sm">
                 <div className="flex flex-wrap items-center gap-2">

@@ -21,7 +21,7 @@ export function ProfileProgressRow({ steps }: { steps: ProfileSteps }) {
   const { percent, next } = completion(steps);
   if (!next) return null;
   return (
-    <Link href={next.href} className="flex items-center gap-3.5 rounded-[20px] bg-surface px-4 py-3">
+    <Link href={next.href} className="flex items-center gap-3.5 rounded-[20px] border border-line px-4 py-3">
       <span className="h-display w-11 shrink-0 text-lg text-lime-ink">{percent}%</span>
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="truncate text-sm">
@@ -54,7 +54,7 @@ export function ProfileChecklist({ steps }: { steps: ProfileSteps }) {
           // Steps on this page are plain hash links, so the photo and verify sections react to them.
           const Tag = s.href.startsWith("/profile#") ? "a" : Link;
           return (
-            <li key={s.key} className="border-b border-surface-2 last:border-b-0">
+            <li key={s.key} className="border-b border-line last:border-b-0">
               <Tag href={s.href.startsWith("/profile#") ? s.href.slice("/profile".length) : s.href} className="flex min-h-12 items-center gap-3 py-2">
                 <span
                   className={`flex size-7 shrink-0 items-center justify-center rounded-full ${done ? "bg-lime text-on-accent" : "border-[1.5px] border-line"}`}

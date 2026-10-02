@@ -33,14 +33,14 @@ export default function StateList({ rows, myState }: { rows: Row[]; myState: str
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search a state"
-          className="h-12 w-full rounded-full border border-line bg-surface pl-11 pr-4 text-[15px] placeholder:text-faint focus:border-lime focus:outline-none"
+          className="h-12 w-full rounded-full border border-line bg-transparent pl-11 pr-4 text-[15px] placeholder:text-faint focus:border-lime focus:outline-none"
         />
         <SearchIcon size={20} className="pointer-events-none absolute left-4 top-3.5 text-faint" />
       </div>
       {shown.length === 0 ? (
-        <p className="rounded-[20px] bg-surface px-4 py-6 text-center text-muted">No state matches “{q}”</p>
+        <p className="rounded-[20px] border border-line px-4 py-6 text-center text-muted">No state matches “{q}”</p>
       ) : (
-        <ol className="divide-y divide-surface-2 rounded-[20px] bg-surface">
+        <ol className="divide-y divide-line rounded-[20px] border border-line">
           {shown.map((r) => {
             const mine = r.state === myState;
             const empty = r.count === 0;

@@ -70,7 +70,7 @@ export default async function StatePage({ params, searchParams }: Props) {
             const me = m.id === user.id;
             return (
               <li key={m.id}>
-                <PersonButton id={m.id} label={m.nickname} className="flex w-full flex-col items-center gap-1.5 rounded-2xl py-1 active:bg-surface">
+                <PersonButton id={m.id} label={m.nickname} className="flex w-full flex-col items-center gap-1.5 rounded-2xl py-1 active:bg-surface-2">
                   <Avatar id={m.id} nickname={m.nickname} photoVersion={m.photo_version} size={72} ring={me} />
                   <span className={`flex w-full items-center justify-center gap-1 text-sm font-medium ${me ? "text-lime-ink" : ""}`}>
                     <span className="truncate">

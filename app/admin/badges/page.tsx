@@ -84,7 +84,7 @@ export default async function AdminBadgesPage({ searchParams }: { searchParams: 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead className="text-xs text-muted">
-                <tr className="border-b border-surface-2">
+                <tr className="border-b border-line">
                   <th className="p-2">State</th>
                   <th className="p-2">#</th>
                   <th className="p-2">User</th>
@@ -94,7 +94,7 @@ export default async function AdminBadgesPage({ searchParams }: { searchParams: 
               </thead>
               <tbody>
                 {candidates.map((c) => (
-                  <tr key={c.id} className="border-b border-surface-2">
+                  <tr key={c.id} className="border-b border-line">
                     <td className="p-2">{c.state_rank === 1 ? c.state : ""}</td>
                     <td className="p-2 text-muted">{c.state_rank}</td>
                     <td className="p-2">

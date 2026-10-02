@@ -61,7 +61,7 @@ export default async function ProfilePage() {
             )}
           </div>
         </div>
-        <dl className="grid grid-cols-3 divide-x divide-surface-2 rounded-2xl bg-surface-2/60 py-3">
+        <dl className="grid grid-cols-3 divide-x divide-line rounded-2xl border border-line py-3">
           {stats.map(([value, label]) => (
             <div key={label} className="flex flex-col-reverse items-center gap-0.5">
               <dt className="text-xs text-muted">{label}</dt>
@@ -83,7 +83,7 @@ export default async function ProfilePage() {
       </section>
 
       <GroupLabel>Account</GroupLabel>
-      <section className="divide-y divide-surface-2 rounded-[20px] bg-surface">
+      <section className="divide-y divide-line rounded-[20px] border border-line">
         <EditableRow field="nickname" label="Nickname" display={user.nickname} value={user.nickname} />
         <EditableRow field="whatsapp" label="WhatsApp" display={maskPhone(user.whatsapp_e164)} value={user.whatsapp_e164 ?? ""} />
         <EditableRow field="state" label="State" display={user.state ?? ""} value={user.state ?? ""} />
@@ -94,7 +94,7 @@ export default async function ProfilePage() {
       </p>
 
       <GroupLabel>Preferences</GroupLabel>
-      <section className="divide-y divide-surface-2 rounded-[20px] bg-surface">
+      <section className="divide-y divide-line rounded-[20px] border border-line">
         <ShowInListToggle on={user.show_in_list} />
         <LightModeToggle initial={jar.get(THEME_COOKIE)?.value === "light"} />
       </section>

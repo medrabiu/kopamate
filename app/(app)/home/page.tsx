@@ -140,7 +140,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           fileName={`kopamate-${user.referral_code}.png`}
         />
 
-        <div className="-mb-1 flex items-center justify-between gap-3 border-t border-surface-2 pt-3 text-sm">
+        <div className="-mb-1 flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
           <Link href="/invite" className="text-muted">
             {refs === 0 ? "No friends joined yet" : `${refs} ${refs === 1 ? "friend" : "friends"} joined`}
             <span className="font-bold text-lime-ink"> · Invite</span>
@@ -158,14 +158,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </section>
 
       {announcement && (
-        <section className="flex flex-col gap-2 rounded-3xl bg-pink p-[22px] text-on-accent" aria-label="Announcement">
-          <h2 className="h-display text-[24px] leading-tight">{announcement.title}</h2>
-          {announcement.body && <p className="text-[15px] font-medium leading-normal">{announcement.body}</p>}
+        <section className="flex flex-col gap-2 rounded-3xl border-[1.5px] border-pink p-[22px]" aria-label="Announcement">
+          <h2 className="h-display text-[22px] leading-tight text-pink-ink">{announcement.title}</h2>
+          {announcement.body && <p className="text-[15px] leading-normal">{announcement.body}</p>}
           {announcement.buttonLabel && announcement.buttonUrl && (
             <a
               href={announcement.buttonUrl}
               {...(announcement.buttonUrl.startsWith("https://") ? { target: "_blank", rel: "noopener" } : {})}
-              className="mt-1 flex h-11 items-center justify-center self-start rounded-full bg-on-accent px-5 text-[15px] font-bold text-pink"
+              className="mt-1 flex h-11 items-center justify-center self-start rounded-full bg-pink px-5 text-[15px] font-bold text-on-accent"
             >
               {announcement.buttonLabel}
             </a>

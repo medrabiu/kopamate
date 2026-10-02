@@ -3,7 +3,7 @@ export type Theme = "dark" | "light";
 /** Cookie read by app/layout.tsx, so the server renders <html data-theme="light"> and nothing flashes. */
 export const THEME_COOKIE = "km_theme";
 const LEGACY_KEY = "kopamate-theme";
-export const THEME_COLOR: Record<Theme, string> = { dark: "#0E0E10", light: "#F7F6F1" };
+export const THEME_COLOR: Record<Theme, string> = { dark: "#000000", light: "#FFFFFF" };
 
 /**
  * Moves the old localStorage setting into the cookie for people who switched on light mode before

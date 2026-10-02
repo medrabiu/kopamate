@@ -66,7 +66,7 @@ export default function ComingSoon(props: { layout: "grid" } | { layout: "tiles"
               key={title}
               type="button"
               onClick={() => show(`${title} is coming soon`)}
-              className="flex flex-col gap-2.5 rounded-[18px] bg-surface px-3 py-3.5 text-left"
+              className="flex flex-col gap-2.5 rounded-[18px] border border-line px-3 py-3.5 text-left"
             >
               <LockIcon size={20} className="text-muted" />
               <span className="text-sm font-medium">{title}</span>
@@ -97,7 +97,7 @@ export default function ComingSoon(props: { layout: "grid" } | { layout: "tiles"
             key={heading}
             type="button"
             onClick={() => setOpen(heading)}
-            className="flex flex-col gap-2 rounded-[18px] bg-surface px-3 py-3.5 text-left"
+            className="flex flex-col gap-2 rounded-[18px] border border-line px-3 py-3.5 text-left"
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
               <Icon size={18} />

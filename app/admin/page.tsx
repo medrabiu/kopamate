@@ -77,7 +77,7 @@ export default async function AdminOverviewPage() {
           ["Verified", formatNumber(o.verified)],
           ["Unfinished Google sign-ups", formatNumber(o.incomplete)],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl bg-surface p-4">
+          <div key={label} className="rounded-2xl border border-line p-4">
             <div className="text-xs text-muted">{label}</div>
             <div className="h-display mt-1 text-2xl">{value}</div>
           </div>

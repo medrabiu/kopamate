@@ -81,7 +81,7 @@ export function PeopleProvider({ viewerId, children }: { viewerId: string; child
               </div>
             </div>
 
-            <dl className="grid grid-cols-3 divide-x divide-surface-2 rounded-2xl bg-surface-2/60 py-3">
+            <dl className="grid grid-cols-3 divide-x divide-line rounded-2xl border border-line py-3">
               {(
                 [
                   [profile.position ? `#${new Intl.NumberFormat("en-NG").format(profile.position)}` : "–", "Position"],

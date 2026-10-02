@@ -470,7 +470,7 @@ export function AccountActions({ admin }: { admin: boolean }) {
   const [confirming, setConfirming] = useState(false);
   return (
     <div className="flex flex-col gap-4">
-      <div className="divide-y divide-surface-2 rounded-[20px] bg-surface">
+      <div className="divide-y divide-line rounded-[20px] border border-line">
         {admin && (
           <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 text-[15px] font-medium">
             <span className="flex-1">Open admin</span>

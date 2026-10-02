@@ -41,12 +41,12 @@ export default function RewardBanner({ unclaimedIds, unclaimedTotal, hiddenCount
     return (
       <>
         <Confetti fire={fire} />
-        <Link href="/rewards#your-rewards" className="flex items-center gap-3 rounded-[20px] bg-lime px-[18px] py-4 text-on-accent">
+        <Link href="/rewards#your-rewards" className="flex items-center gap-3 rounded-[20px] border-[1.5px] border-lime px-[18px] py-4">
           <span className="min-w-0 flex-1">
-            <span className="h-display block text-xl leading-tight">🎉 You won {formatNgn(unclaimedTotal)}!</span>
-            <span className="text-sm font-bold">{underReview ? "Your account is under review" : "Claim it"}</span>
+            <span className="h-display block text-xl leading-tight text-lime-ink">🎉 You won {formatNgn(unclaimedTotal)}!</span>
+            <span className="text-sm font-bold text-muted">{underReview ? "Your account is under review" : "Claim it"}</span>
           </span>
-          <ChevronRight size={22} className="shrink-0" />
+          <ChevronRight size={22} className="shrink-0 text-lime-ink" />
         </Link>
       </>
     );

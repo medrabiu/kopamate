@@ -26,7 +26,7 @@ export function Field({ label, id, children }: { label: string; id: string; chil
 export function PhoneInput({ defaultValue, id = "whatsapp", autoFocus }: { defaultValue?: string; id?: string; autoFocus?: boolean }) {
   return (
     <div className="flex gap-2">
-      <div className="flex h-13 items-center rounded-[14px] border border-line bg-surface px-3.5 font-medium">+234</div>
+      <div className="flex h-13 items-center rounded-[14px] border border-line px-3.5 font-medium">+234</div>
       <input
         id={id}
         name="whatsapp"

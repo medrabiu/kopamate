@@ -29,7 +29,7 @@ export default function Landing({ stats, prizeText, inviter, earlyDeadline }: Pr
       </header>
 
       {inviter && (
-        <div className="flex items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-3">
+        <div className="flex items-center gap-2.5 rounded-2xl border border-line px-3.5 py-3">
           <Avatar id={inviter.id} nickname={inviter.nickname} photoVersion={inviter.photo_version} size={36} />
           <p className="text-sm">
             <span className="font-bold">{inviter.nickname}</span> invited you to join
@@ -73,9 +73,9 @@ export default function Landing({ stats, prizeText, inviter, earlyDeadline }: Pr
       {top.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="h-display text-xl">Top states</h2>
-          <ol className="rounded-[20px] bg-surface px-4 py-2">
+          <ol className="rounded-[20px] border border-line px-4 py-2">
             {top.map((s, i) => (
-              <li key={s.state} className={`flex h-11 items-center gap-3 ${i < top.length - 1 ? "border-b border-surface-2" : ""}`}>
+              <li key={s.state} className={`flex h-11 items-center gap-3 ${i < top.length - 1 ? "border-b border-line" : ""}`}>
                 <span className={`h-display w-5 ${i < 3 ? "text-lime-ink" : "text-muted"}`}>{i + 1}</span>
                 <span className="flex-1 font-medium">{s.state}</span>
                 <span className="text-muted">{formatNumber(s.count)}</span>

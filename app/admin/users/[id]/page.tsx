@@ -342,7 +342,7 @@ export default async function AdminUserPage({
             {settings.cap ? ` · per-user cap ${formatNgn(settings.cap)}` : " · no per-user cap"} · budget left {formatNgn(budget.remaining)}
           </p>
           {rewards.length > 0 && (
-            <ul className="mb-4 flex flex-col divide-y divide-surface-2 text-sm">
+            <ul className="mb-4 flex flex-col divide-y divide-line text-sm">
               {rewards.map((r) => {
                 const history = events.filter((e) => e.reward_id === r.id);
                 return (

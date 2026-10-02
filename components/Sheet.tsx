@@ -27,7 +27,7 @@ export default function Sheet({ open, onClose, title, children }: Props) {
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="sheet m-0 mx-auto mt-auto w-full max-w-[480px] rounded-t-3xl bg-surface p-0 text-ink backdrop:bg-black/60"
+      className="sheet m-0 mx-auto mt-auto w-full max-w-[480px] rounded-t-3xl border border-b-0 border-line bg-bg p-0 text-ink backdrop:bg-black/60"
     >
       <div className="flex flex-col gap-3 px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-5">
         <div className="flex items-start justify-between gap-3">

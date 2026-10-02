@@ -68,7 +68,7 @@ export default function YourRewards({
         {rewards.map((r) => {
           const summary = payoutSummary(r);
           return (
-            <li key={r.id} className={`flex flex-col gap-3 rounded-[18px] p-4 ${r.status === "unclaimed" ? "border-[1.5px] border-lime bg-surface" : "bg-surface"}`}>
+            <li key={r.id} className={`flex flex-col gap-3 rounded-[18px] p-4 ${r.status === "unclaimed" ? "border-[1.5px] border-lime" : "border border-line"}`}>
               <div className="flex items-start gap-3.5">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
                   <GiftIcon size={20} />

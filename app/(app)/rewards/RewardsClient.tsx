@@ -22,7 +22,7 @@ export type BoardRow = {
 
 function Row({ r, me, last }: { r: BoardRow; me: boolean; last?: boolean }) {
   return (
-    <li className={last ? "" : "border-b border-surface-2"} aria-current={me ? "true" : undefined}>
+    <li className={last ? "" : "border-b border-line"} aria-current={me ? "true" : undefined}>
       <PersonButton id={r.id} label={r.nickname} className="flex h-14 w-full items-center gap-3">
         <span className={`h-display w-7 shrink-0 text-center ${r.rank <= 3 ? "text-lime-ink" : "text-faint"}`}>{r.rank || "–"}</span>
         <Avatar id={r.id} nickname={r.nickname} photoVersion={r.photo_version} size={36} ring={me} />
@@ -75,7 +75,7 @@ export function Leaderboard({
         </h2>
         <span className="text-xs text-faint">Friends joined</span>
       </div>
-      <div role="tablist" aria-label="Leaderboard" className="grid grid-cols-2 gap-1 rounded-full bg-surface p-1">
+      <div role="tablist" aria-label="Leaderboard" className="grid grid-cols-2 gap-1 rounded-full border border-line p-1">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -93,11 +93,11 @@ export function Leaderboard({
       </div>
       <div id="board-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="flex flex-col gap-2">
         {rows.length === 0 ? (
-          <p className="rounded-[20px] bg-surface px-4 py-5 text-sm text-muted">
+          <p className="rounded-[20px] border border-line px-4 py-5 text-sm text-muted">
             No one is on the board{tab === "state" ? ` in ${stateName}` : ""} yet. Invite a friend to take the lead.
           </p>
         ) : (
-          <ol className="rounded-[20px] bg-surface px-4 py-1">
+          <ol className="rounded-[20px] border border-line px-4 py-1">
             {rows.map((r, i) => (
               <Row key={r.id} r={r} me={r.id === userId} last={i === rows.length - 1} />
             ))}
@@ -163,7 +163,7 @@ export function Prizes({
           Amounts revealed later
         </span>
       </div>
-      <ul className="divide-y divide-surface-2 rounded-[20px] bg-surface">
+      <ul className="divide-y divide-line rounded-[20px] border border-line">
         {prizes.map((p) => (
           <li key={p.key}>
             <button type="button" onClick={() => setOpen(p)} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left">

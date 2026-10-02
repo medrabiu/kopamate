@@ -161,11 +161,11 @@ export default async function RewardsPage() {
           Your standing
         </h2>
         <div className="grid grid-cols-2 gap-2.5">
-          <div className="rounded-2xl bg-surface-2/60 px-3.5 py-3">
+          <div className="rounded-2xl border border-line px-3.5 py-3">
             <div className="text-[13px] text-muted">Nigeria</div>
             <div className="h-display text-[30px] leading-tight text-lime-ink">{me ? `#${me.rank}` : "–"}</div>
           </div>
-          <div className="rounded-2xl bg-surface-2/60 px-3.5 py-3">
+          <div className="rounded-2xl border border-line px-3.5 py-3">
             <div className="truncate text-[13px] text-muted">{state}</div>
             <div className="h-display text-[30px] leading-tight text-pink-ink">{me ? `#${me.state_rank}` : "–"}</div>
           </div>
@@ -179,7 +179,7 @@ export default async function RewardsPage() {
             Invite
           </Link>
         </div>
-        <div className="flex flex-col border-t border-surface-2 pt-1">
+        <div className="flex flex-col border-t border-line pt-1">
           <div className="flex min-h-11 items-center gap-3">
             <ClockIcon size={18} className={`shrink-0 ${earlyOpen ? "text-lime-ink" : "text-faint"}`} />
             {earlyOpen ? (

@@ -65,7 +65,7 @@ export default function FriendsJoined({ friends }: { friends: Friend[] }) {
       <Sheet open={open} onClose={() => setOpen(false)} title={`Friends who joined · ${friends.length}`}>
         <ul className="-mt-1 max-h-[60vh] overflow-y-auto">
           {friends.map((f, i) => (
-            <li key={f.id} className={i < friends.length - 1 ? "border-b border-surface-2" : ""}>
+            <li key={f.id} className={i < friends.length - 1 ? "border-b border-line" : ""}>
               <PersonButton id={f.id} label={f.nickname} className="flex h-14 w-full items-center gap-3">
                 <Avatar id={f.id} nickname={f.nickname} photoVersion={f.photo_version} size={40} />
                 <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">

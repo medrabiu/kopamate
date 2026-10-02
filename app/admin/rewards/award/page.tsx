@@ -277,9 +277,9 @@ async function Review(p: {
         ))}
 
         {rows.length > 0 && (
-          <div className="mb-4 max-h-[60vh] overflow-auto rounded-lg border border-surface-2">
+          <div className="mb-4 max-h-[60vh] overflow-auto rounded-lg border border-line">
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-surface text-xs text-muted">
+              <thead className="sticky top-0 border border-line text-xs text-muted">
                 <tr>
                   <th className="p-2">#</th>
                   <th className="p-2">User</th>
@@ -294,7 +294,7 @@ async function Review(p: {
                   const after = (totals.get(r.id) ?? 0) + (r.amount || 0);
                   const capped = settings.cap !== null && after > settings.cap;
                   return (
-                    <tr key={r.id} className="border-t border-surface-2">
+                    <tr key={r.id} className="border-t border-line">
                       <td className="p-2">
                         {r.prizeRank}
                         {p.mode === "top" && r.board_rank !== r.prizeRank && <span className="text-xs text-muted"> (board #{r.board_rank})</span>}

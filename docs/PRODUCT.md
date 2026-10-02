@@ -293,38 +293,40 @@ The "Which state will have the most corpers when camp ends?" poll was taken off 
 
 ---
 
-## 7. Design system: "Social Night"
+## 7. Design system: "Social Night" (flat, X-style)
 
 Dark by default. **Light mode** can be switched on in Profile (cookie `km_theme`, read in `app/layout.tsx`, which sets `data-theme` on `<html>`).
 
 ### Colours
+Flat, X-style: true black, **no filled cards**. Cards, lists and banners are outlined with a 1px hairline (`line`) and share the page background; dividers inside lists use the same hairline. Colour comes from lime/pink outlines, text, buttons and badges, not from tinted panels.
+
 | Token | Hex | Use |
 |---|---|---|
-| `bg` | `#0E0E10` | Page background |
-| `surface` | `#1C1C20` | Cards |
-| `surface-2` | `#26262B` | Inner elements, dividers, progress track |
-| `border` | `#2E2E34` | Input and outline borders |
-| `text` | `#F5F5F0` | Main text |
-| `text-muted` | `#A8A8A0` | Secondary text |
-| `text-faint` | `#8A8A84` | Hints, inactive tabs |
-| `lime` | `#C6F432` | Primary buttons, position number, active tab, highlights |
-| `pink` | `#FF4FA3` | Accents, prize cards, second headline line |
+| `bg` | `#000000` | Page background |
+| `surface` | `#000000` | Same as `bg` (cards have no fill) |
+| `surface-2` | `#16181C` | The only tint: chips, progress tracks, small icon circles, pressed states |
+| `line` | `#2F3336` | Hairline borders and dividers (cards, lists, inputs, bottom nav) |
+| `text` | `#E7E9EA` | Main text |
+| `text-muted` | `#8B98A5` | Secondary text |
+| `text-faint` | `#80868B` | Hints, inactive tabs |
+| `lime` | `#C6F432` | Primary buttons, position number, active tab, highlights, "You won" outline |
+| `pink` | `#FF4FA3` | Accents, announcement outline, second headline line |
 
-Text on lime or pink is always `#0E0E10`.
+Text on lime or pink is always `#0E0E10`. X's own grey (`#71767B`) was too dim on `surface-2` (3.9:1), so muted and faint are a step lighter; every text colour passes WCAG AA (4.5:1) on `bg` and `surface-2`.
 
-**Light palette** (`[data-theme="light"]` in `globals.css`): `bg` `#F7F6F1`, `surface` `#FFFFFF`, `surface-2` `#EEECE4`, `border` `#DEDBD0`, `text` `#141413`, `text-muted` `#5F5E5A`, `text-faint` `#6B6A65`. Lime stays `#C6F432` for fills (dark text on it); lime **text** uses `#4D6B00` and pink text `#C21C6C`. Every text colour passes WCAG AA (4.5:1) on `bg`, `surface` and `surface-2`; `#7A7973` and `#D6247A` were tried for faint and pink text and fell just short.
+**Light palette** (`[data-theme="light"]` in `globals.css`): same flat style on white. `bg` and `surface` `#FFFFFF`, `surface-2` `#F7F9F9`, `line` `#E1E8ED`, `text` `#0F1419`, `text-muted` `#536471`, `text-faint` `#5B7083`. Lime stays `#C6F432` for fills (dark text on it); lime **text** uses `#4D6B00` and pink text `#C21C6C`. All pass AA on `bg` and `surface-2`.
 
 Avatar background colours for default avatars (pick from the user ID so it's stable): `#C6F432`, `#FF4FA3`, `#FFB547`, `#8B7BFF`, `#4FD1C5`.
 
 ### Typography
 - **System font stack** everywhere in the app: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`. Headings, big numbers and ranks use it in bold (700) with tight letter spacing; body text at 400/500/700. x.com's own font (Chirp) is licensed to X only, so this is its fallback stack.
 - The generated images (WhatsApp Status card, link previews, app icons) still embed Bricolage Grotesque 800 and DM Sans 700 from `@fontsource`, since images can't use the phone's fonts.
-- Position number on Home: ~72px, weight 800, lime. Landing counter: ~64px.
+- Position number on Home: ~64px, bold, lime. Landing counter: ~64px.
 
 ### Shapes and components
-- Cards: radius 20–24px, `surface` background, no shadows.
-- Buttons: pill-shaped (fully rounded), height 52–56px. Primary = lime background with dark text. Secondary = transparent with `border`.
-- Inputs: height 52px, radius 14px, `surface` background, `border` outline.
+- Cards: radius 20–24px, transparent with a 1px `line` border, no fill, no shadows. Lists inside cards are split by `line` dividers.
+- Buttons: pill-shaped (fully rounded), height 48–56px. Primary = lime background with dark text. Secondary = transparent with a `line` outline.
+- Inputs: height 52px, radius 14px, transparent with a `line` outline (lime when focused).
 - Bottom nav: 76px high, 5 equal tabs, icon + label.
 - Icons: simple outline icons (e.g. Lucide). **No emoji in the UI** (emoji are fine in the WhatsApp share message).
 - **Default avatar:** coloured circle with the first letter of the nickname in bold, dark text.
