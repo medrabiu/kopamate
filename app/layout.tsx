@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { APP_NAME, APP_URL, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/config";
 import ConnectionBanner from "@/components/ConnectionBanner";
@@ -65,6 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {children}
         <ConnectionBanner />
         <ServiceWorker />
+        <Analytics />
       </body>
     </html>
   );

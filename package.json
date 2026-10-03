@@ -15,6 +15,7 @@
   "dependencies": {
     "@fontsource/bricolage-grotesque": "^5.1.0",
     "@fontsource/dm-sans": "^5.1.0",
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^2.4.3",
     "next": "^15.3.0",
     "postgres": "^3.4.5",
