@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { APP_URL } from "@/lib/config";
 import { createSession } from "@/lib/session";
+import { followFromCookie } from "@/lib/signup";
 import { currentIpHash, ipLimited, uniqueReferralCode } from "@/lib/signup";
 import { validateNickname } from "@/lib/validate";
 
@@ -66,6 +67,8 @@ export async function GET(req: NextRequest) {
   }
 
   await createSession(userId);
+  // Existing accounts follow whoever's profile link brought them here; new ones do it when they finish sign-up.
+  if (complete) await followFromCookie(userId);
   const res = NextResponse.redirect(`${APP_URL}${complete ? "/home" : "/join"}`);
   res.cookies.delete("km_oauth_state");
   return res;

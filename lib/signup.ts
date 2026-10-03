@@ -5,6 +5,8 @@ import { MAX_SIGNUPS_PER_IP_PER_HOUR } from "./config";
 import { clientIp, hashIp, randomDigits, referralCodeBase } from "./util";
 
 export const REF_COOKIE = "km_ref";
+/** Set by profile links (/u/<code>): follow that person once sign-up is done. */
+export const FOLLOW_COOKIE = "km_follow";
 
 /** Generates a unique referral code like "ada347". */
 export async function uniqueReferralCode(nickname: string) {
@@ -48,6 +50,17 @@ export async function referrerByCode(code: string, excludeUserId?: string) {
   const r = rows[0];
   if (!r || r.id === excludeUserId) return null;
   return r;
+}
+
+/** After sign-up: follow whoever's profile link brought you here, then forget it. */
+export async function followFromCookie(userId: string) {
+  const jar = await cookies();
+  const code = jar.get(FOLLOW_COOKIE)?.value;
+  if (!code) return;
+  jar.delete(FOLLOW_COOKIE);
+  const target = await referrerByCode(code, userId);
+  if (!target) return;
+  await sql`INSERT INTO follows (follower_id, following_id) VALUES (${userId}, ${target.id}) ON CONFLICT DO NOTHING`;
 }
 
 export async function whatsappTaken(e164: string, exceptUserId?: string) {

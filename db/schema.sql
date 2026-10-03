@@ -216,3 +216,6 @@ INSERT INTO settings (key, value) VALUES
   ('referral_bonus_ngn', '250'),
   ('referral_bonus_min_withdraw_ngn', '1000')
 ON CONFLICT (key) DO NOTHING;
+
+-- Full name, optional, added in Profile. Private: only the user and admins see it (like the phone number).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name text;

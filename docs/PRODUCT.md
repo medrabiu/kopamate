@@ -150,6 +150,13 @@ Tapping a person opens a normal profile in a bottom sheet: photo, nickname, "Ver
 - Works in the state grid, Home's "New from {state}" row, the Rewards leaderboard and Invite's friends list.
 - Data comes from `/api/person/[id]` (and `?list=followers|following`), signed-in users only, never cached, and never includes WhatsApp numbers, emails, state codes, payout details, positions, referrals or badges. Follow/unfollow is the server action `setFollow` (`app/actions/follows.ts`): you can't follow yourself, banned or unfinished accounts; following twice does nothing.
 
+### Profile links (`/u/[code]`)
+Everyone has a shareable profile link, `kopamate.ng/u/<their invite code>` (nicknames aren't unique, so the invite code doubles as the handle).
+- **Share your profile** card on Profile (under the header): WhatsApp ("Follow me (Ada) on Kopamate, the app for NYSC corpers: <link>"), the phone's share sheet (or Copy link), and the link with Copy.
+- **Logged in:** the person's profile (photo, nickname, Verified, Follows you, "Serving in {state} · Joined {month year}", Following / Followers) with a **Follow** button; on your own link, "This is your profile" and the share buttons.
+- **Logged out:** the same public preview (nothing private) with **Join Kopamate to follow {nickname}** and **Log in to follow**, plus a short "What is Kopamate?". Opening the link stores the code like an invite link (`km_ref`, 30 days) and `km_follow`: signing up credits them as your inviter and follows them; logging in to an existing account follows them too.
+- Link preview: "Follow {nickname} on Kopamate" with their photo (`/u/[code]/opengraph-image`). Profile links are `noindex`; unknown, banned or unfinished accounts give 404.
+
 ### 4.6 Invite (`/invite`)
 - Title "Invite friends" and "Every friend who joins with your link moves you **up 10 places**."
 - **Progress card:** "{N} friends joined" in large lime type (valid referrals, the count that ranks you; "No friends yet" at 0), "You've moved up {N × 10} places", a progress bar and the next goal: "2 more to pass Kels (#7)" (to pass the person just above you nationally), "Invite 1 friend to get on the leaderboard", or "You're #1 nationwide. Keep going to stay on top." Then **Share on WhatsApp** and one slim row with the link, **Copy** and (where the phone supports it) a share icon for other apps.
@@ -202,11 +209,11 @@ Top to bottom:
 - **Get verified** (hidden once verified): a one-line card, "Get verified to win" (or "Verification needs another try" with the admin's reason). It opens a bottom sheet with the state code (format `EN/26B/1234`) and a photo of the NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. While pending the card reads "Checking your ID". Links to `/profile#verify` (Rewards, the Home progress card, the checklist) open the sheet directly. A state code can only be verified on one account, and this sheet is the only place to enter it.
 - **Complete your profile:** the three completion steps (section 5, "Profile completion") with ticks and a percentage; "Add your state code" opens the verify sheet. Hidden at 100% (reaching it gives the Profile Complete badge with confetti).
 - Badges are not shown on Profile (they still appear as the small icon next to nicknames in lists). Reaching 100% still plays the Profile Complete celebration.
-- **Account** (grouped card, label left, value right, inline edit): Nickname, WhatsApp (masked), State serving in, and Change PIN for phone users. Under it: "Only you can see your WhatsApp number (and state code)."
+- **Account** (grouped card, label left, value right, inline edit): Nickname, **Full name** (optional, 2–60 letters; private: only the user and admins see it; "Not added" / **Add**), WhatsApp (masked), **State** (read-only: set when you join; only an admin can change it, from the admin user page) and Change PIN for phone users. Under it: "Only you can see your full name and WhatsApp number (and state code). Your state can't be changed after you join; message us on WhatsApp if it's wrong."
 - **Preferences** (grouped card): **Show me in the Corpers list** ("Others see your nickname and photo only", on by default) and **Light mode** (off by default, saved in the `km_theme` cookie as `light` / `dark` so the server renders the right theme with no flash).
 - A card with **Open admin** (admins only) and **Log out**, then a small "Delete my account" link (type DELETE to confirm).
 - **State code:** optional, free text in the format like `EN/26B/1234`; validate the pattern loosely; never shown publicly in v1.
-- Changing state should be allowed but limited (e.g. once every 30 days) so people can't game state rankings.
+- Users can't change their state after joining (so nobody can game state rankings); admins can correct it.
 
 ### 4.9 Admin (`/admin`)
 Only accessible to users whose email or phone is in an `ADMIN_IDS` environment variable. Simple and functional, no need to match the full design. Split into separate pages (tabs at the top) so each page runs only a few queries:
@@ -368,7 +375,8 @@ users
   signup_number     int unique null           -- set when sign-up completes
   completed_at      timestamptz null
   show_in_list      boolean default true
-  state_changed_at  timestamptz null
+  state_changed_at  timestamptz null   -- no longer written (users can't change state)
+  full_name         text null          -- private, optional
   is_flagged        boolean default false
   is_banned         boolean default false
   signup_ip_hash    text null
@@ -462,7 +470,7 @@ state_predictions
 
 ## 9. Privacy, safety and fairness
 
-- **Public info is only:** nickname, photo (or default avatar), state, position, plus on the profile sheet the join date, whether they're verified, and follower / following counts and lists. **WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
+- **Public info is only:** nickname, photo (or default avatar), state, position, plus on the profile sheet the join date, whether they're verified, and follower / following counts and lists. **Full names, WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
 - **Payout details** (bank, account number, account name, payout phone, on `rewards` and the remembered ones on `users`) are read only on the owner's own Rewards page and in admin (Payouts, the user page, the payouts CSV). No other query, page or API selects them; Home only reads reward ids, statuses and amounts.
 - Show a short privacy notice (linked from sign-up): what we collect, why (account, prizes, anti-fraud), that we don't sell data, and how to delete your account. Keep in line with Nigeria's Data Protection Act.
 - Users can hide themselves from the Corpers list and delete their account.

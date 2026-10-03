@@ -5,10 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { destroySession, getCurrentUser } from "@/lib/session";
-import { normalizeNigerianPhone, normalizeStateCode, validateNickname, validatePin } from "@/lib/validate";
-import { isState } from "@/lib/states";
+import { normalizeNigerianPhone, normalizeStateCode, validateFullName, validateNickname, validatePin } from "@/lib/validate";
 import { isUniqueViolation, whatsappTaken } from "@/lib/signup";
-import { STATE_CHANGE_DAYS } from "@/lib/config";
 import { checkAutoBadges } from "@/lib/badges";
 
 export type ProfileState = { error?: string; ok?: boolean } | undefined;
@@ -22,8 +20,8 @@ async function me() {
 export async function updateField(_prev: ProfileState, fd: FormData): Promise<ProfileState> {
   const user = await me();
   const field = String(fd.get("field") ?? "");
-  // Phone and state inputs keep their own names; the others post "value".
-  const value = String(fd.get(field === "whatsapp" || field === "state" ? field : "value") ?? "");
+  // The phone input keeps its own name; the others post "value".
+  const value = String(fd.get(field === "whatsapp" ? field : "value") ?? "");
 
   switch (field) {
     case "nickname": {
@@ -45,19 +43,15 @@ export async function updateField(_prev: ProfileState, fd: FormData): Promise<Pr
       }
       break;
     }
-    case "state": {
-      if (!isState(value)) return { error: "Choose a state." };
-      if (value === user.state) break;
-      if (user.state_changed_at) {
-        const next = new Date(new Date(user.state_changed_at).getTime() + STATE_CHANGE_DAYS * 86400_000);
-        if (next > new Date()) {
-          return { error: `You can change your state again on ${next.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}.` };
-        }
-      }
-      await sql`UPDATE users SET state = ${value}, state_changed_at = now() WHERE id = ${user.id}`;
-      revalidateTag("stats");
+    case "full_name": {
+      const name = validateFullName(value);
+      if (!name.ok) return { error: name.error };
+      await sql`UPDATE users SET full_name = ${name.value} WHERE id = ${user.id}`;
       break;
     }
+    case "state":
+      // Users can't change their state once they've joined; an admin can (admin user page).
+      return { error: "Your state can't be changed after you join. Message us on WhatsApp if it's wrong." };
     case "state_code": {
       if (user.verification_status === "verified" || user.verification_status === "pending") {
         return { error: "Your state code is locked while it's being checked or once you're verified." };

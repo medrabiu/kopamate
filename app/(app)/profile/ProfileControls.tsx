@@ -8,7 +8,7 @@ import { useOpenPerson } from "@/components/PersonSheet";
 import { useToast } from "@/components/Toast";
 import { CameraIcon, ChevronRight, ClockIcon, ShieldIcon } from "@/components/icons";
 import IdCardGuide from "@/components/IdCardGuide";
-import { PhoneInput, StateSelect } from "@/components/forms";
+import { PhoneInput } from "@/components/forms";
 import {
   changePin,
   deleteAccount,
@@ -22,7 +22,7 @@ import {
 import { logout } from "@/app/actions/auth";
 import { getTheme, setTheme } from "@/lib/theme";
 
-type FieldName = "nickname" | "whatsapp" | "state" | "state_code";
+type FieldName = "nickname" | "full_name" | "whatsapp" | "state_code";
 
 /** A profile row that opens an inline form when you tap Edit. */
 export function EditableRow({
@@ -62,17 +62,17 @@ export function EditableRow({
           <label htmlFor={`f-${field}`} className="text-[13px] text-faint">
             {label}
           </label>
-          {field === "state" ? (
-            <StateSelect id={`f-${field}`} defaultValue={value} />
-          ) : field === "whatsapp" ? (
+          {field === "whatsapp" ? (
             <PhoneInput id={`f-${field}`} defaultValue={value.replace("+234", "0")} />
           ) : (
             <input
               id={`f-${field}`}
               name="value"
               defaultValue={value}
-              maxLength={field === "nickname" ? 20 : 16}
-              placeholder={field === "state_code" ? "EN/26B/1234" : undefined}
+              maxLength={field === "nickname" ? 20 : field === "full_name" ? 60 : 16}
+              placeholder={field === "state_code" ? "EN/26B/1234" : field === "full_name" ? "As on your NYSC ID card" : undefined}
+              autoComplete={field === "full_name" ? "name" : "off"}
+              autoCapitalize={field === "full_name" ? "words" : undefined}
               className="field"
               autoFocus
             />

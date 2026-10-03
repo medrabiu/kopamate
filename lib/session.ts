@@ -12,6 +12,8 @@ export const SESSION_COOKIE = "km_session";
 export type User = {
   id: string;
   nickname: string;
+  /** Private: shown only to the user and admins. */
+  full_name: string | null;
   whatsapp_e164: string | null;
   state: string | null;
   state_code: string | null;
@@ -35,7 +37,7 @@ export type User = {
 };
 
 export const userColumns = () => sql`
-  u.id, u.nickname, u.whatsapp_e164, u.state, u.state_code, u.photo_version, u.google_id, u.email,
+  u.id, u.nickname, u.full_name, u.whatsapp_e164, u.state, u.state_code, u.photo_version, u.google_id, u.email,
   (u.pin_hash IS NOT NULL) AS has_pin, u.referral_code, u.referred_by, u.signup_number, u.completed_at,
   u.show_in_list, u.state_changed_at, u.is_flagged, u.is_banned, u.last_seen_on::text AS last_seen_on,
   u.last_seen_position, u.created_at, u.verification_status, u.verification_note

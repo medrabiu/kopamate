@@ -11,6 +11,7 @@ import {
   currentIpHash,
   ipLimited,
   isUniqueViolation,
+  followFromCookie,
   referrerFromCookie,
   uniqueReferralCode,
   whatsappTaken,
@@ -64,6 +65,7 @@ export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<F
   }
 
   await createSession(userId);
+  await followFromCookie(userId);
   await track("signup_completed", userId, { method: "phone", referred: Boolean(referrer) });
   if (referrer) await track("referral_completed", referrer.id, { referred: userId });
   // Early Corper for the new user; First Invite (and maybe Profile Complete) for whoever invited them.
@@ -101,6 +103,7 @@ export async function finishSignup(_prev: FormState, fd: FormData): Promise<Form
     throw err;
   }
 
+  await followFromCookie(user.id);
   await track("signup_completed", user.id, { method: "google", referred: Boolean(referrer) });
   if (referrer) await track("referral_completed", referrer.id, { referred: user.id });
   await checkAutoBadges([user.id, referrer?.id]);
@@ -145,6 +148,8 @@ export async function loginWithPhone(_prev: FormState, fd: FormData): Promise<Fo
 
   await sql`UPDATE users SET failed_pin_attempts = 0, pin_locked_until = NULL WHERE id = ${u.id}`;
   await createSession(u.id);
+  // Came from someone's profile link? Follow them now that you're logged in.
+  await followFromCookie(u.id);
   redirect("/home");
 }
 

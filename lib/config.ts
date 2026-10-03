@@ -44,9 +44,6 @@ export const MAX_SIGNUPS_PER_IP_PER_HOUR = 5;
 export const MAX_PIN_ATTEMPTS = 5;
 export const PIN_LOCK_MINUTES = 15;
 
-/** Users can change their state once every N days. */
-export const STATE_CHANGE_DAYS = 30;
-
 export const SESSION_DAYS = 60;
 
 /** Defaults for the reward settings an admin can change (Africa/Lagos times). */

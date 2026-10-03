@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <ul className="list-disc space-y-1 pl-5 text-muted">
         <li>Your nickname, the state you&apos;re serving in, and a photo if you add one.</li>
         <li>Your WhatsApp number, and your email if you sign in with Google.</li>
-        <li>Your state code, only if you choose to add it.</li>
+        <li>Your full name and state code, only if you choose to add them.</li>
         <li>
           If you claim a prize: your bank name, account number and account name, or the phone number for airtime or
           data. We keep your last bank details to fill in your next claim.
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
 
       <h2 className="h-display text-xl">What other users see</h2>
       <p className="text-muted">
-        Only your nickname, photo, state and position. Your WhatsApp number, email, state code and bank details are never
+        Only your nickname, photo, state and position. Your full name, WhatsApp number, email, state code and bank details are never
         shown to anyone else. You can hide yourself from the Corpers list in your profile.
       </p>
 

@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import BadgeCelebration from "@/components/BadgeCelebration";
 import { CheckIcon } from "@/components/icons";
 import { ProfileChecklist } from "@/components/ProfileProgress";
+import ShareProfile from "@/components/ShareProfile";
+import { APP_URL } from "@/lib/config";
 import { isAdmin, requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
 import { getProfileSteps, getUserBadges } from "@/lib/badges";
@@ -74,6 +76,16 @@ export default async function ProfilePage() {
         </div>
       </section>
 
+      <section className="card flex flex-col gap-3 !p-[18px]" aria-labelledby="share-profile-title">
+        <div>
+          <h2 id="share-profile-title" className="font-bold">
+            Share your profile
+          </h2>
+          <p className="text-sm text-muted">Anyone with the link can follow you. New people who join with it count as your invites.</p>
+        </div>
+        <ShareProfile link={`${APP_URL}/u/${user.referral_code}`} nickname={user.nickname} />
+      </section>
+
       <VerificationCard status={user.verification_status} note={user.verification_note} stateCode={user.state_code} />
 
       <ProfileChecklist steps={steps} />
@@ -81,12 +93,25 @@ export default async function ProfilePage() {
       <GroupLabel>Account</GroupLabel>
       <section className="divide-y divide-line rounded-[20px] border border-line">
         <EditableRow field="nickname" label="Nickname" display={user.nickname} value={user.nickname} />
+        <EditableRow
+          field="full_name"
+          label="Full name"
+          display={user.full_name || "Not added"}
+          value={user.full_name ?? ""}
+          muted={!user.full_name}
+          actionLabel={user.full_name ? "Edit" : "Add"}
+        />
         <EditableRow field="whatsapp" label="WhatsApp" display={maskPhone(user.whatsapp_e164)} value={user.whatsapp_e164 ?? ""} />
-        <EditableRow field="state" label="State" display={user.state ?? ""} value={user.state ?? ""} />
+        {/* State is set when you join and can't be changed here (an admin can fix it). */}
+        <div className="flex min-h-14 items-center gap-3 px-4 py-3">
+          <span className="shrink-0 text-[15px] text-muted">State</span>
+          <span className="min-w-0 flex-1 truncate text-right text-[15px] font-medium">{user.state ?? "–"}</span>
+        </div>
         {user.has_pin && <ChangePinRow />}
       </section>
       <p className="-mt-3 px-1 text-xs text-faint">
-        Only you can see your WhatsApp number{user.state_code ? ` and state code (${user.state_code})` : ""}.
+        Only you can see your full name and WhatsApp number{user.state_code ? `, and your state code (${user.state_code})` : ""}. Your
+        state can&apos;t be changed after you join; message us on WhatsApp if it&apos;s wrong.
       </p>
 
       <GroupLabel>Preferences</GroupLabel>

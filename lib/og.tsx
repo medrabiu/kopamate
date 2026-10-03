@@ -95,8 +95,11 @@ function Art({ inviter }: { inviter?: OgInviter | null }) {
   );
 }
 
-/** Share preview image in the Social Night style. With an inviter: "Chidi invited you" and their face. */
-export async function ogImage(inviter?: OgInviter | null) {
+/**
+ * Share preview image in the Social Night style. With a person: their face and "Chidi invited you",
+ * or `line` instead (profile links use "Follow Chidi on Kopamate").
+ */
+export async function ogImage(inviter?: OgInviter | null, line?: (nickname: string) => string) {
   return new ImageResponse(
     (
       <div
@@ -135,13 +138,13 @@ export async function ogImage(inviter?: OgInviter | null) {
           <div style={{ display: "flex", flexDirection: "column" }}>
             {inviter ? (
               <div style={{ fontSize: 44, color: LIME, marginBottom: 18, display: "flex" }}>
-                {`${inviter.nickname.length > 16 ? `${inviter.nickname.slice(0, 15)}…` : inviter.nickname} invited you`}
+                {(line ?? ((n: string) => `${n} invited you`))(inviter.nickname.length > 16 ? `${inviter.nickname.slice(0, 15)}…` : inviter.nickname)}
               </div>
             ) : null}
             <div style={{ fontFamily: "Bricolage", fontSize: 88, lineHeight: 1.04 }}>Every corper.</div>
             <div style={{ fontFamily: "Bricolage", fontSize: 88, lineHeight: 1.04, color: PINK }}>One place.</div>
           </div>
-          <div style={{ display: "flex", fontSize: 32, color: "#A8A8A0" }}>Prizes for the first 500 corpers to join</div>
+          <div style={{ display: "flex", fontSize: 32, color: "#A8A8A0" }}>The free app for NYSC corps members</div>
         </div>
         <Art inviter={inviter} />
       </div>

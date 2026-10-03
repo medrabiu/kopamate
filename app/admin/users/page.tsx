@@ -84,7 +84,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
     WHERE ${filterSql(filter)}
       AND ${
         search
-          ? sql`(u.nickname ILIKE ${like} OR u.email ILIKE ${like} OR u.referral_code = ${search.toLowerCase()}
+          ? sql`(u.nickname ILIKE ${like} OR u.full_name ILIKE ${like} OR u.email ILIKE ${like} OR u.referral_code = ${search.toLowerCase()}
                  OR u.whatsapp_e164 = ${phone ?? "-"} OR u.state_code = ${search.toUpperCase()})`
           : sql`true`
       }
@@ -111,7 +111,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
         <input
           name="q"
           defaultValue={search}
-          placeholder="Search nickname, phone, email, state code or referral code"
+          placeholder="Search nickname, full name, phone, email, state code or referral code"
           className={`${input} flex-1`}
         />
         <button className="rounded-lg bg-lime px-4 text-sm font-bold text-on-accent">Search</button>

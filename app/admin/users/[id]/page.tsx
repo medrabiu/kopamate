@@ -34,6 +34,7 @@ export const metadata: Metadata = { title: "User" };
 type Detail = {
   id: string;
   nickname: string;
+  full_name: string | null;
   whatsapp_e164: string | null;
   email: string | null;
   state: string | null;
@@ -76,7 +77,7 @@ export default async function AdminUserPage({
   const [rows, referred, rewards, badges, settings, events] = await Promise.all([
     sql<Detail[]>`
       ${ranked()}
-      SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.state_code, u.referral_code, u.photo_version,
+      SELECT u.id, u.nickname, u.full_name, u.whatsapp_e164, u.email, u.state, u.state_code, u.referral_code, u.photo_version,
              u.signup_number, u.completed_at, u.created_at, u.is_flagged, u.is_banned, u.is_seed, u.show_in_list,
              u.verification_status, u.verification_note, u.verified_at, (u.id_card_data IS NOT NULL) AS has_id_card,
              (u.pin_hash IS NOT NULL) AS has_pin, (u.google_id IS NOT NULL) AS google,
@@ -154,6 +155,8 @@ export default async function AdminUserPage({
           <h2 className="h-display text-2xl">{u.nickname}</h2>
           <StatusBadges user={u} />
           <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-muted">Full name</dt>
+            <dd>{u.full_name ?? "–"}</dd>
             <dt className="text-muted">WhatsApp</dt>
             <dd>{u.whatsapp_e164 ?? "–"}</dd>
             <dt className="text-muted">Email</dt>

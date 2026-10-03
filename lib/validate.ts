@@ -38,6 +38,15 @@ export function validateNickname(raw: string): { ok: true; value: string } | { o
   return { ok: true, value };
 }
 
+/** Full name: 2 to 60 characters, letters with spaces, hyphens, apostrophes and dots. Empty clears it. */
+export function validateFullName(raw: string): { ok: true; value: string | null } | { ok: false; error: string } {
+  const value = (raw || "").trim().replace(/\s+/g, " ");
+  if (!value) return { ok: true, value: null };
+  if (value.length < 2 || value.length > 60) return { ok: false, error: "Full name must be 2 to 60 characters." };
+  if (!/^[\p{L}][\p{L} '.-]*$/u.test(value)) return { ok: false, error: "Use letters, spaces, hyphens and apostrophes only." };
+  return { ok: true, value };
+}
+
 export function validatePin(pin: string) {
   return /^\d{4}$/.test(pin || "");
 }
