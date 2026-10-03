@@ -9,6 +9,8 @@ import { isAdmin, requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
 import { getProfileSteps, getUserBadges } from "@/lib/badges";
 import { getFollowCounts } from "@/lib/people";
+import { isState, STATE_CODE_PREFIX } from "@/lib/states";
+import { verificationBlock } from "@/lib/verification";
 import { THEME_COOKIE } from "@/lib/theme";
 import { formatJoined, formatNumber } from "@/lib/util";
 import { maskPhone } from "@/lib/validate";
@@ -86,7 +88,14 @@ export default async function ProfilePage() {
         <ShareProfile link={`${APP_URL}/u/${user.referral_code}`} nickname={user.nickname} />
       </section>
 
-      <VerificationCard status={user.verification_status} note={user.verification_note} stateCode={user.state_code} />
+      <VerificationCard
+        status={user.verification_status}
+        note={user.verification_note}
+        stateCode={user.state_code}
+        fullName={user.full_name}
+        codePrefix={user.state && isState(user.state) ? STATE_CODE_PREFIX[user.state] : null}
+        blocked={verificationBlock(user)}
+      />
 
       <ProfileChecklist steps={steps} />
 

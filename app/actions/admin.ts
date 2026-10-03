@@ -100,8 +100,16 @@ export async function saveSettings(fd: FormData) {
 }
 
 /** Approves a verification request. The ID card photo is deleted once a decision is made. */
+/** Records a verification decision for the history admins see on the review screen. */
+async function logVerification(userId: string, action: string, actor: string, note: string | null = null) {
+  await sql`
+    INSERT INTO verification_events (user_id, action, state_code, note, actor)
+    SELECT id, ${action}, state_code, ${note}, ${actor} FROM users WHERE id = ${userId}
+  `;
+}
+
 export async function approveVerification(fd: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const userId = id(fd);
   try {
     await sql`
@@ -113,34 +121,66 @@ export async function approveVerification(fd: FormData) {
     if (!isUniqueViolation(err)) throw err;
     await rejectWith(userId, "This state code is already verified on another account.");
   }
+  const [row] = await sql<{ verification_status: string }[]>`SELECT verification_status FROM users WHERE id = ${userId}`;
+  await logVerification(userId, row?.verification_status === "verified" ? "approved" : "rejected", admin.id,
+    row?.verification_status === "verified" ? null : "State code already verified on another account");
   // Whoever invited them earns their referral bonus now.
   await recordBonuses({ referredId: userId });
   done();
 }
 
 export async function rejectVerification(fd: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
+  const userId = id(fd);
   const note = String(fd.get("note") ?? "").trim().slice(0, 200) || "We couldn't confirm your ID card. Please try again with a clear photo.";
-  await rejectWith(id(fd), note);
+  // "Fake state code": no account can use it again.
+  if (fd.get("block_code") === "1") {
+    await sql`
+      INSERT INTO blocked_state_codes (code, reason, blocked_by)
+      SELECT state_code, ${note}, ${admin.id} FROM users WHERE id = ${userId} AND state_code IS NOT NULL
+      ON CONFLICT (code) DO NOTHING
+    `;
+  }
+  await rejectWith(userId, note);
+  await logVerification(userId, fd.get("block_code") === "1" ? "rejected_blocked" : "rejected", admin.id, note);
+  done();
+}
+
+/** Gives someone who used up their tries (or is waiting after a rejection) another go right away. */
+export async function allowVerificationRetry(fd: FormData) {
+  const admin = await requireAdmin();
+  const userId = id(fd);
+  await sql`UPDATE users SET verification_attempts = 0, verification_rejected_at = NULL WHERE id = ${userId}`;
+  await logVerification(userId, "reset", admin.id);
+  done();
+}
+
+/** Lets a blocked state code be used again (e.g. it was blocked by mistake). */
+export async function unblockStateCode(fd: FormData) {
+  await requireAdmin();
+  const code = String(fd.get("code") ?? "").trim().toUpperCase().slice(0, 20);
+  if (code) await sql`DELETE FROM blocked_state_codes WHERE code = ${code}`;
   done();
 }
 
 async function rejectWith(userId: string, note: string) {
   await sql`
-    UPDATE users SET verification_status = 'rejected', verification_note = ${note}, id_card_data = NULL, id_card_mime = NULL
+    UPDATE users SET verification_status = 'rejected', verification_note = ${note}, verification_rejected_at = now(),
+      id_card_data = NULL, id_card_mime = NULL
     WHERE id = ${userId} AND verification_status = 'pending'
   `;
 }
 
 /** Removes someone's verified status (e.g. it turned out to be fake). */
 export async function revokeVerification(fd: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   await sql`
     UPDATE users SET verification_status = 'rejected', verified_at = NULL,
       verification_note = 'Your verification was removed. Contact us on WhatsApp if you think this is a mistake.'
     WHERE id = ${id(fd)} AND verification_status = 'verified'
   `;
   await dropBonus(id(fd));
+  await logVerification(id(fd), "revoked", admin.id);
   done();
 }
 

@@ -22,7 +22,7 @@ import {
 import { logout } from "@/app/actions/auth";
 import { getTheme, setTheme } from "@/lib/theme";
 
-type FieldName = "nickname" | "full_name" | "whatsapp" | "state_code";
+type FieldName = "nickname" | "full_name" | "whatsapp";
 
 /** A profile row that opens an inline form when you tap Edit. */
 export function EditableRow({
@@ -69,8 +69,8 @@ export function EditableRow({
               id={`f-${field}`}
               name="value"
               defaultValue={value}
-              maxLength={field === "nickname" ? 20 : field === "full_name" ? 60 : 16}
-              placeholder={field === "state_code" ? "EN/26B/1234" : field === "full_name" ? "As on your NYSC ID card" : undefined}
+              maxLength={field === "nickname" ? 20 : 60}
+              placeholder={field === "full_name" ? "As on your NYSC ID card" : undefined}
               autoComplete={field === "full_name" ? "name" : "off"}
               autoCapitalize={field === "full_name" ? "words" : undefined}
               className="field"
@@ -120,8 +120,36 @@ async function resizeImage(file: File, max = 400, quality = 0.8): Promise<Blob> 
   }
 }
 
-/** Scales a photo down to fit max×max (no cropping) and re-encodes it as JPEG, which also strips metadata. */
-async function shrinkImage(file: File, max: number, maxBytes: number): Promise<Blob> {
+/**
+ * A 64-bit difference hash: the photo shrunk to 9×8 greys, one bit per "is this pixel brighter than the next".
+ * The same photo re-saved, resized or lightly cropped gives (nearly) the same hash, so the server can spot one
+ * ID card photo used on several accounts without keeping the photo. Returned as 16 hex digits.
+ */
+function differenceHash(img: CanvasImageSource): string {
+  const c = document.createElement("canvas");
+  c.width = 9;
+  c.height = 8;
+  const ctx = c.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, 9, 8);
+  const px = ctx.getImageData(0, 0, 9, 8).data;
+  const grey = (x: number, y: number) => {
+    const i = (y * 9 + x) * 4;
+    return px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+  };
+  let hex = "";
+  for (let y = 0; y < 8; y++) {
+    let byte = 0;
+    for (let x = 0; x < 8; x++) byte = (byte << 1) | (grey(x, y) > grey(x + 1, y) ? 1 : 0);
+    hex += byte.toString(16).padStart(2, "0");
+  }
+  return hex;
+}
+
+/**
+ * Scales a photo down to fit max×max (no cropping) and re-encodes it as JPEG, which also strips metadata.
+ * Also returns the photo's difference hash.
+ */
+async function shrinkImage(file: File, max: number, maxBytes: number): Promise<{ blob: Blob; dhash: string }> {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -139,22 +167,31 @@ async function shrinkImage(file: File, max: number, maxBytes: number): Promise<B
     let blob = await toBlob(0.82);
     if (blob && blob.size > maxBytes) blob = await toBlob(0.6);
     if (!blob || blob.size > maxBytes) throw new Error("too large");
-    return blob;
+    return { blob, dhash: differenceHash(img) };
   } finally {
     URL.revokeObjectURL(url);
   }
 }
 
-type Verification = { status: "none" | "pending" | "verified" | "rejected"; note: string | null; stateCode: string | null };
+type Verification = {
+  status: "none" | "pending" | "verified" | "rejected";
+  note: string | null;
+  stateCode: string | null;
+  fullName: string | null;
+  /** The two letters their state's codes start with, for the placeholder (e.g. "LA"). */
+  codePrefix: string | null;
+  /** Why they can't send a new request right now (waiting after a rejection, or out of tries), if so. */
+  blocked: string | null;
+};
 
-/** Get verified for prizes: state code + a photo of the NYSC ID card, checked by an admin. */
-export function VerificationCard({ status, note, stateCode }: Verification) {
+/** Get verified for prizes: full name, state code and a photo of the NYSC ID card, checked by an admin. */
+export function VerificationCard({ status, note, stateCode, fullName, codePrefix, blocked }: Verification) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(requestVerification, undefined);
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
-  const cardFile = useRef<Blob | null>(null);
+  const cardFile = useRef<{ blob: Blob; dhash: string } | null>(null);
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
@@ -199,9 +236,9 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
     setError(null);
     start(async () => {
       try {
-        const blob = await shrinkImage(file, 1600, 850 * 1024);
-        cardFile.current = blob;
-        setPreview(URL.createObjectURL(blob));
+        const shrunk = await shrinkImage(file, 1600, 850 * 1024);
+        cardFile.current = shrunk;
+        setPreview(URL.createObjectURL(shrunk.blob));
       } catch {
         setError("Couldn't read that photo. Try another.");
       }
@@ -210,7 +247,8 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
 
   function submit(fd: FormData) {
     if (!cardFile.current) return setError("Add a photo of your NYSC ID card.");
-    fd.set("id_card", new File([cardFile.current], "id-card.jpg", { type: "image/jpeg" }));
+    fd.set("id_card", new File([cardFile.current.blob], "id-card.jpg", { type: "image/jpeg" }));
+    fd.set("card_dhash", cardFile.current.dhash);
     action(fd);
   }
 
@@ -251,7 +289,23 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
             {note}
           </p>
         )}
+        {blocked ? (
+          <p className="rounded-2xl border border-line px-4 py-3 text-sm">{blocked}</p>
+        ) : (
         <form action={submit} className="flex flex-col gap-3">
+          <label htmlFor="v-name" className="label">
+            Full name, as on your ID card
+          </label>
+          <input
+            id="v-name"
+            name="full_name"
+            defaultValue={fullName ?? ""}
+            maxLength={60}
+            autoComplete="name"
+            autoCapitalize="words"
+            required
+            className="field"
+          />
           <label htmlFor="v-code" className="label">
             State code
           </label>
@@ -260,7 +314,7 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
             name="state_code"
             defaultValue={stateCode ?? ""}
             maxLength={16}
-            placeholder="EN/26B/1234"
+            placeholder={`${codePrefix ?? "LA"}/26B/1234`}
             autoCapitalize="characters"
             required
             className="field"
@@ -285,6 +339,7 @@ export function VerificationCard({ status, note, stateCode }: Verification) {
             {pending ? "Sending…" : "Send for checking"}
           </button>
         </form>
+        )}
       </Sheet>
     </>
   );

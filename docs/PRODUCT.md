@@ -215,6 +215,16 @@ Top to bottom:
 - **State code:** optional, free text in the format like `EN/26B/1234`; validate the pattern loosely; never shown publicly in v1.
 - Users can't change their state after joining (so nobody can game state rankings); admins can correct it.
 
+### Verification checks
+Stops one person verifying several accounts or making up a state code. Nothing here approves anyone automatically; admins still decide.
+- **State code must match the state:** NYSC codes start with the state's two letters (`STATE_CODE_PREFIX` in `lib/states.ts`: AB Abia, AD Adamawa, AK Akwa Ibom, AN Anambra, BA Bauchi, BY Bayelsa, BN Benue, BO Borno, CR Cross River, DT Delta, EB Ebonyi, ED Edo, EK Ekiti, EN Enugu, FC FCT (Abuja), GM Gombe, IM Imo, JG Jigawa, KD Kaduna, KN Kano, KT Katsina, KB Kebbi, KG Kogi, KW Kwara, LA Lagos, NS Nasarawa, NG Niger, OG Ogun, OD Ondo, OS Osun, OY Oyo, PL Plateau, RV Rivers, SO Sokoto, TR Taraba, YB Yobe, ZM Zamfara). A Lagos corper must send `LA/…`. The batch year must be this year, next year or the two before (e.g. `24`–`27` in 2026). The placeholder shows their own prefix.
+- **Full name** (as on the ID card) is required in the Get verified sheet and saved to their profile, so admins compare it with the card.
+- **Tries:** at most 3 requests per account (`MAX_VERIFICATION_ATTEMPTS`), and 24 hours between a rejection and the next try. The sheet explains the wait, or says to message on WhatsApp when the tries are used up. Admins can **Allow another try now** on the user page.
+- **ID photo fingerprints** (`id_card_fingerprints`): an exact SHA-256 of the uploaded file and a 64-bit difference hash computed on the phone (survives re-saving and resizing). The photo is still deleted after the decision; the fingerprints stay. A match within 6 bits on another account is flagged.
+- **Blocked codes** (`blocked_state_codes`): rejecting with "Fake state code: block it for every account" stops any account sending that code again ("This state code can't be used. Message us on WhatsApp if it's really yours."). Listed with **Unblock** at the bottom of the Verification page.
+- **Warnings on each request** (Verification page and user page): state code doesn't match the state / old batch, code blocked, same or near-identical ID photo on another account, same full name in the same state, accounts invited by or inviting them from the same network, how many other accounts share the sign-up network (verified / pending), tries used, and the history of requests and decisions with reasons (`verification_events`).
+- State codes can only be added through Get verified (no separate edit).
+
 ### 4.9 Admin (`/admin`)
 Only accessible to users whose email or phone is in an `ADMIN_IDS` environment variable. Simple and functional, no need to match the full design. Split into separate pages (tabs at the top) so each page runs only a few queries:
 - **Overview** (`/admin`): corpers joined (public number, including seed accounts), real users, seed accounts, signups today, real signups per day (last 14 days), top states, % from referrals, average referrals per referrer, verified count. Shortcuts to waiting verification requests and payouts to send (claimed + processing).

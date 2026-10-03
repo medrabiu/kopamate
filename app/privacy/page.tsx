@@ -26,6 +26,10 @@ export default function PrivacyPage() {
         <li>Your WhatsApp number, and your email if you sign in with Google.</li>
         <li>Your full name and state code, only if you choose to add them.</li>
         <li>
+          If you ask to be verified: a photo of your NYSC ID card, seen only by our team and deleted once we&apos;ve checked it. We
+          keep a short fingerprint of the photo (not the photo) so the same card can&apos;t be used on more than one account.
+        </li>
+        <li>
           If you claim a prize: your bank name, account number and account name, or the phone number for airtime or
           data. We keep your last bank details to fill in your next claim.
         </li>

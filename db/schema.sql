@@ -219,3 +219,41 @@ ON CONFLICT (key) DO NOTHING;
 
 -- Full name, optional, added in Profile. Private: only the user and admins see it (like the phone number).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name text;
+
+-- Verification checks against duplicate and fake requests.
+-- Attempts: 24 hours between tries after a rejection, at most 3 tries (an admin can allow more).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_attempts int NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_rejected_at timestamptz;
+
+-- A fingerprint of each ID card photo sent (never the photo): an exact hash of the uploaded file and a
+-- 64-bit difference hash that survives re-saving and resizing. Used to spot one card photo on many accounts.
+CREATE TABLE IF NOT EXISTS id_card_fingerprints (
+  id          bigserial PRIMARY KEY,
+  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sha256      text NOT NULL,
+  dhash       bigint,
+  state_code  text,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS id_card_fingerprints_sha_idx ON id_card_fingerprints (sha256);
+CREATE INDEX IF NOT EXISTS id_card_fingerprints_user_idx ON id_card_fingerprints (user_id);
+
+-- Every verification request and decision, so admins can see earlier rejections and why.
+CREATE TABLE IF NOT EXISTS verification_events (
+  id          bigserial PRIMARY KEY,
+  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action      text NOT NULL,                 -- requested, approved, rejected, revoked, reset
+  state_code  text,
+  note        text,
+  actor       text NOT NULL,                 -- 'user' or the admin's user id
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS verification_events_user_idx ON verification_events (user_id, created_at DESC);
+
+-- State codes an admin found to be fake: no account can use them again.
+CREATE TABLE IF NOT EXISTS blocked_state_codes (
+  code        text PRIMARY KEY,
+  reason      text,
+  blocked_by  text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);

@@ -19,6 +19,7 @@ import {
   adminRevokeBadge,
   adminRemovePhoto,
   adminUpdateUser,
+  allowVerificationRetry,
   approveVerification,
   rejectVerification,
   resetPin,
@@ -28,6 +29,7 @@ import {
 } from "@/app/actions/admin";
 import { btn, btnPrimary, input, panel } from "../../ui";
 import { StatusBadges } from "../../badges";
+import VerificationSignals from "../../VerificationSignals";
 
 export const metadata: Metadata = { title: "User" };
 
@@ -268,10 +270,14 @@ export default async function AdminUserPage({
                 <input type="hidden" name="id" value={u.id} />
                 <button className={btnPrimary}>Approve</button>
               </form>
-              <form action={rejectVerification} className="flex min-w-[280px] flex-1 gap-1.5">
+              <form action={rejectVerification} className="flex min-w-[280px] flex-1 flex-wrap gap-1.5">
                 <input type="hidden" name="id" value={u.id} />
                 <input name="note" maxLength={200} placeholder="Reason (shown to them)" className={`${input} min-w-0 flex-1`} />
                 <button className={btn}>Reject</button>
+                <label className="flex w-full items-center gap-1.5 text-xs text-muted">
+                  <input type="checkbox" name="block_code" value="1" className="accent-pink" />
+                  Fake state code: block it for every account
+                </label>
               </form>
             </div>
           </div>
@@ -288,6 +294,15 @@ export default async function AdminUserPage({
             {u.verification_status === "rejected" ? `Rejected: ${u.verification_note ?? ""}` : "Hasn't asked to be verified."}
           </p>
         )}
+        <div className="mt-3 flex flex-col gap-2">
+          <VerificationSignals userId={u.id} />
+          {u.verification_status !== "verified" && u.verification_status !== "pending" && (
+            <form action={allowVerificationRetry}>
+              <input type="hidden" name="id" value={u.id} />
+              <button className={btn}>Allow another try now</button>
+            </form>
+          )}
+        </div>
       </section>
 
       <section className={panel}>

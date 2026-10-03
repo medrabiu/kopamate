@@ -34,13 +34,16 @@ export type User = {
   created_at: Date;
   verification_status: "none" | "pending" | "verified" | "rejected";
   verification_note: string | null;
+  verification_attempts: number;
+  verification_rejected_at: Date | null;
 };
 
 export const userColumns = () => sql`
   u.id, u.nickname, u.full_name, u.whatsapp_e164, u.state, u.state_code, u.photo_version, u.google_id, u.email,
   (u.pin_hash IS NOT NULL) AS has_pin, u.referral_code, u.referred_by, u.signup_number, u.completed_at,
   u.show_in_list, u.state_changed_at, u.is_flagged, u.is_banned, u.last_seen_on::text AS last_seen_on,
-  u.last_seen_position, u.created_at, u.verification_status, u.verification_note
+  u.last_seen_position, u.created_at, u.verification_status, u.verification_note,
+  u.verification_attempts, u.verification_rejected_at
 `;
 
 /** Creates a session and sets the cookie. Call from a server action or route handler only. */

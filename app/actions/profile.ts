@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "crypto";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -8,6 +9,8 @@ import { destroySession, getCurrentUser } from "@/lib/session";
 import { normalizeNigerianPhone, normalizeStateCode, validateFullName, validateNickname, validatePin } from "@/lib/validate";
 import { isUniqueViolation, whatsappTaken } from "@/lib/signup";
 import { checkAutoBadges } from "@/lib/badges";
+import { stateCodeProblem } from "@/lib/states";
+import { verificationBlock } from "@/lib/verification";
 
 export type ProfileState = { error?: string; ok?: boolean } | undefined;
 
@@ -52,15 +55,9 @@ export async function updateField(_prev: ProfileState, fd: FormData): Promise<Pr
     case "state":
       // Users can't change their state once they've joined; an admin can (admin user page).
       return { error: "Your state can't be changed after you join. Message us on WhatsApp if it's wrong." };
-    case "state_code": {
-      if (user.verification_status === "verified" || user.verification_status === "pending") {
-        return { error: "Your state code is locked while it's being checked or once you're verified." };
-      }
-      const code = normalizeStateCode(value);
-      if (code === null) return { error: "State codes look like EN/26B/1234." };
-      await sql`UPDATE users SET state_code = ${code || null} WHERE id = ${user.id}`;
-      break;
-    }
+    case "state_code":
+      // State codes are only added through Get verified, where they're checked (see requestVerification).
+      return { error: "Add your state code in Get verified on your Profile." };
     default:
       return { error: "Something went wrong. Try again." };
   }
@@ -138,8 +135,20 @@ const MAX_ID_CARD_BYTES = 900 * 1024;
 export async function requestVerification(_prev: ProfileState, fd: FormData): Promise<ProfileState> {
   const user = await me();
   if (user.verification_status === "verified") return { ok: true };
+  if (user.verification_status === "pending") return { error: "We're already checking your ID." };
+  const block = verificationBlock(user);
+  if (block) return { error: block };
+
+  const name = validateFullName(String(fd.get("full_name") ?? ""));
+  if (!name.ok) return { error: name.error };
+  if (!name.value) return { error: "Enter your full name as it is on your ID card." };
   const code = normalizeStateCode(String(fd.get("state_code") ?? ""));
-  if (!code) return { error: "Enter your state code, like EN/26B/1234." };
+  if (!code) return { error: "Enter your state code, like LA/26B/1234." };
+  const problem = stateCodeProblem(user.state, code);
+  if (problem) return { error: problem };
+  const [blocked] = await sql`SELECT 1 FROM blocked_state_codes WHERE code = ${code}`;
+  if (blocked) return { error: "This state code can't be used. Message us on WhatsApp if it's really yours." };
+
   const file = fd.get("id_card");
   if (!(file instanceof File) || file.size === 0) return { error: "Add a photo of your NYSC ID card." };
   if (file.size > MAX_ID_CARD_BYTES) return { error: "That photo is too large. Try another." };
@@ -150,10 +159,24 @@ export async function requestVerification(_prev: ProfileState, fd: FormData): Pr
     SELECT 1 FROM users WHERE state_code = ${code} AND id <> ${user.id} AND verification_status IN ('verified', 'pending')
   `;
   if (taken) return { error: "This state code is already used by another account." };
+
+  // Fingerprints of the photo (never the photo itself) so admins can spot one ID card on several accounts.
+  const sha = createHash("sha256").update(bytes).digest("hex");
+  const dhashHex = String(fd.get("card_dhash") ?? "");
+  const dhash = /^[0-9a-f]{16}$/.test(dhashHex) ? BigInt.asIntN(64, BigInt(`0x${dhashHex}`)).toString() : null;
+
+  const updated = await sql`
+    UPDATE users SET full_name = ${name.value}, state_code = ${code},
+      id_card_data = ${Buffer.from(bytes).toString("base64")}, id_card_mime = ${mime},
+      verification_status = 'pending', verification_requested_at = now(), verification_note = NULL,
+      verification_attempts = verification_attempts + 1
+    WHERE id = ${user.id} AND verification_status IN ('none', 'rejected')
+    RETURNING id
+  `;
+  if (updated.length === 0) return { error: "Something changed. Refresh and try again." };
+  await sql`INSERT INTO id_card_fingerprints (user_id, sha256, dhash, state_code) VALUES (${user.id}, ${sha}, ${dhash}, ${code})`;
   await sql`
-    UPDATE users SET state_code = ${code}, id_card_data = ${Buffer.from(bytes).toString("base64")}, id_card_mime = ${mime},
-      verification_status = 'pending', verification_requested_at = now(), verification_note = NULL
-    WHERE id = ${user.id}
+    INSERT INTO verification_events (user_id, action, state_code, actor) VALUES (${user.id}, 'requested', ${code}, 'user')
   `;
   await checkAutoBadges(user.id);
   revalidatePath("/", "layout");
