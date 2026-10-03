@@ -46,7 +46,8 @@ export default function StateList({ rows, myState }: { rows: Row[]; myState: str
             const empty = r.count === 0;
             return (
               <li key={r.state}>
-                <Link href={`/corpers/${r.slug}`} className="flex items-center gap-3 px-4 py-3">
+                {/* No prefetch: 37 states scrolling past would each be fetched on paid data. */}
+                <Link href={`/corpers/${r.slug}`} prefetch={false} className="flex items-center gap-3 px-4 py-3">
                   <span
                     className={`h-display w-6 shrink-0 text-center ${r.rank <= 3 && !empty ? "text-lime-ink" : "text-faint"}`}
                   >

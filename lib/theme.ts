@@ -18,5 +18,7 @@ export function getTheme(): Theme {
 export function setTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[theme]);
+  // So installing from here gets the matching splash colour (app/manifest.webmanifest).
+  document.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.setAttribute("href", theme === "light" ? "/manifest.webmanifest?theme=light" : "/manifest.webmanifest");
   document.cookie = `${THEME_COOKIE}=${theme};path=/;max-age=31536000;samesite=lax`;
 }

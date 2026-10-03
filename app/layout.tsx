@@ -5,13 +5,16 @@ import "./globals.css";
 import { APP_NAME, APP_URL, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/config";
 import ConnectionBanner from "@/components/ConnectionBanner";
 import ServiceWorker from "@/components/ServiceWorker";
+import { splashImages } from "@/lib/splash";
 import { THEME_COLOR, THEME_COOKIE, themeMigrationScript, type Theme } from "@/lib/theme";
 
 async function currentTheme(): Promise<Theme> {
   return (await cookies()).get(THEME_COOKIE)?.value === "light" ? "light" : "dark";
 }
 
-export const metadata: Metadata = {
+const APPLE_WEB_APP = { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" } as const;
+
+const baseMetadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: { default: SITE_TITLE, template: `%s · ${APP_NAME}` },
   description: SITE_DESCRIPTION,
@@ -32,7 +35,6 @@ export const metadata: Metadata = {
   category: "social networking",
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   formatDetection: { telephone: false },
-  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" },
   openGraph: {
     type: "website",
     siteName: APP_NAME,
@@ -43,6 +45,16 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image", title: SITE_TITLE, description: SITE_DESCRIPTION },
 };
+
+/** The install manifest and iPhone launch screens follow the theme, so opening the app doesn't flash the wrong colour. */
+export async function generateMetadata(): Promise<Metadata> {
+  const theme = await currentTheme();
+  return {
+    ...baseMetadata,
+    manifest: theme === "light" ? "/manifest.webmanifest?theme=light" : "/manifest.webmanifest",
+    appleWebApp: { ...APPLE_WEB_APP, startupImage: splashImages(theme) },
+  };
+}
 
 export async function generateViewport(): Promise<Viewport> {
   return {

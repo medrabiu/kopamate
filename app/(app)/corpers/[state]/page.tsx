@@ -90,7 +90,7 @@ export default async function StatePage({ params, searchParams }: Props) {
       )}
 
       {hasMore && (
-        <Link href={`/corpers/${stateSlug(state)}?page=${page + 1}`} scroll={false} className="btn-secondary">
+        <Link href={`/corpers/${stateSlug(state)}?page=${page + 1}`} prefetch={false} scroll={false} className="btn-secondary">
           Show more
         </Link>
       )}
