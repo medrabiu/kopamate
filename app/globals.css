@@ -57,6 +57,15 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * No rubber-band stretch past the top or bottom of a page: on iPhone it drags everything on screen, the
+ * fixed bottom nav included, leaving the nav floating mid-screen.
+ */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-ink);
