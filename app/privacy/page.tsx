@@ -22,7 +22,7 @@ export default function PrivacyPage() {
 
       <h2 className="h-display text-xl">What we collect</h2>
       <ul className="list-disc space-y-1 pl-5 text-muted">
-        <li>Your nickname, the state you&apos;re serving in, and a photo if you add one.</li>
+        <li>Your username, the state you&apos;re serving in, and a photo if you add one.</li>
         <li>Your WhatsApp number, and your email if you sign in with Google.</li>
         <li>Your full name and state code, only if you choose to add them.</li>
         <li>

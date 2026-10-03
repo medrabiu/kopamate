@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { signupWithPhone, finishSignup, type FormState } from "@/app/actions/auth";
-import { Divider, Field, FormError, GoogleButton, PhoneInput, PinInput, StateSelect } from "@/components/forms";
+import { Divider, Field, FormError, GoogleButton, PhoneInput, PinInput, StateSelect, UsernameInput } from "@/components/forms";
 
 export function PhoneSignupForm({ googleOn }: { googleOn: boolean }) {
   const [state, action, pending] = useActionState<FormState, FormData>(signupWithPhone, undefined);
@@ -17,8 +17,8 @@ export function PhoneSignupForm({ googleOn }: { googleOn: boolean }) {
       )}
       <form action={action} className="flex flex-col gap-4">
         <FormError message={state?.error} />
-        <Field label="Nickname" id="nickname">
-          <input id="nickname" name="nickname" required maxLength={20} placeholder="Ada" defaultValue={f.nickname} autoComplete="nickname" className="field" />
+        <Field label="Username" id="nickname">
+          <UsernameInput defaultValue={f.nickname} />
         </Field>
         <Field label="WhatsApp number" id="whatsapp">
           <PhoneInput defaultValue={f.whatsapp} />
@@ -44,8 +44,8 @@ export function FinishForm({ nickname }: { nickname: string }) {
   return (
     <form action={action} className="flex flex-col gap-4">
       <FormError message={state?.error} />
-      <Field label="Nickname" id="nickname">
-        <input id="nickname" name="nickname" required maxLength={20} defaultValue={f.nickname ?? nickname} className="field" />
+      <Field label="Username" id="nickname">
+        <UsernameInput defaultValue={f.nickname ?? nickname} />
       </Field>
       <Field label="WhatsApp number" id="whatsapp">
         <PhoneInput defaultValue={f.whatsapp} autoFocus />

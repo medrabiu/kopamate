@@ -19,6 +19,36 @@ export async function uniqueReferralCode(nickname: string) {
   return base + randomDigits(8);
 }
 
+/** True if someone else already has this username (capitals don't matter). */
+export async function usernameTaken(username: string, exceptUserId?: string) {
+  const rows = await sql`
+    SELECT 1 FROM users WHERE lower(nickname) = lower(${username})
+    ${exceptUserId ? sql`AND id <> ${exceptUserId}` : sql``}
+  `;
+  return rows.length > 0;
+}
+
+/** `base` if it's free, otherwise base with a few digits ("ada" → "ada_482"), kept within 20 characters. */
+export async function uniqueUsername(base: string) {
+  if (!(await usernameTaken(base))) return base;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const suffix = "_" + randomDigits(attempt < 4 ? 3 : 5);
+    const name = base.slice(0, 20 - suffix.length) + suffix;
+    if (!(await usernameTaken(name))) return name;
+  }
+  return base.slice(0, 11) + "_" + randomDigits(8);
+}
+
+/** The error for a username someone already has, with a free one to try. */
+export async function usernameTakenError(username: string) {
+  return `@${username} is taken. Try @${await uniqueUsername(username)}.`;
+}
+
+/** A unique-index clash on the username (two people saving the same one at once). */
+export function isUsernameViolation(err: unknown) {
+  return isUniqueViolation(err) && (err as { constraint_name?: string }).constraint_name === "users_username_idx";
+}
+
 export async function currentIpHash() {
   return hashIp(clientIp(await headers()));
 }

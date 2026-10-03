@@ -57,7 +57,11 @@ try {
   let added = 0;
   for (let i = 0; i < count; i++) {
     const look = Math.random() < 0.5 ? "f" : "m";
-    const name = pick(NAMED[look]) + (Math.random() < 0.3 ? Math.floor(Math.random() * 99) : "");
+    // Usernames are unique (ignoring capitals): add digits until one is free.
+    let name = pick(NAMED[look]) + (Math.random() < 0.3 ? Math.floor(Math.random() * 99) : "");
+    while ((await sql`SELECT 1 FROM users WHERE lower(nickname) = lower(${name})`).length) {
+      name = name.replace(/\d+$/, "") + Math.floor(Math.random() * 9999);
+    }
     const minutesAgo = Math.floor(((count - i) / count) * 3 * 24 * 60);
     // About 40% of seeded users were invited by an earlier user (mostly by a few "top" referrers).
     // Seed referrals never count, so none of this puts seed accounts on a leaderboard.

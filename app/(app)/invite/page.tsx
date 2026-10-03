@@ -8,7 +8,7 @@ import { getReferrerStanding } from "@/lib/ranking";
 import { PLACES_PER_REFERRAL, TOP_REFERRERS, referralLink, shareMessage, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import { formatNumber, timeAgo } from "@/lib/util";
-import { topBadge } from "@/lib/badges";
+import { isVerified, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
 import { getEarnings } from "@/lib/referral-bonus";
 import FriendsJoined from "./FriendsJoined";
@@ -18,8 +18,8 @@ export const metadata: Metadata = { title: "Invite friends" };
 export default async function InvitePage() {
   const user = await requireUser();
   const [joined, { me, above }, earnings] = await Promise.all([
-    sql<{ id: string; nickname: string; photo_version: number; completed_at: Date; top_badge: BadgeInfo | null }[]>`
-      SELECT u.id, u.nickname, u.photo_version, u.completed_at, ${topBadge()} FROM users u
+    sql<{ id: string; nickname: string; photo_version: number; completed_at: Date; top_badge: BadgeInfo | null; verified: boolean }[]>`
+      SELECT u.id, u.nickname, u.photo_version, u.completed_at, ${topBadge()}, ${isVerified()} FROM users u
       WHERE u.referred_by = ${user.id} AND u.completed_at IS NOT NULL AND NOT u.is_banned AND NOT u.is_flagged
       ORDER BY u.completed_at DESC LIMIT 100
     `,
@@ -102,6 +102,7 @@ export default async function InvitePage() {
           photo_version: j.photo_version,
           ago: timeAgo(j.completed_at),
           top_badge: j.top_badge,
+          verified: j.verified,
           bonus: (earnings.enabled && earnings.rate > 0) || earnings.earnedCount > 0 ? earnings.friends.get(j.id) : undefined,
         }))}
       />

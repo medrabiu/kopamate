@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import Countdown from "@/components/Countdown";
 import { PersonButton } from "@/components/PersonSheet";
 import { ChevronLeft } from "@/components/icons";
@@ -29,7 +30,10 @@ function Players({ title, rows, me, myRow }: { title: string; rows: PlayerRow[];
               <PersonButton id={r.id} label={r.nickname} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                 <Avatar id={r.id} nickname={r.nickname} photoVersion={r.photo_version} size={36} />
                 <span className="min-w-0">
-                  <span className="block truncate text-[15px] font-bold">{r.id === me ? "You" : r.nickname}</span>
+                  <span className="flex min-w-0 items-center gap-1 text-[15px] font-bold">
+                    <span className="truncate">{r.id === me ? "You" : r.nickname}</span>
+                    {r.verified && <VerifiedBadge />}
+                  </span>
                   <span className="block truncate text-[13px] text-muted">
                     {r.state} · {r.days} {r.days === 1 ? "day" : "days"}
                   </span>

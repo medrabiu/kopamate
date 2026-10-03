@@ -233,7 +233,7 @@ export default async function AdminUserPage({
         <form action={adminUpdateUser} className="grid gap-3 md:grid-cols-3">
           <input type="hidden" name="id" value={u.id} />
           <label className="flex flex-col gap-1 text-sm text-muted">
-            Nickname
+            Username
             <input name="nickname" defaultValue={u.nickname} maxLength={20} required className={input} />
           </label>
           <label className="flex flex-col gap-1 text-sm text-muted">

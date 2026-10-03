@@ -3,8 +3,8 @@ import { sql } from "@/lib/db";
 import { APP_URL } from "@/lib/config";
 import { createSession } from "@/lib/session";
 import { followFromCookie } from "@/lib/signup";
-import { currentIpHash, ipLimited, uniqueReferralCode } from "@/lib/signup";
-import { validateNickname } from "@/lib/validate";
+import { currentIpHash, ipLimited, isUsernameViolation, uniqueReferralCode, uniqueUsername } from "@/lib/signup";
+import { toUsername, validateUsername } from "@/lib/validate";
 
 export const dynamic = "force-dynamic";
 
@@ -55,14 +55,24 @@ export async function GET(req: NextRequest) {
   } else {
     const ipHash = await currentIpHash();
     if (await ipLimited(ipHash)) return fail("limit");
-    const suggested = validateNickname(profile.given_name || profile.name?.split(" ")[0] || "");
-    const nickname = suggested.ok ? suggested.value : "Corper";
-    const referralCode = await uniqueReferralCode(nickname);
-    const [row] = await sql<{ id: string }[]>`
-      INSERT INTO users (nickname, google_id, email, referral_code, signup_ip_hash)
-      VALUES (${nickname}, ${profile.sub}, ${profile.email ?? null}, ${referralCode}, ${ipHash})
-      RETURNING id
-    `;
+    // A starting username from their Google name; they confirm or change it when they finish sign-up.
+    const suggested = validateUsername(toUsername(profile.given_name || profile.name?.split(" ")[0] || ""));
+    const base = suggested.ok ? suggested.value : "corper";
+    const referralCode = await uniqueReferralCode(base);
+    let row: { id: string } | undefined;
+    // Someone may take the same name in the same moment: pick another and try again.
+    for (let attempt = 0; !row; attempt++) {
+      const nickname = await uniqueUsername(base);
+      try {
+        [row] = await sql<{ id: string }[]>`
+          INSERT INTO users (nickname, google_id, email, referral_code, signup_ip_hash)
+          VALUES (${nickname}, ${profile.sub}, ${profile.email ?? null}, ${referralCode}, ${ipHash})
+          RETURNING id
+        `;
+      } catch (err) {
+        if (!isUsernameViolation(err) || attempt >= 2) throw err;
+      }
+    }
     userId = row.id;
   }
 

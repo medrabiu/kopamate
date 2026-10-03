@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import BadgeCelebration from "@/components/BadgeCelebration";
-import { CheckIcon } from "@/components/icons";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { ProfileChecklist } from "@/components/ProfileProgress";
 import { ShareProfileButton } from "@/components/ShareProfile";
 import { APP_URL } from "@/lib/config";
@@ -58,16 +58,13 @@ export default async function ProfilePage() {
         <div className="flex items-center gap-4">
           <PhotoPicker id={user.id} nickname={user.nickname} photoVersion={user.photo_version} />
           <div className="min-w-0 flex-1">
-            <div className="h-display truncate text-2xl leading-tight">{user.nickname}</div>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="h-display truncate text-2xl leading-tight">{user.nickname}</span>
+              {verified && !user.is_flagged && <VerifiedBadge size={22} />}
+            </div>
             <div className="truncate text-sm text-muted">
               {user.state} · Joined {formatJoined(user.completed_at!)}
             </div>
-            {verified && (
-              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-xs font-bold text-on-accent">
-                <CheckIcon size={12} strokeWidth={3} />
-                Verified corper
-              </span>
-            )}
           </div>
           <ShareProfileButton link={`${APP_URL}/u/${user.referral_code}`} nickname={user.nickname} />
         </div>
@@ -94,7 +91,7 @@ export default async function ProfilePage() {
 
       <GroupLabel>Account</GroupLabel>
       <section className="divide-y divide-line rounded-[20px] border border-line">
-        <EditableRow field="nickname" label="Nickname" display={user.nickname} value={user.nickname} />
+        <EditableRow field="nickname" label="Username" display={`@${user.nickname}`} value={user.nickname} />
         <EditableRow
           field="full_name"
           label="Full name"

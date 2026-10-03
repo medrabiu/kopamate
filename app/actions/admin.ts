@@ -5,10 +5,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { normalizeStateCode, validateNickname } from "@/lib/validate";
+import { normalizeStateCode, validateUsername } from "@/lib/validate";
 import { isState } from "@/lib/states";
 import { randomDigits } from "@/lib/util";
-import { isUniqueViolation } from "@/lib/signup";
+import { isUniqueViolation, isUsernameViolation } from "@/lib/signup";
 import { awardBadge, checkAutoBadges, restoreBadge, revokeBadge } from "@/lib/badges";
 import { getLeaderboardClose } from "@/lib/stats";
 import { dropBonus, recordBonuses } from "@/lib/referral-bonus";
@@ -24,14 +24,14 @@ function done() {
   revalidatePath("/admin", "layout");
 }
 
-/** Admin edit of a user's nickname, state and state code. Invalid values are ignored. */
+/** Admin edit of a user's username, state and state code. Invalid values (and taken usernames) are ignored. */
 export async function adminUpdateUser(fd: FormData) {
   await requireAdmin();
   const userId = id(fd);
-  const nick = validateNickname(String(fd.get("nickname") ?? ""));
+  const nick = validateUsername(String(fd.get("nickname") ?? ""));
   const state = String(fd.get("state") ?? "");
   const code = normalizeStateCode(String(fd.get("state_code") ?? ""));
-  if (nick.ok) await sql`UPDATE users SET nickname = ${nick.value} WHERE id = ${userId}`;
+  if (nick.ok) await setUsername(userId, nick.value);
   if (state === "" || isState(state)) await sql`UPDATE users SET state = ${state || null} WHERE id = ${userId}`;
   if (code !== null) {
     try {
@@ -73,10 +73,19 @@ export async function setBan(fd: FormData) {
 
 export async function renameUser(fd: FormData) {
   await requireAdmin();
-  const nick = validateNickname(String(fd.get("nickname") ?? ""));
+  const nick = validateUsername(String(fd.get("nickname") ?? ""));
   if (!nick.ok) return;
-  await sql`UPDATE users SET nickname = ${nick.value} WHERE id = ${id(fd)}`;
+  await setUsername(id(fd), nick.value);
   done();
+}
+
+/** Sets a username unless someone else has it (then nothing changes). */
+async function setUsername(userId: string, username: string) {
+  try {
+    await sql`UPDATE users SET nickname = ${username} WHERE id = ${userId}`;
+  } catch (err) {
+    if (!isUsernameViolation(err)) throw err;
+  }
 }
 
 export async function adminRemovePhoto(fd: FormData) {

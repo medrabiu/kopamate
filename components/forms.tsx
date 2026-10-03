@@ -23,6 +23,40 @@ export function Field({ label, id, children }: { label: string; id: string; chil
   );
 }
 
+/** Username with an @ in front, like on X. Rules are checked again on the server (lib/validate.ts). */
+export function UsernameInput({ defaultValue, autoFocus }: { defaultValue?: string; autoFocus?: boolean }) {
+  return (
+    <>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-muted" aria-hidden="true">
+          @
+        </span>
+        <input
+          id="nickname"
+          name="nickname"
+          required
+          minLength={2}
+          maxLength={20}
+          pattern="@?[A-Za-z0-9_.]{2,20}"
+          title="2 to 20 letters, numbers, _ or . (no spaces)"
+          placeholder="ada_obi"
+          defaultValue={defaultValue}
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoFocus={autoFocus}
+          aria-describedby="username-hint"
+          className="field pl-9"
+        />
+      </div>
+      <p id="username-hint" className="text-[13px] text-faint">
+        Letters, numbers, _ or . (no spaces). Only you can have it.
+      </p>
+    </>
+  );
+}
+
 export function PhoneInput({ defaultValue, id = "whatsapp", autoFocus }: { defaultValue?: string; id?: string; autoFocus?: boolean }) {
   return (
     <div className="flex gap-2">

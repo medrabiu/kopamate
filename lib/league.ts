@@ -79,22 +79,22 @@ async function loadStandings(week: string): Promise<StateStanding[]> {
 /** The live table, cached briefly; finishing a quiz refreshes it (tag "league"). */
 export const getStandings = unstable_cache(loadStandings, ["league-standings"], { revalidate: 30, tags: ["league"] });
 
-export type PlayerRow = { id: string; nickname: string; photo_version: number; state: string; points: number; days: number; rank: number };
+export type PlayerRow = { id: string; nickname: string; photo_version: number; verified: boolean; state: string; points: number; days: number; rank: number };
 
 const playerTotals = (week: string) => sql`
-  SELECT a.user_id AS id, u.nickname, u.photo_version, a.state,
+  SELECT a.user_id AS id, u.nickname, u.photo_version, (u.verification_status = 'verified') AS verified, a.state,
          sum(a.points + a.bonus)::int AS points, count(*)::int AS days,
          min(a.started_at) AS first_at
   FROM quiz_attempts a JOIN users u ON u.id = a.user_id
   WHERE a.day >= ${week}::date AND a.day < ${week}::date + 7
     AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed
-  GROUP BY a.user_id, u.nickname, u.photo_version, a.state
+  GROUP BY a.user_id, u.nickname, u.photo_version, u.verification_status, a.state
 `;
 
 /** Top players this week, in Nigeria or one state. Ties go to whoever started playing first. */
 export async function getTopPlayers(week: string, state: string | null, limit: number): Promise<PlayerRow[]> {
   return sql<PlayerRow[]>`
-    SELECT id, nickname, photo_version, state, points, days,
+    SELECT id, nickname, photo_version, verified, state, points, days,
            (row_number() OVER (ORDER BY points DESC, first_at))::int AS rank
     FROM (${playerTotals(week)}) t
     WHERE ${state ? sql`state = ${state}` : sql`true`}

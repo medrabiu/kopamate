@@ -6,8 +6,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { destroySession, getCurrentUser } from "@/lib/session";
-import { normalizeNigerianPhone, normalizeStateCode, validateFullName, validateNickname, validatePin } from "@/lib/validate";
-import { isUniqueViolation, whatsappTaken } from "@/lib/signup";
+import { normalizeNigerianPhone, normalizeStateCode, validateFullName, validatePin, validateUsername } from "@/lib/validate";
+import { isUniqueViolation, isUsernameViolation, usernameTaken, usernameTakenError, whatsappTaken } from "@/lib/signup";
 import { checkAutoBadges } from "@/lib/badges";
 import { stateCodeProblem } from "@/lib/states";
 import { verificationBlock } from "@/lib/verification";
@@ -28,9 +28,15 @@ export async function updateField(_prev: ProfileState, fd: FormData): Promise<Pr
 
   switch (field) {
     case "nickname": {
-      const nick = validateNickname(value);
+      const nick = validateUsername(value);
       if (!nick.ok) return { error: nick.error };
-      await sql`UPDATE users SET nickname = ${nick.value} WHERE id = ${user.id}`;
+      if (await usernameTaken(nick.value, user.id)) return { error: await usernameTakenError(nick.value) };
+      try {
+        await sql`UPDATE users SET nickname = ${nick.value} WHERE id = ${user.id}`;
+      } catch (err) {
+        if (isUsernameViolation(err)) return { error: await usernameTakenError(nick.value) };
+        throw err;
+      }
       break;
     }
     case "whatsapp": {

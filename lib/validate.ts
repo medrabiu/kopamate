@@ -23,19 +23,32 @@ const BLOCKED = [
   "admin", "kopamate", "nysc", "official",
 ];
 
-export function validateNickname(raw: string): { ok: true; value: string } | { ok: false; error: string } {
-  const value = (raw || "").trim().replace(/\s+/g, " ");
-  if (value.length < 2 || value.length > 20) {
-    return { ok: false, error: "Nickname must be 2 to 20 characters." };
-  }
-  if (!/^[\p{L}\p{N} _.]+$/u.test(value)) {
-    return { ok: false, error: "Use letters, numbers, spaces, _ or . only." };
-  }
+/** Usernames, like on X: 2 to 20 letters, numbers, _ or ., at least one letter. Unique ignoring capitals (see lib/signup.ts). */
+export const USERNAME_RULES = "2 to 20 letters, numbers, _ or . (no spaces)";
+
+export function validateUsername(raw: string): { ok: true; value: string } | { ok: false; error: string } {
+  const value = (raw || "").trim().replace(/^@/, "");
+  if (/\s/.test(value)) return { ok: false, error: "No spaces in usernames. Use _ instead, like ada_obi." };
+  if (value.length < 2 || value.length > 20) return { ok: false, error: "Username must be 2 to 20 characters." };
+  if (!/^[A-Za-z0-9_.]+$/.test(value)) return { ok: false, error: "Use letters, numbers, _ or . only." };
+  if (!/[A-Za-z]/.test(value)) return { ok: false, error: "Include at least one letter." };
   const squashed = value.toLowerCase().replace(/[^a-z]/g, "");
   if (BLOCKED.some((w) => (w.length <= 4 ? squashed === w : squashed.includes(w)))) {
-    return { ok: false, error: "Choose a different nickname." };
+    return { ok: false, error: "Choose a different username." };
   }
   return { ok: true, value };
+}
+
+/** Turns any name into a username shape ("Ọlá Ade" → "Ola_Ade"), or "" if nothing usable is left. */
+export function toUsername(raw: string) {
+  return (raw || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Za-z0-9_.]/g, "")
+    .replace(/^[_.]+|[_.]+$/g, "")
+    .slice(0, 20);
 }
 
 /** Full name: 2 to 60 characters, letters with spaces, hyphens, apostrophes and dots. Empty clears it. */

@@ -4,6 +4,7 @@ import { after } from "next/server";
 import Avatar from "@/components/Avatar";
 import BadgeCelebration from "@/components/BadgeCelebration";
 import BadgeIcon from "@/components/BadgeIcon";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { ProfileProgressRow } from "@/components/ProfileProgress";
 import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
@@ -13,7 +14,7 @@ import { ArrowDownIcon, ArrowUpIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getSnapshotPosition } from "@/lib/ranking";
 import { getAnnouncement, getPublicStats, track } from "@/lib/stats";
-import { checkAutoBadges, getProfileSteps, getUserBadges, topBadge } from "@/lib/badges";
+import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
 import { getStandings, weekStart } from "@/lib/league";
 import { getQuizStatus } from "@/lib/quiz";
@@ -40,8 +41,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getPublicStats(),
     getAnnouncement(),
     getSnapshotPosition(user.id, today),
-    sql<{ id: string; nickname: string; photo_version: number; top_badge: BadgeInfo | null }[]>`
-      SELECT u.id, u.nickname, u.photo_version, ${topBadge()} FROM users u
+    sql<{ id: string; nickname: string; photo_version: number; top_badge: BadgeInfo | null; verified: boolean }[]>`
+      SELECT u.id, u.nickname, u.photo_version, ${topBadge()}, ${isVerified()} FROM users u
       WHERE u.state = ${user.state} AND u.id <> ${user.id} AND u.completed_at IS NOT NULL
         AND NOT u.is_banned AND u.show_in_list
       ORDER BY u.completed_at DESC LIMIT 5
@@ -155,6 +156,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 <Avatar id={n.id} nickname={n.nickname} photoVersion={n.photo_version} size={56} />
                 <span className="flex w-full items-center justify-center gap-1 text-xs text-muted">
                   <span className="truncate">{n.nickname}</span>
+                  {n.verified && <VerifiedBadge size={14} />}
                   <BadgeIcon badge={n.top_badge} size={14} />
                 </span>
               </PersonButton>

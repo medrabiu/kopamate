@@ -34,7 +34,7 @@ const FAQ = [
   },
   {
     q: "Can other people see my phone number?",
-    a: "No. Other corpers only see your nickname, photo, state, position and badges. Your phone number, email and state code stay private.",
+    a: "No. Other corpers only see your username, photo, state, position and badges. Your phone number, email and state code stay private.",
   },
 ];
 

@@ -73,7 +73,7 @@ export function EditableRow({
               maxLength={field === "nickname" ? 20 : 60}
               placeholder={field === "full_name" ? "As on your NYSC ID card" : undefined}
               autoComplete={field === "full_name" ? "name" : "off"}
-              autoCapitalize={field === "full_name" ? "words" : undefined}
+              autoCapitalize={field === "full_name" ? "words" : field === "nickname" ? "none" : undefined}
               className="field"
               autoFocus
             />
@@ -454,7 +454,7 @@ export function ShowInListToggle({ on }: { on: boolean }) {
     <SwitchRow
       id="show-label"
       title="Show me in the Corpers list"
-      hint="Others see your nickname and photo only"
+      hint="Others see your username and photo only"
       on={on}
       disabled={pending}
       onToggle={() => start(() => toggleShowInList())}

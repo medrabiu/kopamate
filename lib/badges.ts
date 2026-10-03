@@ -31,6 +31,12 @@ export const topBadge = () => sql`
    ORDER BY b.priority DESC LIMIT 1) AS top_badge
 `;
 
+/**
+ * Whether the user has the verified check (admin checked their NYSC ID, and they aren't flagged), as `verified`.
+ * Use inside a SELECT where the users table is aliased `u`.
+ */
+export const isVerified = () => sql`(u.verification_status = 'verified' AND NOT u.is_flagged) AS verified`;
+
 export async function getAllBadges(): Promise<Badge[]> {
   return sql<Badge[]>`
     SELECT slug, name, description, icon, color, priority, kind, qualifies_for_rewards FROM badges ORDER BY priority DESC

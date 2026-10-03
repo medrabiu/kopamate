@@ -4,8 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useState, useTransit
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Avatar from "./Avatar";
+import VerifiedBadge from "./VerifiedBadge";
 import Sheet from "./Sheet";
-import { CheckIcon, ChevronLeft, ChevronRight } from "./icons";
+import { ChevronLeft, ChevronRight } from "./icons";
 import { setFollow } from "@/app/actions/follows";
 import type { FollowRow, PublicProfile } from "@/lib/people";
 import { stateSlug } from "@/lib/states";
@@ -138,7 +139,10 @@ export function PeopleProvider({ viewerId, children }: { viewerId: string; child
                     >
                       <Avatar id={p.id} nickname={p.nickname} photoVersion={p.photo_version} size={40} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-bold">{p.id === viewerId ? "You" : p.nickname}</span>
+                        <span className="flex min-w-0 items-center gap-1 font-bold">
+                          <span className="truncate">{p.id === viewerId ? "You" : p.nickname}</span>
+                          {p.verified && <VerifiedBadge />}
+                        </span>
                         {p.state && <span className="block truncate text-sm text-muted">{p.state}</span>}
                       </span>
                       <ChevronRight size={18} className="shrink-0 text-faint" />
@@ -186,13 +190,10 @@ export function PeopleProvider({ viewerId, children }: { viewerId: string; child
 
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="h-display text-xl">{profile.nickname}</span>
-                {profile.verified && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-xs font-bold text-on-accent">
-                    <CheckIcon size={12} strokeWidth={3} />
-                    Verified
-                  </span>
-                )}
+                <span className="flex items-center gap-1">
+                  <span className="h-display text-xl">{profile.nickname}</span>
+                  {profile.verified && <VerifiedBadge size={20} />}
+                </span>
                 {me && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-bold">You</span>}
                 {!me && profile.follows_you && (
                   <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted">Follows you</span>

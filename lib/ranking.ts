@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { sql } from "./db";
 import { PLACES_PER_REFERRAL } from "./config";
-import { topBadge } from "./badges";
+import { isVerified, topBadge } from "./badges";
 import type { BadgeInfo } from "./badge-meta";
 
 /**
@@ -71,8 +71,10 @@ export type ReferrerRow = {
   state_rank: number;
   /** Place among verified referrers only (null when not verified). Used for the top-referrer prize. */
   prize_rank: number | null;
-  /** Highest-priority badge, shown next to the nickname. */
+  /** Highest-priority badge, shown next to the username. */
   top_badge: BadgeInfo | null;
+  /** Shows the green verified check. */
+  verified: boolean;
 };
 
 /**
@@ -92,7 +94,7 @@ const referrerRanks = () => sql`
 `;
 
 /** Use after referrerRanks(): selects ref_ranked rows plus their top badge. */
-const referrerRows = () => sql`SELECT rr.*, ${topBadge()} FROM ref_ranked rr JOIN users u ON u.id = rr.id`;
+const referrerRows = () => sql`SELECT rr.*, ${topBadge()}, ${isVerified()} FROM ref_ranked rr JOIN users u ON u.id = rr.id`;
 
 export async function getTopReferrers(limit: number): Promise<ReferrerRow[]> {
   return sql<ReferrerRow[]>`${referrerRanks()} ${referrerRows()} WHERE rr.rank <= ${limit} ORDER BY rr.rank`;
@@ -157,6 +159,7 @@ export type MemberRow = {
   nickname: string;
   photo_version: number;
   top_badge: BadgeInfo | null;
+  verified: boolean;
   /** Null for seed accounts: they're listed but never hold a position. */
   position: number | null;
 };
@@ -165,7 +168,7 @@ export type MemberRow = {
 export async function getStateMembers(state: string, limit: number): Promise<MemberRow[]> {
   return sql<MemberRow[]>`
     ${ranked()}
-    SELECT u.id, u.nickname, u.photo_version, r.position, ${topBadge()}
+    SELECT u.id, u.nickname, u.photo_version, r.position, ${topBadge()}, ${isVerified()}
     FROM users u LEFT JOIN ranked r ON r.id = u.id
     WHERE u.state = ${state} AND u.show_in_list AND u.completed_at IS NOT NULL AND NOT u.is_banned
       AND (r.id IS NOT NULL OR u.is_seed)

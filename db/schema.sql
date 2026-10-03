@@ -343,3 +343,36 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);
+
+-- Usernames: the nickname column now holds a unique username like on X: 2 to 20 letters, numbers, _ or .,
+-- unique ignoring capitals (lib/validate.ts validateUsername). Runs once, before the unique index exists:
+-- spaces become _, common accents are dropped, anything else is removed (and _ or . at either end); too-short
+-- names become corper<n>;
+-- when names clash, real accounts beat seed accounts, then whoever joined first keeps it; the others get a short
+-- suffix (they can change it in Profile).
+DO $$
+DECLARE
+  changed int;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'users_username_idx') THEN
+    UPDATE users SET nickname = left(regexp_replace(regexp_replace(regexp_replace(
+        translate(btrim(nickname),
+          'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÑñẸẹỌọṢṣŃńǸǹÇç',
+          'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuNnEeOoSsNnNnCc'),
+        '\s+', '_', 'g'), '[^A-Za-z0-9_.]', '', 'g'), '^[_.]+|[_.]+$', '', 'g'), 20)
+    WHERE nickname !~ '^[A-Za-z0-9_.]{2,20}$';
+    UPDATE users SET nickname = 'corper' || COALESCE(signup_number::text, substr(md5(id::text), 1, 6))
+    WHERE length(nickname) < 2 OR nickname !~ '[A-Za-z]';
+    LOOP
+      UPDATE users u SET nickname = left(u.nickname, 15) || '_' || substr(md5(random()::text), 1, 4)
+      FROM (
+        SELECT id, row_number() OVER (PARTITION BY lower(nickname) ORDER BY is_seed, completed_at NULLS LAST, created_at, signup_number NULLS LAST, id) AS rn
+        FROM users
+      ) d
+      WHERE d.id = u.id AND d.rn > 1;
+      GET DIAGNOSTICS changed = ROW_COUNT;
+      EXIT WHEN changed = 0;
+    END LOOP;
+    CREATE UNIQUE INDEX users_username_idx ON users (lower(nickname));
+  END IF;
+END $$;

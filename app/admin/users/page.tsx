@@ -111,7 +111,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
         <input
           name="q"
           defaultValue={search}
-          placeholder="Search nickname, full name, phone, email, state code or referral code"
+          placeholder="Search username, full name, phone, email, state code or referral code"
           className={`${input} flex-1`}
         />
         <button className="rounded-lg bg-lime px-4 text-sm font-bold text-on-accent">Search</button>

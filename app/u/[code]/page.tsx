@@ -5,7 +5,7 @@ import { after } from "next/server";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
 import ShareProfile from "@/components/ShareProfile";
-import { CheckIcon } from "@/components/icons";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { APP_NAME, APP_URL } from "@/lib/config";
 import { getProfileByCode } from "@/lib/people";
 import { getCurrentUser } from "@/lib/session";
@@ -72,13 +72,10 @@ export default async function ProfileLinkPage({ params }: Props) {
           <Avatar id={p.id} nickname={p.nickname} photoVersion={p.photo_version} size={96} ring={me} />
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="h-display text-[26px] leading-tight">{p.nickname}</h1>
-              {p.verified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-xs font-bold text-on-accent">
-                  <CheckIcon size={12} strokeWidth={3} />
-                  Verified corper
-                </span>
-              )}
+              <h1 className="flex items-center gap-1.5 h-display text-[26px] leading-tight">
+                {p.nickname}
+                {p.verified && <VerifiedBadge size={24} />}
+              </h1>
               {!me && p.follows_you && (
                 <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted">Follows you</span>
               )}

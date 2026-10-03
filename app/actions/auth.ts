@@ -6,15 +6,18 @@ import { after } from "next/server";
 import { revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { createSession, destroySession, getCurrentUser } from "@/lib/session";
-import { normalizeNigerianPhone, validateNickname, validatePin } from "@/lib/validate";
+import { normalizeNigerianPhone, validatePin, validateUsername } from "@/lib/validate";
 import { isState } from "@/lib/states";
 import {
   currentIpHash,
   ipLimited,
   isUniqueViolation,
+  isUsernameViolation,
   followFromCookie,
   referrerFromCookie,
   uniqueReferralCode,
+  usernameTaken,
+  usernameTakenError,
   whatsappTaken,
 } from "@/lib/signup";
 import { track } from "@/lib/stats";
@@ -32,8 +35,9 @@ function fieldsOf(fd: FormData, names: string[]) {
 /** Sign up with phone number + PIN. */
 export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<FormState> {
   const fields = fieldsOf(fd, ["nickname", "whatsapp", "state"]);
-  const nick = validateNickname(fields.nickname);
+  const nick = validateUsername(fields.nickname);
   if (!nick.ok) return { error: nick.error, fields };
+  if (await usernameTaken(nick.value)) return { error: await usernameTakenError(nick.value), fields };
   const phone = normalizeNigerianPhone(fields.whatsapp);
   if (!phone) return { error: "Enter a valid Nigerian WhatsApp number.", fields };
   if (!isState(fields.state)) return { error: "Choose the state you're serving in.", fields };
@@ -63,6 +67,7 @@ export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<F
     `;
     userId = row.id;
   } catch (err) {
+    if (isUsernameViolation(err)) return { error: await usernameTakenError(nick.value), fields };
     if (isUniqueViolation(err)) return { error: "This number already has an account. Log in instead.", fields };
     throw err;
   }
@@ -88,8 +93,9 @@ export async function finishSignup(_prev: FormState, fd: FormData): Promise<Form
   if (user.completed_at) redirect("/home");
 
   const fields = fieldsOf(fd, ["nickname", "whatsapp", "state"]);
-  const nick = validateNickname(fields.nickname);
+  const nick = validateUsername(fields.nickname);
   if (!nick.ok) return { error: nick.error, fields };
+  if (await usernameTaken(nick.value, user.id)) return { error: await usernameTakenError(nick.value), fields };
   const phone = normalizeNigerianPhone(fields.whatsapp);
   if (!phone) return { error: "Enter a valid Nigerian WhatsApp number.", fields };
   if (!isState(fields.state)) return { error: "Choose the state you're serving in.", fields };
@@ -106,6 +112,7 @@ export async function finishSignup(_prev: FormState, fd: FormData): Promise<Form
       WHERE id = ${user.id} AND completed_at IS NULL
     `;
   } catch (err) {
+    if (isUsernameViolation(err)) return { error: await usernameTakenError(nick.value), fields };
     if (isUniqueViolation(err)) return { error: "This number is already used by another account.", fields };
     throw err;
   }

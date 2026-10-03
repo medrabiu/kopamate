@@ -22,7 +22,7 @@ const lagosDay = (iso: string) =>
 const friends = (n: number) => `${n} ${n === 1 ? "friend" : "friends"}`;
 
 function toBoard(r: ReferrerRow, rank: number): BoardRow {
-  return { id: r.id, nickname: r.nickname, photo_version: r.photo_version, state: r.state, refs: r.refs, rank, top_badge: r.top_badge };
+  return { id: r.id, nickname: r.nickname, photo_version: r.photo_version, state: r.state, refs: r.refs, rank, top_badge: r.top_badge, verified: r.verified };
 }
 
 export default async function RewardsPage() {
@@ -56,7 +56,7 @@ export default async function RewardsPage() {
   // Your rows on the boards, pinned below the list when you're not in it.
   const meNational: BoardRow = me
     ? toBoard(me, me.rank)
-    : { id: user.id, nickname: user.nickname, photo_version: user.photo_version, state, refs: 0, rank: 0, top_badge: badges[0] ?? null };
+    : { id: user.id, nickname: user.nickname, photo_version: user.photo_version, state, refs: 0, rank: 0, top_badge: badges[0] ?? null, verified: user.verification_status === "verified" && !user.is_flagged };
   const meState: BoardRow = { ...meNational, rank: me?.state_rank ?? 0 };
 
   let beat: string;
