@@ -187,3 +187,13 @@ INSERT INTO settings (key, value) VALUES
   ('max_claim_per_user_ngn', ''),
   ('prize_presets', '{"top_referrers":[30000,20000,15000,10000,10000,5000,5000,5000,5000,5000]}')
 ON CONFLICT (key) DO NOTHING;
+
+-- Follows: anyone can follow any other corper. Counts and lists show on profiles.
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  following_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (follower_id, following_id),
+  CHECK (follower_id <> following_id)
+);
+CREATE INDEX IF NOT EXISTS follows_following_idx ON follows (following_id, created_at DESC);

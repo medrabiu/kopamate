@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import Sheet from "@/components/Sheet";
+import { useOpenPerson } from "@/components/PersonSheet";
 import { useToast } from "@/components/Toast";
 import { CameraIcon, ChevronRight, ClockIcon, ShieldIcon } from "@/components/icons";
 import IdCardGuide from "@/components/IdCardGuide";
@@ -504,5 +505,17 @@ export function AccountActions({ admin }: { admin: boolean }) {
         </form>
       )}
     </div>
+  );
+}
+
+/** Followers / Following on your own profile header; tapping opens the list in the profile sheet. */
+export function FollowStat({ userId, list, count }: { userId: string; list: "followers" | "following"; count: number }) {
+  const open = useOpenPerson();
+  const label = list === "followers" ? (count === 1 ? "Follower" : "Followers") : "Following";
+  return (
+    <button type="button" onClick={() => open?.(userId, list)} className="flex flex-col items-center gap-0.5">
+      <span className="h-display text-xl leading-tight">{new Intl.NumberFormat("en-NG").format(count)}</span>
+      <span className="text-xs text-muted">{label}</span>
+    </button>
   );
 }

@@ -144,8 +144,11 @@ A real landing page that says what Kopamate is, with live numbers. No referral o
 - Users who chose "hide me" don't appear.
 - No messaging.
 
-### Profile sheet (anywhere in the signed-in app)
-Tapping a person opens a bottom sheet with their public profile: avatar, nickname, state, join date, "Verified corper" (and "You" on your own), position, friends invited, number of badges and the badge chips, plus "See corpers in {state}" (hidden when already on that page). It works in the state grid, Home's "New from {state}" row, the Rewards leaderboard and Invite's friends list. The profile is fetched when tapped from `/api/person/[id]` (signed-in users only; 404 for unknown, banned or unfinished accounts; kept for the visit) and never includes WhatsApp numbers, emails, state codes, payout details or anything else private. Flagged users' badges stay hidden, as everywhere.
+### Profile sheet and follows (anywhere in the signed-in app)
+Tapping a person opens a normal profile in a bottom sheet: photo, nickname, "Verified" tag, "Follows you" (when they do), "Serving in {state} · Joined {month year}", **Following** and **Followers** counts, a **Follow** button (white; "Follow back" when they follow you; "Following" outlined once you do, showing "Unfollow" on hover; the change shows at once and is undone if the server refuses) and "See corpers in {state}" (hidden when already on that page). Position, referrals and badges are **not** shown on other people's profiles.
+- Tapping Following or Followers switches the same sheet to that list (newest first, up to 200; banned and unfinished accounts left out); tapping someone in a list opens their profile, with a back link, so sheets never stack.
+- Works in the state grid, Home's "New from {state}" row, the Rewards leaderboard and Invite's friends list.
+- Data comes from `/api/person/[id]` (and `?list=followers|following`), signed-in users only, never cached, and never includes WhatsApp numbers, emails, state codes, payout details, positions, referrals or badges. Follow/unfollow is the server action `setFollow` (`app/actions/follows.ts`): you can't follow yourself, banned or unfinished accounts; following twice does nothing.
 
 ### 4.6 Invite (`/invite`)
 - Title "Invite friends" and "Every friend who joins with your link moves you **up 10 places**."
@@ -187,10 +190,10 @@ Prize amounts on the prize rows stay hidden; amounts the user has actually won s
 
 ### 4.8 Profile (`/profile`)
 Top to bottom:
-- **Header card:** avatar (camera button: picks a photo, or with a photo already, a sheet with "Choose a new photo" / "Remove photo"; upload results show as a toast), nickname, "{State} · Joined {date}", a "Verified corper" tag once verified, and three numbers: position, friends (valid referrals) and badges ("2/5").
+- **Header card:** avatar (camera button: picks a photo, or with a photo already, a sheet with "Choose a new photo" / "Remove photo"; upload results show as a toast), nickname, "{State} · Joined {date}", a "Verified corper" tag once verified, and three numbers: your position, **Followers** and **Following** (tapping either opens that list in the profile sheet).
 - **Get verified** (hidden once verified): a one-line card, "Get verified to win" (or "Verification needs another try" with the admin's reason). It opens a bottom sheet with the state code (format `EN/26B/1234`) and a photo of the NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. While pending the card reads "Checking your ID". Links to `/profile#verify` (Rewards, the Home progress card, the checklist) open the sheet directly. A state code can only be verified on one account, and this sheet is the only place to enter it.
 - **Complete your profile:** the three completion steps (section 5, "Profile completion") with ticks and a percentage; "Add your state code" opens the verify sheet. Hidden at 100% (reaching it gives the Profile Complete badge with confetti).
-- **Badges:** one sideways-scrolling row of chips, earned first; locked badges are greyed out with a lock. Tapping a chip opens a sheet with the name, description, and the date earned or how to earn it.
+- Badges are not shown on Profile (they still appear as the small icon next to nicknames in lists). Reaching 100% still plays the Profile Complete celebration.
 - **Account** (grouped card, label left, value right, inline edit): Nickname, WhatsApp (masked), State serving in, and Change PIN for phone users. Under it: "Only you can see your WhatsApp number (and state code)."
 - **Preferences** (grouped card): **Show me in the Corpers list** ("Others see your nickname and photo only", on by default) and **Light mode** (off by default, saved in the `km_theme` cookie as `light` / `dark` so the server renders the right theme with no flash).
 - A card with **Open admin** (admins only) and **Log out**, then a small "Delete my account" link (type DELETE to confirm).
@@ -425,6 +428,12 @@ user_badges
   revoked_reason    text null
   primary key (user_id, badge_slug)
 
+follows
+  follower_id       uuid fk users on delete cascade
+  following_id      uuid fk users on delete cascade
+  created_at        timestamptz
+  primary key (follower_id, following_id), check follower_id <> following_id
+
 state_predictions
   user_id           uuid pk fk users on delete cascade
   state             text not null
@@ -438,7 +447,7 @@ state_predictions
 
 ## 9. Privacy, safety and fairness
 
-- **Public info is only:** nickname, photo (or default avatar), state, position, plus on the profile sheet the join date, friends invited, badges and whether they're verified. **WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
+- **Public info is only:** nickname, photo (or default avatar), state, position, plus on the profile sheet the join date, whether they're verified, and follower / following counts and lists. **WhatsApp numbers, emails, state codes, ID card photos and PINs are never exposed** in any page or API response to other users.
 - **Payout details** (bank, account number, account name, payout phone, on `rewards` and the remembered ones on `users`) are read only on the owner's own Rewards page and in admin (Payouts, the user page, the payouts CSV). No other query, page or API selects them; Home only reads reward ids, statuses and amounts.
 - Show a short privacy notice (linked from sign-up): what we collect, why (account, prizes, anti-fraud), that we don't sell data, and how to delete your account. Keep in line with Nigeria's Data Protection Act.
 - Users can hide themselves from the Corpers list and delete their account.

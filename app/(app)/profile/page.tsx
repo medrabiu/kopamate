@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import BadgeCelebration from "@/components/BadgeCelebration";
-import BadgeShelf from "@/components/BadgeShelf";
 import { CheckIcon } from "@/components/icons";
 import { ProfileChecklist } from "@/components/ProfileProgress";
 import { isAdmin, requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
-import { getAllBadges, getProfileSteps, getUserBadges } from "@/lib/badges";
+import { getProfileSteps, getUserBadges } from "@/lib/badges";
+import { getFollowCounts } from "@/lib/people";
 import { THEME_COOKIE } from "@/lib/theme";
 import { formatJoined, formatNumber } from "@/lib/util";
 import { maskPhone } from "@/lib/validate";
-import { AccountActions, ChangePinRow, EditableRow, LightModeToggle, PhotoPicker, ShowInListToggle, VerificationCard } from "./ProfileControls";
+import {
+  AccountActions,
+  ChangePinRow,
+  EditableRow,
+  FollowStat,
+  LightModeToggle,
+  PhotoPicker,
+  ShowInListToggle,
+  VerificationCard,
+} from "./ProfileControls";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -21,28 +30,22 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  const [rank, steps, all, mine, jar] = await Promise.all([
+  const [rank, steps, mine, follows, jar] = await Promise.all([
     getRank(user.id),
     getProfileSteps(user.id),
-    getAllBadges(),
     getUserBadges(user.id),
+    getFollowCounts(user.id),
     cookies(),
   ]);
-  const earned = new Map(mine.map((b) => [b.slug, new Date(b.awarded_at).toISOString()]));
-  const shelf = all.map((b) => ({ ...b, awarded_at: earned.get(b.slug) ?? null }));
-  const complete = earned.get("profile_complete");
+  // Badges aren't shown on Profile any more, but finishing your profile still gets its celebration.
+  const complete = mine.find((b) => b.slug === "profile_complete");
   const verified = user.verification_status === "verified";
-  const refs = rank?.refs ?? 0;
-
-  const stats: [string, string][] = [
-    [rank ? `#${formatNumber(rank.position)}` : "–", "Position"],
-    [formatNumber(refs), refs === 1 ? "Friend" : "Friends"],
-    [`${mine.length}/${all.length}`, "Badges"],
-  ];
 
   return (
     <>
-      {complete && <BadgeCelebration slug="profile_complete" name="Profile Complete" awardedAt={complete} />}
+      {complete && (
+        <BadgeCelebration slug="profile_complete" name="Profile Complete" awardedAt={new Date(complete.awarded_at).toISOString()} />
+      )}
       <h1 className="h-display text-[28px]">Profile</h1>
 
       <section id="photo" className="card flex scroll-mt-5 flex-col gap-4 !p-[18px]" aria-label="Your profile">
@@ -61,26 +64,19 @@ export default async function ProfilePage() {
             )}
           </div>
         </div>
-        <dl className="grid grid-cols-3 divide-x divide-line rounded-2xl border border-line py-3">
-          {stats.map(([value, label]) => (
-            <div key={label} className="flex flex-col-reverse items-center gap-0.5">
-              <dt className="text-xs text-muted">{label}</dt>
-              <dd className="h-display text-xl leading-tight">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="grid grid-cols-3 divide-x divide-line rounded-2xl border border-line py-3">
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="h-display text-xl leading-tight">{rank ? `#${formatNumber(rank.position)}` : "–"}</span>
+            <span className="text-xs text-muted">Position</span>
+          </div>
+          <FollowStat userId={user.id} list="followers" count={follows.followers} />
+          <FollowStat userId={user.id} list="following" count={follows.following} />
+        </div>
       </section>
 
       <VerificationCard status={user.verification_status} note={user.verification_note} stateCode={user.state_code} />
 
       <ProfileChecklist steps={steps} />
-
-      <section className="flex flex-col gap-2.5" aria-labelledby="badges-title">
-        <h2 id="badges-title" className="h-display text-lg">
-          Badges
-        </h2>
-        <BadgeShelf badges={shelf} row />
-      </section>
 
       <GroupLabel>Account</GroupLabel>
       <section className="divide-y divide-line rounded-[20px] border border-line">

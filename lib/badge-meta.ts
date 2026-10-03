@@ -13,15 +13,6 @@ export const BADGE_FILL: Record<string, string> = {
 
 export const badgeFill = (color: string) => BADGE_FILL[color] ?? BADGE_FILL.lime;
 
-/** How to earn each badge, shown on locked badges. */
-export const BADGE_HOW_TO: Record<string, string> = {
-  early_corper: "Join before the Early Corper countdown ends.",
-  profile_complete: "Finish every profile step.",
-  first_invite: "Get a friend to join with your link.",
-  prophet: "Coming soon: predict which state will have the most corpers.",
-  state_ambassador: "Be the top referrer in your state when camp ends.",
-};
-
 export type StepKey = "photo" | "stateCode" | "friend";
 
 /** Profile-completion steps, in order. Each is worth the same share of 100%. */
