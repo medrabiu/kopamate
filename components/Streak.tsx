@@ -100,7 +100,7 @@ export function StreakChip() {
         <span key={streak.days} className="countdown-tick">
           {streak.days}
         </span>
-        {atRisk && <span className="font-medium">· {hoursLeft}h left</span>}
+        {atRisk && <span className="font-medium max-[374px]:hidden">· {hoursLeft}h left</span>}
       </button>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={streak.days > 0 ? `${streak.days}-day streak` : "Your streak"}>
