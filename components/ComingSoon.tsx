@@ -66,10 +66,10 @@ export default function ComingSoon(props: { layout: "grid" } | { layout: "tiles"
               key={title}
               type="button"
               onClick={() => show(`${title} is coming soon`)}
-              className="flex min-w-0 flex-col gap-2.5 rounded-[18px] border border-line px-3 py-3.5 text-left"
+              className="flex flex-col gap-2.5 rounded-[18px] border border-line px-3 py-3.5 text-left"
             >
               <LockIcon size={20} className="text-muted" />
-              <span className="hyphens-auto break-words text-sm font-medium">{title}</span>
+              <span className="text-sm font-medium">{title}</span>
             </button>
           ))}
         </div>
@@ -97,12 +97,12 @@ export default function ComingSoon(props: { layout: "grid" } | { layout: "tiles"
             key={heading}
             type="button"
             onClick={() => setOpen(heading)}
-            className="flex min-w-0 flex-col gap-2 rounded-[18px] border border-line px-3 py-3.5 text-left"
+            className="flex flex-col gap-2 rounded-[18px] border border-line px-3 py-3.5 text-left"
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
               <Icon size={18} />
             </span>
-            <span className="hyphens-auto break-words text-sm font-bold">{heading}</span>
+            <span className="text-sm font-bold">{heading}</span>
             <span className="-mt-1.5 text-xs text-muted">{items.length} coming</span>
           </button>
         ))}

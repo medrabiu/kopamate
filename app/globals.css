@@ -57,20 +57,6 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
-/*
- * Nothing may make the page wider than the phone: one long word poking past the edge lets the whole page,
- * bottom nav included, be dragged sideways and around. `clip` (not `hidden`) keeps sticky headers working.
- */
-html,
-body {
-  overflow-x: clip;
-  /*
-   * No rubber-band bounce at the top or bottom of a page: on iPhone it drags the whole screen, the fixed
-   * bottom nav included, so the app feels loose. Pages stay fresh through RefreshOnReturn and navigation.
-   */
-  overscroll-behavior-y: none;
-}
-
 body {
   background: var(--color-bg);
   color: var(--color-ink);
