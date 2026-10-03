@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Sheet from "./Sheet";
 import { ChatIcon, ShareIcon } from "./icons";
 import { logShare } from "./ShareButtons";
 import { useToast } from "./Toast";
@@ -63,5 +64,41 @@ export default function ShareProfile({ link, nickname }: { link: string; nicknam
       </div>
       {toast}
     </div>
+  );
+}
+
+/**
+ * A small "Share profile" pill. On phones it opens the share sheet straight away; elsewhere (or if that
+ * fails) it opens a small sheet with WhatsApp and Copy.
+ */
+export function ShareProfileButton({ link, nickname }: { link: string; nickname: string }) {
+  const [open, setOpen] = useState(false);
+  async function share() {
+    logShare("profile_button");
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({ title: `${nickname} on Kopamate`, text: `Follow me (${nickname}) on Kopamate, the app for NYSC corpers`, url: link });
+        return;
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return; // They closed the share sheet.
+      }
+    }
+    setOpen(true);
+  }
+  return (
+    <>
+      <button
+        type="button"
+        onClick={share}
+        className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-bold hover:bg-surface-2"
+      >
+        <ShareIcon size={15} />
+        Share
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title="Share your profile">
+        <p className="-mt-1 text-sm text-muted">Anyone with the link can follow you. New people who join with it count as your invites.</p>
+        <ShareProfile link={link} nickname={nickname} />
+      </Sheet>
+    </>
   );
 }

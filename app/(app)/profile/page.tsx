@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import BadgeCelebration from "@/components/BadgeCelebration";
 import { CheckIcon } from "@/components/icons";
 import { ProfileChecklist } from "@/components/ProfileProgress";
-import ShareProfile from "@/components/ShareProfile";
+import { ShareProfileButton } from "@/components/ShareProfile";
 import { APP_URL } from "@/lib/config";
 import { isAdmin, requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
@@ -67,6 +67,7 @@ export default async function ProfilePage() {
               </span>
             )}
           </div>
+          <ShareProfileButton link={`${APP_URL}/u/${user.referral_code}`} nickname={user.nickname} />
         </div>
         <div className="grid grid-cols-3 divide-x divide-line rounded-2xl border border-line py-3">
           <div className="flex flex-col items-center gap-0.5">
@@ -76,16 +77,6 @@ export default async function ProfilePage() {
           <FollowStat userId={user.id} list="followers" count={follows.followers} />
           <FollowStat userId={user.id} list="following" count={follows.following} />
         </div>
-      </section>
-
-      <section className="card flex flex-col gap-3 !p-[18px]" aria-labelledby="share-profile-title">
-        <div>
-          <h2 id="share-profile-title" className="font-bold">
-            Share your profile
-          </h2>
-          <p className="text-sm text-muted">Anyone with the link can follow you. New people who join with it count as your invites.</p>
-        </div>
-        <ShareProfile link={`${APP_URL}/u/${user.referral_code}`} nickname={user.nickname} />
       </section>
 
       <VerificationCard

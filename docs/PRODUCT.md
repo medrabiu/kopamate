@@ -152,7 +152,7 @@ Tapping a person opens a normal profile in a bottom sheet: photo, nickname, "Ver
 
 ### Profile links (`/u/[code]`)
 Everyone has a shareable profile link, `kopamate.ng/u/<their invite code>` (nicknames aren't unique, so the invite code doubles as the handle).
-- **Share your profile** card on Profile (under the header): WhatsApp ("Follow me (Ada) on Kopamate, the app for NYSC corpers: <link>"), the phone's share sheet (or Copy link), and the link with Copy.
+- **Share** pill in the Profile header (top right): opens the phone's share sheet with the link straight away; where that isn't available, a small sheet with WhatsApp ("Follow me (Ada) on Kopamate, the app for NYSC corpers: <link>"), Copy link, and the link with Copy.
 - **Logged in:** the person's profile (photo, nickname, Verified, Follows you, "Serving in {state} · Joined {month year}", Following / Followers) with a **Follow** button; on your own link, "This is your profile" and the share buttons.
 - **Logged out:** the same public preview (nothing private) with **Join Kopamate to follow {nickname}** and **Log in to follow**, plus a short "What is Kopamate?". Opening the link stores the code like an invite link (`km_ref`, 30 days) and `km_follow`: signing up credits them as your inviter and follows them; logging in to an existing account follows them too.
 - Link preview: "Follow {nickname} on Kopamate" with their photo (`/u/[code]/opengraph-image`). Profile links are `noindex`; unknown, banned or unfinished accounts give 404.
