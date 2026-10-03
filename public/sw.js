@@ -5,7 +5,7 @@
 //   again even when the phone's small browser cache has thrown them out.
 // Pages and data always come from the network, so nobody sees someone else's or stale data.
 // Also shows push notifications.
-const VERSION = "v2";
+const VERSION = "v3";
 const PAGES = `kopamate-pages-${VERSION}`;
 const STATIC = `kopamate-static-${VERSION}`;
 const AVATARS = `kopamate-avatars-${VERSION}`;

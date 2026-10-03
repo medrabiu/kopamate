@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { LogoMark } from "@/components/Logo";
 import { APP_NAME } from "./config";
 import { avatarColor } from "./util";
 
@@ -117,22 +118,7 @@ export async function ogImage(inviter?: OgInviter | null, line?: (nickname: stri
       >
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", maxWidth: 700 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                background: LIME,
-                color: "#0E0E10",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "Bricolage",
-                fontSize: 38,
-              }}
-            >
-              K
-            </div>
+            <LogoMark size={64} />
             <div style={{ fontFamily: "Bricolage", fontSize: 40 }}>{APP_NAME}</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>

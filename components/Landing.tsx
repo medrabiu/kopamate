@@ -3,6 +3,7 @@ import CountUp from "./CountUp";
 import EarlyCorperBanner from "./EarlyCorperBanner";
 import { CheckIcon, GiftIcon, LockIcon, MedalIcon, ShieldIcon, TrophyIcon, UsersIcon } from "./icons";
 import { APP_NAME, APP_URL, SITE_DESCRIPTION } from "@/lib/config";
+import { LogoMark } from "./Logo";
 import { STATES } from "@/lib/states";
 import type { PublicStats } from "@/lib/stats";
 import { formatNumber } from "@/lib/util";
@@ -121,7 +122,10 @@ export default function Landing({ stats, earlyDeadline }: Props) {
       />
       <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1040px] items-center justify-between px-5">
-          <span className="h-display text-xl">{APP_NAME}</span>
+          <span className="flex items-center gap-2.5">
+            <LogoMark size={30} />
+            <span className="h-display text-xl">{APP_NAME}</span>
+          </span>
           <nav className="flex items-center gap-1.5">
             <Link href="/login" className="rounded-full px-3.5 py-2 text-[15px] font-bold hover:bg-surface-2">
               Log in

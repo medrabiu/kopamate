@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { LogoMark } from "@/components/Logo";
 import { sql } from "@/lib/db";
 import { getRank } from "@/lib/ranking";
 import { APP_NAME, referralLink } from "@/lib/config";
@@ -49,22 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              background: "#C6F432",
-              color: "#0E0E10",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontFamily: "Bricolage",
-              fontSize: 48,
-            }}
-          >
-            K
-          </div>
+          <LogoMark size={80} />
           <div style={{ fontFamily: "Bricolage", fontSize: 52 }}>{APP_NAME}</div>
         </div>
 
