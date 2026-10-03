@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ReferralEarnings from "@/components/ReferralEarnings";
 import ShareButtons from "@/components/ShareButtons";
 import { ChevronRight, TrophyIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
@@ -9,19 +10,21 @@ import { sql } from "@/lib/db";
 import { formatNumber, timeAgo } from "@/lib/util";
 import { topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
+import { getEarnings } from "@/lib/referral-bonus";
 import FriendsJoined from "./FriendsJoined";
 
 export const metadata: Metadata = { title: "Invite friends" };
 
 export default async function InvitePage() {
   const user = await requireUser();
-  const [joined, { me, above }] = await Promise.all([
+  const [joined, { me, above }, earnings] = await Promise.all([
     sql<{ id: string; nickname: string; photo_version: number; completed_at: Date; top_badge: BadgeInfo | null }[]>`
       SELECT u.id, u.nickname, u.photo_version, u.completed_at, ${topBadge()} FROM users u
       WHERE u.referred_by = ${user.id} AND u.completed_at IS NOT NULL AND NOT u.is_banned AND NOT u.is_flagged
       ORDER BY u.completed_at DESC LIMIT 100
     `,
     getReferrerStanding(user.id),
+    getEarnings(user.id),
   ]);
 
   // Valid referrals (the same count that ranks you), and the next person to pass nationally.
@@ -81,6 +84,17 @@ export default async function InvitePage() {
         />
       </section>
 
+      <ReferralEarnings
+        enabled={earnings.enabled}
+        rate={earnings.rate}
+        minWithdraw={earnings.minWithdraw}
+        available={earnings.available}
+        withdrawn={earnings.withdrawn}
+        earnedCount={earnings.earnedCount}
+        verified={user.verification_status === "verified"}
+        underReview={user.is_flagged}
+      />
+
       <FriendsJoined
         friends={joined.map((j) => ({
           id: j.id,
@@ -88,6 +102,7 @@ export default async function InvitePage() {
           photo_version: j.photo_version,
           ago: timeAgo(j.completed_at),
           top_badge: j.top_badge,
+          bonus: (earnings.enabled && earnings.rate > 0) || earnings.earnedCount > 0 ? earnings.friends.get(j.id) : undefined,
         }))}
       />
 

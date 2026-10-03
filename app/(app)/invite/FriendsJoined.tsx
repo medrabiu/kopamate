@@ -7,8 +7,25 @@ import Sheet from "@/components/Sheet";
 import { PersonButton } from "@/components/PersonSheet";
 import { ChevronRight } from "@/components/icons";
 import type { BadgeInfo } from "@/lib/badge-meta";
+import type { FriendBonus } from "@/lib/referral-bonus";
+import { formatNgn } from "@/lib/reward-meta";
 
-export type Friend = { id: string; nickname: string; photo_version: number; ago: string; top_badge: BadgeInfo | null };
+export type Friend = {
+  id: string;
+  nickname: string;
+  photo_version: number;
+  ago: string;
+  top_badge: BadgeInfo | null;
+  /** Their referral bonus status, when the bonus is on. */
+  bonus?: FriendBonus;
+};
+
+function BonusTag({ bonus }: { bonus?: FriendBonus }) {
+  if (!bonus || bonus.status === "none") return null;
+  if (bonus.status === "earned") return <span className="text-xs font-bold text-lime-ink">+{formatNgn(bonus.amount ?? 0)}</span>;
+  if (bonus.status === "paid") return <span className="text-xs text-muted">{formatNgn(bonus.amount ?? 0)} withdrawn</span>;
+  return <span className="text-xs text-faint">Not verified yet</span>;
+}
 
 /** Overlapping avatars and the latest joiner; "See all" opens the full list in a sheet. */
 export default function FriendsJoined({ friends }: { friends: Friend[] }) {
@@ -68,9 +85,12 @@ export default function FriendsJoined({ friends }: { friends: Friend[] }) {
             <li key={f.id} className={i < friends.length - 1 ? "border-b border-line" : ""}>
               <PersonButton id={f.id} label={f.nickname} className="flex h-14 w-full items-center gap-3">
                 <Avatar id={f.id} nickname={f.nickname} photoVersion={f.photo_version} size={40} />
-                <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
-                  <span className="truncate">{f.nickname}</span>
-                  <BadgeIcon badge={f.top_badge} />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex min-w-0 items-center gap-1.5 font-medium">
+                    <span className="truncate">{f.nickname}</span>
+                    <BadgeIcon badge={f.top_badge} />
+                  </span>
+                  <BonusTag bonus={f.bonus} />
                 </span>
                 <span className="shrink-0 text-[13px] text-faint">{f.ago}</span>
               </PersonButton>

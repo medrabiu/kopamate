@@ -11,6 +11,7 @@ import { randomDigits } from "@/lib/util";
 import { isUniqueViolation } from "@/lib/signup";
 import { awardBadge, checkAutoBadges, restoreBadge, revokeBadge } from "@/lib/badges";
 import { getLeaderboardClose } from "@/lib/stats";
+import { dropBonus, recordBonuses } from "@/lib/referral-bonus";
 
 function id(fd: FormData) {
   const v = String(fd.get("id") ?? "");
@@ -112,6 +113,8 @@ export async function approveVerification(fd: FormData) {
     if (!isUniqueViolation(err)) throw err;
     await rejectWith(userId, "This state code is already verified on another account.");
   }
+  // Whoever invited them earns their referral bonus now.
+  await recordBonuses({ referredId: userId });
   done();
 }
 
@@ -137,6 +140,7 @@ export async function revokeVerification(fd: FormData) {
       verification_note = 'Your verification was removed. Contact us on WhatsApp if you think this is a mistake.'
     WHERE id = ${id(fd)} AND verification_status = 'verified'
   `;
+  await dropBonus(id(fd));
   done();
 }
 

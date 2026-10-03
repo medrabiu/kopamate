@@ -4,6 +4,7 @@ import { getAnnouncementSettings, getFirstNMode, getRewardSettings } from "@/lib
 import { saveAnnouncement, saveRewardSettings, saveSettings } from "@/app/actions/admin";
 import { saveMoneySettings } from "@/app/actions/admin-rewards";
 import { getMoneySettings } from "@/lib/rewards";
+import { getBonusSettings } from "@/lib/referral-bonus";
 import { btnPrimary, input, panel } from "../ui";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -14,6 +15,7 @@ const ERRORS: Record<string, string> = {
   budget: "The budget must be a whole number of naira. Nothing was saved.",
   cap: "The per-user cap must be a whole number of naira, or empty for no cap. Nothing was saved.",
   preset: "Presets are amounts separated by commas, like 30000, 20000, 15000. Nothing was saved.",
+  bonus: "The referral bonus and minimum withdrawal must be whole naira (0 switches the bonus off). Nothing was saved.",
 };
 
 const lagosTime = (iso: string) =>
@@ -22,11 +24,12 @@ const lagosTime = (iso: string) =>
 export default async function AdminSettingsPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string }> }) {
   await requireAdmin();
   const { error, saved } = await searchParams;
-  const [mode, announcement, rewards, money] = await Promise.all([
+  const [mode, announcement, rewards, money, bonus] = await Promise.all([
     getFirstNMode(),
     getAnnouncementSettings(),
     getRewardSettings(),
     getMoneySettings(),
+    getBonusSettings(),
   ]);
 
   return (
@@ -81,6 +84,23 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
               <input name="max_claim_per_user_ngn" defaultValue={money.cap ?? ""} inputMode="numeric" className={input} />
             </label>
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="referral_bonus_enabled" value="1" defaultChecked={bonus.enabled} className="size-4 accent-lime" />
+            Referral bonus on (off: no new bonuses; people can still withdraw what they already earned)
+          </label>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              Referral bonus per verified friend (₦)
+              <input name="referral_bonus_ngn" defaultValue={bonus.rate} inputMode="numeric" required className={input} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              Least a user can withdraw (₦)
+              <input name="referral_bonus_min_withdraw_ngn" defaultValue={bonus.minWithdraw} inputMode="numeric" required className={input} />
+            </label>
+          </div>
+          <p className="-mt-1 text-xs text-muted">
+            A new bonus amount applies to friends verified from now on; bonuses already earned keep their amount.
+          </p>
           <label className="flex flex-col gap-1 text-sm text-muted">
             Top referrers preset, nationwide (one amount per rank, comma-separated)
             <input name="preset_top_referrers" defaultValue={(money.presets.top_referrers ?? []).join(", ")} className={input} />

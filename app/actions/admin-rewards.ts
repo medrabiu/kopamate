@@ -373,7 +373,14 @@ export async function saveMoneySettings(fd: FormData) {
     if (list.length > 100 || list.some((a) => a === null || Number.isNaN(a))) redirect("/admin/settings?error=preset");
     presets[key] = list as number[];
   }
+  const bonusRaw = String(fd.get("referral_bonus_ngn") ?? "").replace(/[₦,\s]/g, "");
+  const minRaw = String(fd.get("referral_bonus_min_withdraw_ngn") ?? "").replace(/[₦,\s]/g, "");
+  if (!/^\d{1,7}$/.test(bonusRaw) || Number(bonusRaw) > MAX_REWARD_NGN) redirect("/admin/settings?error=bonus");
+  if (!/^\d{1,8}$/.test(minRaw) || Number(minRaw) > MAX_REWARD_NGN) redirect("/admin/settings?error=bonus");
   const values: [string, string][] = [
+    ["referral_bonus_enabled", fd.get("referral_bonus_enabled") === "1" ? "1" : "0"],
+    ["referral_bonus_ngn", String(Number(bonusRaw))],
+    ["referral_bonus_min_withdraw_ngn", String(Number(minRaw))],
     ["rewards_budget_ngn", String(Number(budgetRaw))],
     ["max_claim_per_user_ngn", capRaw ? String(Number(capRaw)) : ""],
     ["prize_presets", JSON.stringify(presets)],

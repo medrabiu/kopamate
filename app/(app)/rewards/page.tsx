@@ -9,6 +9,8 @@ import { getRewardSettings } from "@/lib/stats";
 import { getUserBadges } from "@/lib/badges";
 import { referralLink, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
+import ReferralEarnings from "@/components/ReferralEarnings";
+import { getEarnings } from "@/lib/referral-bonus";
 import YourRewards, { type MyReward, type SavedBank } from "./YourRewards";
 import { Leaderboard, Prizes, RankConfetti, type BoardRow } from "./RewardsClient";
 
@@ -26,7 +28,7 @@ function toBoard(r: ReferrerRow, rank: number): BoardRow {
 export default async function RewardsPage() {
   const user = await requireUser();
   const state = user.state ?? "";
-  const [settings, standing, national, stateBoard, badges, rewards, saved] = await Promise.all([
+  const [settings, standing, national, stateBoard, badges, rewards, saved, earnings] = await Promise.all([
     getRewardSettings(),
     getReferrerStanding(user.id),
     getNationalLeaderboard(),
@@ -43,6 +45,7 @@ export default async function RewardsPage() {
       SELECT payout_bank AS bank, payout_account_number AS account_number, payout_account_name AS account_name
       FROM users WHERE id = ${user.id}
     `,
+    getEarnings(user.id),
   ]);
 
   const { me, above } = standing;
@@ -154,6 +157,18 @@ export default async function RewardsPage() {
           <ChevronRight size={20} className="shrink-0 text-lime-ink" />
         </Link>
       )}
+
+      <ReferralEarnings
+        compact
+        enabled={earnings.enabled}
+        rate={earnings.rate}
+        minWithdraw={earnings.minWithdraw}
+        available={earnings.available}
+        withdrawn={earnings.withdrawn}
+        earnedCount={earnings.earnedCount}
+        verified={user.verification_status === "verified"}
+        underReview={user.is_flagged}
+      />
 
       {/* Standing, with the countdowns underneath */}
       <section className="card flex flex-col gap-4 !p-[18px]" aria-labelledby="standing-title">

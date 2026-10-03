@@ -156,6 +156,14 @@ Tapping a person opens a normal profile in a bottom sheet: photo, nickname, "Ver
 - **Friends who joined:** a card with up to 4 overlapping avatars (+N for the rest) and "{latest} joined {time ago} · N others". Tapping it or **See all** opens a bottom sheet with everyone (avatar, nickname, top badge icon, time ago; latest 100). Empty: "No one yet. Post your link on your WhatsApp Status to get your first friend in."
 - **Rank card** (pink outline) linking to Rewards, where the full leaderboard lives: "#{rank} nationwide · #{state rank} in {state}" (or "Not on the leaderboard yet") and "Top 10 verified referrers win prizes." plus "See the leaderboard." or, for unverified users, "Get verified in Profile to qualify."
 
+### Referral bonus (Invite and Rewards)
+The inviter earns **₦250** (admin setting) for every friend who joins with their link and gets verified.
+- **Admin → Settings → Reward money:** "Referral bonus on" (`referral_bonus_enabled`, "1"/"0"), the amount per verified friend (`referral_bonus_ngn`, default 250) and the least a user can withdraw (`referral_bonus_min_withdraw_ngn`, default 1000). Switching it off stops new bonuses; balances already earned can still be withdrawn. A new amount applies to friends verified from then on; earned bonuses keep theirs.
+- **Earning:** recorded in `referral_bonuses` (one row per invited friend) when an admin approves the friend's verification, and on the inviter's Invite/Rewards visit for friends verified earlier. Only real referrals count: neither person flagged, banned or a seed account. Removing a friend's verification removes their bonus unless it was already withdrawn.
+- **Invite page:** an earnings card after the progress card: "Earn ₦250 for every friend who gets verified", the balance available, a progress bar to the minimum ("₦750 more to withdraw · 3 more verified friends"), verified friends and amount withdrawn, and **Withdraw**. In the friends list each friend shows "+₦250", "₦250 withdrawn" or "Not verified yet".
+- **Withdraw** (verified, not flagged, balance at least the minimum): pick bank transfer, airtime or data; the whole balance becomes one unclaimed reward ("Referral earnings · For N verified friends you invited", batch `referral-bonus`) that the user claims on Rewards like any other, so it goes through Payouts and counts in the budget. Deleting that reward frees the bonuses again.
+- **Rewards page:** a compact "₦X referral earnings" card linking to the Invite earnings card.
+
 ### 4.7 Rewards (`/rewards`)
 Prize amounts on the prize rows stay hidden; amounts the user has actually won show under "Your rewards". In order:
 1. **Your rewards** (anchor `#your-rewards`; only when the user has won something, because that's what they come here for): one card per reward, unclaimed first, with the title, the amount and the state:
@@ -433,6 +441,13 @@ follows
   following_id      uuid fk users on delete cascade
   created_at        timestamptz
   primary key (follower_id, following_id), check follower_id <> following_id
+
+referral_bonuses
+  referred_id       uuid pk fk users on delete cascade   -- the friend who got verified
+  referrer_id       uuid fk users on delete cascade
+  amount_ngn        int (> 0)                             -- the rate when it was earned
+  earned_at         timestamptz
+  reward_id         uuid null fk rewards on delete set null -- set once withdrawn
 
 state_predictions
   user_id           uuid pk fk users on delete cascade

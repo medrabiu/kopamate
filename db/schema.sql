@@ -197,3 +197,22 @@ CREATE TABLE IF NOT EXISTS follows (
   CHECK (follower_id <> following_id)
 );
 CREATE INDEX IF NOT EXISTS follows_following_idx ON follows (following_id, created_at DESC);
+
+-- Referral bonus: one row per invited friend who got verified, worth referral_bonus_ngn at the time it was
+-- earned. Unwithdrawn rows (reward_id NULL) add up to the referrer's balance; withdrawing turns them into one
+-- normal reward (claimed and paid like any other) and links the rows to it. Deleting that reward frees them.
+CREATE TABLE IF NOT EXISTS referral_bonuses (
+  referred_id  uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  referrer_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount_ngn   int NOT NULL CHECK (amount_ngn > 0),
+  earned_at    timestamptz NOT NULL DEFAULT now(),
+  reward_id    uuid REFERENCES rewards(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS referral_bonuses_referrer_idx ON referral_bonuses (referrer_id);
+
+-- 0 switches the bonus off. Withdrawals need at least the minimum balance.
+INSERT INTO settings (key, value) VALUES
+  ('referral_bonus_enabled', '1'),
+  ('referral_bonus_ngn', '250'),
+  ('referral_bonus_min_withdraw_ngn', '1000')
+ON CONFLICT (key) DO NOTHING;
