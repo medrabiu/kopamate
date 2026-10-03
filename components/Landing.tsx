@@ -120,7 +120,7 @@ export default function Landing({ stats, earlyDeadline }: Props) {
         // JSON with "<" escaped, so nothing in it can close the script tag.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData()).replace(/</g, "\\u003c") }}
       />
-      <header className="sticky top-0 z-30 -mt-[env(safe-area-inset-top)] border-b border-line bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1040px] items-center justify-between px-5">
           <span className="flex items-center gap-2.5">
             <LogoMark size={30} />

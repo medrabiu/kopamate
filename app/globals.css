@@ -62,11 +62,6 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  /*
-   * The page draws under the status bar (viewport-fit=cover + black-translucent in app/layout.tsx), so on an
-   * iPhone home-screen app every page needs room for the notch. In the browser these are all 0.
-   */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 
 input,

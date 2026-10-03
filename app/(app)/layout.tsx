@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await requireUser();
   return (
     <PeopleProvider viewerId={user.id}>
-      <main className="mx-auto flex max-w-[480px] flex-col gap-5 px-5 pb-[calc(112px+env(safe-area-inset-bottom))] pt-5">{children}</main>
+      <main className="mx-auto flex max-w-[480px] flex-col gap-5 px-5 pb-[112px] pt-5">{children}</main>
       <BottomNav />
       <RefreshOnReturn />
     </PeopleProvider>
