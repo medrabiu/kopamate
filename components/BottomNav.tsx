@@ -21,10 +21,11 @@ export default function BottomNav() {
   const [tapped, setTapped] = useState<string | null>(null);
   useEffect(() => setTapped(null), [path]);
   return (
-    // touch-none: a swipe that starts on the nav doesn't drag the page under it; taps still work.
+    // Sits under the scrolling content in the app shell (app/(app)/layout.tsx), so it never moves.
+    // touch-none: a swipe that starts on the nav does nothing; taps still work.
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 touch-none border-t border-line bg-bg/95 backdrop-blur"
+      className="z-40 shrink-0 touch-none border-t border-line bg-bg"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto grid h-[76px] max-w-[480px] grid-cols-5">
