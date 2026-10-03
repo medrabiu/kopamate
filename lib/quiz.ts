@@ -21,6 +21,11 @@ export const SECONDS_PER_QUESTION = 15;
 const LIMIT_MS = SECONDS_PER_QUESTION * 1000;
 /** Slack for slow networks before an answer counts as too late. */
 const GRACE_MS = 2500;
+/**
+ * The server's clock includes the trip down to the phone and back, which is 1–3s on weak 2G/3G.
+ * The speed bonus ignores this much of it, so a corper on slow data isn't scored as a slow reader.
+ */
+const NETWORK_ALLOWANCE_MS = 1500;
 export const BASE_POINTS = 100;
 export const SPEED_POINTS = 50;
 /** Finishing adds STREAK_BONUS_PER_DAY for each streak day, up to STREAK_BONUS_MAX_DAYS. */
@@ -240,7 +245,7 @@ export async function answerQuestion(db: Db, userId: string, day: string, idx: n
 
   const timedOut = choice === null || row.elapsed_ms > LIMIT_MS + GRACE_MS;
   const correct = !timedOut && row.perm[choice!] === 0;
-  const speed = Math.max(0, LIMIT_MS - row.elapsed_ms) / LIMIT_MS;
+  const speed = Math.min(1, Math.max(0, LIMIT_MS + NETWORK_ALLOWANCE_MS - row.elapsed_ms) / LIMIT_MS);
   const points = correct ? BASE_POINTS + Math.round(SPEED_POINTS * speed) : 0;
   await db`
     UPDATE quiz_answers SET answered_at = now(), choice = ${timedOut ? null : choice}, correct = ${correct}, points = ${points}

@@ -18,7 +18,7 @@ export function useToast(): [React.ReactNode, (msg: string) => void] {
     <div
       role="status"
       aria-live="polite"
-      className={`pointer-events-none fixed inset-x-0 bottom-28 z-50 flex justify-center px-4 transition-opacity ${
+      className={`pointer-events-none fixed inset-x-0 bottom-[calc(112px+env(safe-area-inset-bottom))] z-50 flex justify-center px-4 transition-opacity ${
         msg ? "opacity-100" : "opacity-0"
       }`}
     >
