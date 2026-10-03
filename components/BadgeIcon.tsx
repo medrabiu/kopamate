@@ -1,4 +1,4 @@
-import { CheckIcon, ClockIcon, CrownIcon, EyeIcon, LinkIcon } from "./icons";
+import { CheckIcon, ClockIcon, CrownIcon, EyeIcon, FlameIcon, LinkIcon, TrophyIcon } from "./icons";
 import { badgeFill, type BadgeInfo } from "@/lib/badge-meta";
 
 const GLYPHS: Record<string, typeof CheckIcon> = {
@@ -7,6 +7,8 @@ const GLYPHS: Record<string, typeof CheckIcon> = {
   link: LinkIcon,
   eye: EyeIcon,
   crown: CrownIcon,
+  flame: FlameIcon,
+  trophy: TrophyIcon,
 };
 
 export function BadgeGlyph({ icon, size }: { icon: string; size: number }) {

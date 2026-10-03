@@ -257,3 +257,89 @@ CREATE TABLE IF NOT EXISTS blocked_state_codes (
   blocked_by  text NOT NULL,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- Daily Quiz: the same QUESTIONS_PER_DAY questions for everyone each Lagos day (lib/quiz.ts).
+CREATE TABLE IF NOT EXISTS quiz_questions (
+  id            serial PRIMARY KEY,
+  category      text NOT NULL,
+  difficulty    smallint NOT NULL DEFAULT 2 CHECK (difficulty BETWEEN 1 AND 3),
+  question      text NOT NULL UNIQUE,
+  options       text[] NOT NULL CHECK (array_length(options, 1) = 4),  -- the right answer is options[1]
+  active        boolean NOT NULL DEFAULT true,
+  last_used_on  date,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS quiz_days (
+  day           date PRIMARY KEY,
+  question_ids  int[] NOT NULL
+);
+-- One per player per day. `state` is where they served when they played; it scores for that state.
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day          date NOT NULL,
+  state        text NOT NULL,
+  points       int NOT NULL DEFAULT 0,   -- from answers
+  bonus        int NOT NULL DEFAULT 0,   -- streak bonus, added when the quiz is finished
+  correct      int NOT NULL DEFAULT 0,
+  started_at   timestamptz NOT NULL DEFAULT now(),
+  finished_at  timestamptz,
+  PRIMARY KEY (user_id, day)
+);
+CREATE INDEX IF NOT EXISTS quiz_attempts_day_idx ON quiz_attempts (day, state);
+-- Each question as served: the server keeps the clock, and `perm` is this player's option order,
+-- so "it's B" can't be passed around. choice is the shown position tapped (null: ran out of time).
+CREATE TABLE IF NOT EXISTS quiz_answers (
+  user_id      uuid NOT NULL,
+  day          date NOT NULL,
+  idx          smallint NOT NULL,
+  question_id  int NOT NULL REFERENCES quiz_questions(id),
+  perm         smallint[] NOT NULL,
+  served_at    timestamptz NOT NULL DEFAULT now(),
+  answered_at  timestamptz,
+  choice       smallint,
+  correct      boolean,
+  points       int NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day, idx),
+  FOREIGN KEY (user_id, day) REFERENCES quiz_attempts(user_id, day) ON DELETE CASCADE
+);
+
+-- State League: one row per finished week (Monday, Lagos), written by the weekly close job.
+CREATE TABLE IF NOT EXISTS league_weeks (
+  week          date PRIMARY KEY,
+  winner_state  text,
+  standings     jsonb NOT NULL,
+  top_players   jsonb NOT NULL,
+  closed_at     timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO badges (slug, name, description, icon, color, priority, kind, qualifies_for_rewards) VALUES
+  ('champion_state', 'Champion State', 'Played for the state that won a League week', 'trophy', 'lime', 55, 'manual', false),
+  ('quiz_mvp', 'Quiz MVP', 'Top player in Nigeria for a League week', 'crown', 'amber', 70, 'manual', false)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Streaks (see lib/streaks.ts). A day counts when you finish the Daily Quiz. A freeze covers one missed
+-- day: you earn one every 7 days in a row and one per friend who joins with your link, holding at most 2.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS streak int NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_on date;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_best int NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_freezes int NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS streak_days (
+  user_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day      date NOT NULL,                    -- Lagos date
+  frozen   boolean NOT NULL DEFAULT false,   -- covered by a freeze instead of played
+  PRIMARY KEY (user_id, day)
+);
+INSERT INTO badges (slug, name, description, icon, color, priority, kind, qualifies_for_rewards) VALUES
+  ('streak_7', '7-Day Streak', 'Played the Daily Quiz 7 days in a row', 'flame', 'amber', 25, 'auto', false),
+  ('streak_30', '30-Day Streak', 'Played the Daily Quiz 30 days in a row', 'flame', 'pink', 45, 'auto', false),
+  ('streak_100', '100-Day Streak', 'Played the Daily Quiz 100 days in a row', 'flame', 'violet', 60, 'auto', false)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Web push: one row per browser that turned notifications on.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint    text PRIMARY KEY,
+  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  p256dh      text NOT NULL,
+  auth        text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);

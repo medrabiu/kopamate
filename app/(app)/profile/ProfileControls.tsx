@@ -8,6 +8,7 @@ import { useOpenPerson } from "@/components/PersonSheet";
 import { useToast } from "@/components/Toast";
 import { CameraIcon, ChevronRight, ClockIcon, ShieldIcon } from "@/components/icons";
 import IdCardGuide from "@/components/IdCardGuide";
+import { currentSubscription, disablePush, enablePush, pushSupport } from "@/components/push-client";
 import { PhoneInput } from "@/components/forms";
 import {
   changePin,
@@ -457,6 +458,51 @@ export function ShowInListToggle({ on }: { on: boolean }) {
       on={on}
       disabled={pending}
       onToggle={() => start(() => toggleShowInList())}
+    />
+  );
+}
+
+/** Push notifications for this browser: streak reminders, League results, friends joining. */
+export function NotificationsToggle({ publicKey }: { publicKey: string }) {
+  const [state, setState] = useState<"loading" | "on" | "off" | "blocked" | "ios" | "unsupported">("loading");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const support = pushSupport();
+    if (support !== "ok") return setState(support === "ios-install" ? "ios" : "unsupported");
+    if (Notification.permission === "denied") return setState("blocked");
+    currentSubscription()
+      .then((sub) => setState(sub && Notification.permission === "granted" ? "on" : "off"))
+      .catch(() => setState("off"));
+  }, []);
+
+  if (state === "unsupported") return null;
+  const hint = {
+    loading: "Streak reminders, League results, friends joining",
+    on: "Streak reminders, League results, friends joining",
+    off: "Streak reminders, League results, friends joining",
+    blocked: "Blocked in your browser settings",
+    ios: "Add Kopamate to your Home Screen first",
+  }[state];
+
+  return (
+    <SwitchRow
+      id="push-label"
+      title="Notifications"
+      hint={hint}
+      on={state === "on"}
+      disabled={busy || state === "loading" || state === "blocked" || state === "ios"}
+      onToggle={async () => {
+        setBusy(true);
+        if (state === "on") {
+          await disablePush();
+          setState("off");
+        } else {
+          const r = await enablePush(publicKey);
+          setState(r === "on" ? "on" : r === "denied" ? "blocked" : "off");
+        }
+        setBusy(false);
+      }}
     />
   );
 }

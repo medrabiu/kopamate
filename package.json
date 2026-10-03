@@ -9,7 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
-    "db:seed": "node scripts/seed.mjs"
+    "db:seed": "node scripts/seed.mjs",
+    "db:quiz": "node scripts/seed-quiz.mjs"
   },
   "dependencies": {
     "@fontsource/bricolage-grotesque": "^5.1.0",
@@ -18,7 +19,8 @@
     "next": "^15.3.0",
     "postgres": "^3.4.5",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
@@ -26,6 +28,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.6.0"
   },

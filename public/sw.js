@@ -4,6 +4,7 @@
 //   ?v=<version>, app icons) are served from this cache first, so repeat visits don't download them
 //   again even when the phone's small browser cache has thrown them out.
 // Pages and data always come from the network, so nobody sees someone else's or stale data.
+// Also shows push notifications.
 const VERSION = "v2";
 const PAGES = `kopamate-pages-${VERSION}`;
 const STATIC = `kopamate-static-${VERSION}`;
@@ -62,4 +63,38 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/avatar/") && url.searchParams.has("v")) {
     event.respondWith(cacheFirst(request, AVATARS));
   }
+});
+
+// Push notifications (lib/push.ts sends { title, body, url, tag }).
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Kopamate", {
+      body: data.body || "",
+      icon: "/icons/192",
+      badge: "/icons/192",
+      tag: data.tag,
+      renotify: Boolean(data.tag),
+      data: { url: data.url || "/home" },
+    }),
+  );
+});
+
+// Tapping a notification focuses an open Kopamate tab (moving it to the page) or opens a new one.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/home", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => new URL(c.url).origin === self.location.origin);
+      // navigate() fails for a tab this worker doesn't control yet; open a fresh one then.
+      if (open) return open.focus().then((c) => c.navigate(url)).catch(() => self.clients.openWindow(url));
+      return self.clients.openWindow(url);
+    }),
+  );
 });

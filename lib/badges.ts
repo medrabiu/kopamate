@@ -81,6 +81,7 @@ const autoFacts = (deadline: string, where: PendingQuery<Row[]>) => sql`
          (u.completed_at <= ${deadline}::timestamptz) AS early,
          (u.photo_version > 0) AS photo,
          (u.state_code IS NOT NULL AND u.state_code <> '') AS state_code,
+         u.streak_best AS best_streak,
          (NOT u.is_flagged AND NOT u.is_banned AND EXISTS (
             SELECT 1 FROM users r
             WHERE r.referred_by = u.id AND r.completed_at IS NOT NULL
@@ -108,7 +109,10 @@ export async function checkAutoBadges(userIds: string | (string | null | undefin
       CROSS JOIN LATERAL (VALUES
         ('early_corper', f.early),
         ('first_invite', f.friend),
-        ('profile_complete', f.photo AND f.state_code AND f.friend)
+        ('profile_complete', f.photo AND f.state_code AND f.friend),
+        ('streak_7', f.best_streak >= 7),
+        ('streak_30', f.best_streak >= 30),
+        ('streak_100', f.best_streak >= 100)
       ) AS v(slug, ok)
       WHERE v.ok
     )

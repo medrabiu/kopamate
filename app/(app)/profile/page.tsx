@@ -14,12 +14,14 @@ import { verificationBlock } from "@/lib/verification";
 import { THEME_COOKIE } from "@/lib/theme";
 import { formatJoined, formatNumber } from "@/lib/util";
 import { maskPhone } from "@/lib/validate";
+import { vapidPublicKey } from "@/lib/push";
 import {
   AccountActions,
   ChangePinRow,
   EditableRow,
   FollowStat,
   LightModeToggle,
+  NotificationsToggle,
   PhotoPicker,
   ShowInListToggle,
   VerificationCard,
@@ -117,6 +119,7 @@ export default async function ProfilePage() {
       <GroupLabel>Preferences</GroupLabel>
       <section className="divide-y divide-line rounded-[20px] border border-line">
         <ShowInListToggle on={user.show_in_list} />
+        {vapidPublicKey && <NotificationsToggle publicKey={vapidPublicKey} />}
         <LightModeToggle initial={jar.get(THEME_COOKIE)?.value === "light"} />
       </section>
 

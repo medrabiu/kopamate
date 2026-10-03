@@ -39,6 +39,13 @@ export function lagosDate(d = new Date()) {
   }).format(d);
 }
 
+/** When the next Lagos day starts (Lagos is UTC+1 all year), as an ISO time. */
+export function nextLagosMidnight(now = Date.now()) {
+  const d = new Date(`${lagosDate(new Date(now))}T00:00:00+01:00`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString();
+}
+
 export function formatNumber(n: number) {
   return new Intl.NumberFormat("en-NG").format(n);
 }

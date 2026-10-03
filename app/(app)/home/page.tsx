@@ -7,21 +7,24 @@ import BadgeIcon from "@/components/BadgeIcon";
 import { ProfileProgressRow } from "@/components/ProfileProgress";
 import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
-import Countdown, { Deadline } from "@/components/Countdown";
-import CountUp from "@/components/CountUp";
 import { PersonButton } from "@/components/PersonSheet";
 import RewardBanner from "@/components/RewardBanner";
-import { ArrowDownIcon, ArrowUpIcon, ChevronRight, ClockIcon } from "@/components/icons";
+import { ArrowDownIcon, ArrowUpIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
-import { getRank, getSnapshotPosition, nextGoal } from "@/lib/ranking";
-import { getAnnouncement, getEarlyDeadline, getPublicStats, track } from "@/lib/stats";
+import { getRank, getSnapshotPosition } from "@/lib/ranking";
+import { getAnnouncement, getPublicStats, track } from "@/lib/stats";
 import { checkAutoBadges, getProfileSteps, getUserBadges, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
-import { shareMessage, whatsappShareUrl } from "@/lib/config";
+import { getStandings, weekStart } from "@/lib/league";
+import { getQuizStatus } from "@/lib/quiz";
+import { getStreak } from "@/lib/streaks";
+import { vapidPublicKey } from "@/lib/push";
+import PushPrompt from "@/components/PushPrompt";
+import { StreakChip, StreakProvider } from "@/components/Streak";
 import { sql } from "@/lib/db";
-import { formatNumber, lagosDate } from "@/lib/util";
+import { formatNumber, lagosDate, nextLagosMidnight } from "@/lib/util";
 import { stateSlug } from "@/lib/states";
-import HomeShare from "./HomeShare";
+import QuizCard from "./QuizCard";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -32,7 +35,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, announcement, snapshot, newcomers, earlyDeadline, steps, badges, myRewards] = await Promise.all([
+  const [rank, stats, announcement, snapshot, newcomers, steps, badges, myRewards, quiz, streak, standings] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getAnnouncement(),
@@ -43,22 +46,24 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         AND NOT u.is_banned AND u.show_in_list
       ORDER BY u.completed_at DESC LIMIT 5
     `,
-    getEarlyDeadline(),
     badgesReady.then(() => getProfileSteps(user.id)),
     badgesReady.then(() => getUserBadges(user.id)),
     // Rewards waiting for the user (no payout details here).
     sql<{ id: string; status: "hidden" | "unclaimed"; amount_ngn: number | null }[]>`
       SELECT id, status, amount_ngn FROM rewards WHERE user_id = ${user.id} AND status IN ('hidden', 'unclaimed')
     `,
+    getQuizStatus(user.id),
+    getStreak(user.id),
+    getStandings(weekStart(today)),
   ]);
   const unclaimed = myRewards.filter((r) => r.status === "unclaimed");
   const profileComplete = badges.find((b) => b.slug === "profile_complete");
 
   const position = rank?.position ?? 0;
-  const refs = rank?.refs ?? 0;
   const change = snapshot ? snapshot - position : 0;
-  const goal = nextGoal(position);
   const myState = stats.states.find((s) => s.state === user.state);
+  const standing = standings.find((s) => s.state === user.state);
+  const above = standing?.rank ? standings.find((s) => s.rank === standing.rank! - 1) : undefined;
 
   // Celebrate new sign-ups and any climb since the last visit.
   const improved = user.last_seen_position !== null && position > 0 && position < user.last_seen_position;
@@ -73,19 +78,35 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     );
   }
 
-  const earlyOpen = new Date(earlyDeadline).getTime() > Date.now();
-
   return (
-    <>
+    <StreakProvider initial={streak}>
       <Confetti fire={celebrate} />
       {profileComplete && (
         <BadgeCelebration slug="profile_complete" name="Profile Complete" awardedAt={new Date(profileComplete.awarded_at).toISOString()} />
       )}
       <header className="flex h-11 items-center justify-between">
-        <h1 className="h-display text-2xl">Hi, {user.nickname}</h1>
-        <Link href="/profile" aria-label="Your profile">
-          <Avatar id={user.id} nickname={user.nickname} photoVersion={user.photo_version} size={40} />
-        </Link>
+        <h1 className="h-display min-w-0 truncate text-2xl">Hi, {user.nickname}</h1>
+        <div className="flex shrink-0 items-center gap-2">
+          <StreakChip />
+          {position > 0 && (
+            <Link
+              href="/invite"
+              aria-label={`Your position: ${position}. Invite friends to move up`}
+              className="flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-sm font-bold text-lime-ink"
+            >
+              #{formatNumber(position)}
+              {change !== 0 && (
+                <span className={`flex items-center text-[12px] ${change > 0 ? "" : "text-muted"}`}>
+                  {change > 0 ? <ArrowUpIcon size={12} strokeWidth={2.5} /> : <ArrowDownIcon size={12} strokeWidth={2.5} />}
+                  {Math.abs(change)}
+                </span>
+              )}
+            </Link>
+          )}
+          <Link href="/profile" aria-label="Your profile">
+            <Avatar id={user.id} nickname={user.nickname} photoVersion={user.photo_version} size={40} />
+          </Link>
+        </div>
       </header>
 
       <RewardBanner
@@ -95,67 +116,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         underReview={user.is_flagged}
       />
 
-      {/* Position: the one thing Home is about, with both ways to share. */}
-      <section className="card flex flex-col gap-4 !p-[22px]" aria-labelledby="position-title">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 id="position-title" className="text-sm text-muted">
-              Your position
-            </h2>
-            <div className="h-display text-[64px] leading-[0.95] text-lime-ink">
-              <CountUp to={position} from={improved && user.last_seen_position ? user.last_seen_position : position} prefix="#" />
-            </div>
-          </div>
-          {change > 0 && (
-            <div className="mt-1 flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-lime-ink">
-              <ArrowUpIcon size={14} strokeWidth={2.5} />
-              {change} since yesterday
-            </div>
-          )}
-          {change < 0 && (
-            <div className="mt-1 flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-[13px] font-bold text-muted">
-              <ArrowDownIcon size={14} strokeWidth={2.5} />
-              {Math.abs(change)} since yesterday
-            </div>
-          )}
-        </div>
+      <QuizCard status={quiz} streak={streak} state={user.state ?? "your state"} standing={standing} above={above} nextAt={nextLagosMidnight()} />
 
-        {goal ? (
-          <div className="flex flex-col gap-2">
-            <div className="h-2 rounded-full bg-surface-2" role="progressbar" aria-label="Progress to your next goal" aria-valuenow={Math.round(goal.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-2 rounded-full bg-lime" style={{ width: `${Math.max(4, goal.progress * 100)}%` }} />
-            </div>
-            <p className="text-sm">
-              Invite <span className="font-bold">{goal.invites} more</span> to reach the top {goal.target}
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm font-bold text-lime-ink">You&apos;re in the top 10. Keep inviting to stay there.</p>
-        )}
-
-        <HomeShare
-          whatsappUrl={whatsappShareUrl(user.referral_code)}
-          cardUrl={`/card/${user.referral_code}`}
-          message={shareMessage(user.referral_code)}
-          fileName={`kopamate-${user.referral_code}.png`}
-        />
-
-        <div className="-mb-1 flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
-          <Link href="/invite" className="text-muted">
-            {refs === 0 ? "No friends joined yet" : `${refs} ${refs === 1 ? "friend" : "friends"} joined`}
-            <span className="font-bold text-lime-ink"> · Invite</span>
-          </Link>
-          {earlyOpen && (
-            <Deadline to={earlyDeadline}>
-              <span className="flex shrink-0 items-center gap-1.5 text-[13px] text-muted">
-                <ClockIcon size={14} className="text-lime-ink" />
-                Early Corper
-                <Countdown to={earlyDeadline} className="font-bold text-lime-ink" />
-              </span>
-            </Deadline>
-          )}
-        </div>
-      </section>
+      {vapidPublicKey && <PushPrompt publicKey={vapidPublicKey} />}
 
       {announcement && (
         <section className="flex flex-col gap-2 rounded-3xl border-[1.5px] border-pink p-[22px]" aria-label="Announcement">
@@ -201,6 +164,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )}
 
       <ComingSoon layout="tiles" state={user.state} />
-    </>
+    </StreakProvider>
   );
 }

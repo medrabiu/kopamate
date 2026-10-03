@@ -11,6 +11,7 @@ Built with Next.js 15, Tailwind CSS 4 and Postgres. Designed to run on free plan
 ### 1. Create the database (Supabase)
 1. Sign up at [supabase.com](https://supabase.com) and create a new project. Pick the region closest to Nigeria (e.g. *West EU* or *Central EU*). Save the database password.
 2. Open **SQL Editor → New query**, paste everything from [`db/schema.sql`](db/schema.sql) and press **Run**.
+   Then load the Daily Quiz questions from your computer: `DATABASE_URL=... npm run db:quiz` (safe to run again; add more later in **Admin → Quiz**).
 3. Open **Project settings → Database → Connection string → URI**, choose **Transaction pooler** (port 6543), and copy it. Replace `[YOUR-PASSWORD]` with your password. This is your `DATABASE_URL`.
 
 ### 2. Put the code on GitHub
@@ -28,6 +29,8 @@ Create a new private repository and upload this folder (or `git push` it).
 | `SESSION_SECRET` | a long random string. On any computer with Node: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `ADMIN_IDS` | your Google email and/or WhatsApp number, comma-separated, e.g. `you@gmail.com,08031234567` |
 | `CRON_SECRET` | another long random string |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | optional, turns on push notifications. Make a pair once with `npx web-push generate-vapid-keys` and never change them: changing them cuts off everyone who already turned notifications on. |
+| `VAPID_SUBJECT` | optional, a contact for push services, e.g. `mailto:you@gmail.com` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | from step 4 (you can add these after the first deploy) |
 
 3. Click **Deploy**. If the build shows an error, copy it to Claude Code (or back to Claude) to fix.
@@ -49,6 +52,8 @@ In Vercel: **Project → Settings → Domains** and add e.g. `kopamate.ng`. Then
 - The app runs in Vercel's Frankfurt region (`fra1` in `vercel.json`), next to a Supabase project in `eu-central-1`. If your Supabase project is somewhere else, change the region to the closest one: every page makes several database round trips, so distance adds up fast.
 - The database client sends one query at a time per connection (`max_pipeline: 1` in `lib/db.ts`). Don't remove it: sending several at once through Supabase's transaction pooler can leave connections stuck and make pages hang.
 - The daily position snapshot runs automatically at 00:05 Lagos time (see `vercel.json`). The "↑ 20 since yesterday" badge appears from the second day.
+- The Daily Quiz changes at midnight Lagos time. The State League week ends Sunday midnight; at 00:10 on Monday (`vercel.json`) the week is closed, Champion State and Quiz MVP badges are given and players get a push.
+- The streak reminder push goes out at 19:00 Lagos time (also in `vercel.json`) to people whose streak ends at midnight. Notifications only work on iPhone once Kopamate is added to the Home Screen.
 
 ---
 
@@ -60,6 +65,7 @@ Needs Node 20+ and a Postgres database (local, Docker, or a free Supabase projec
 cp .env.example .env          # then fill in DATABASE_URL and SESSION_SECRET
 npm install
 npm run db:migrate            # creates the tables
+npm run db:quiz               # loads the Daily Quiz questions
 npm run db:seed               # optional: 300 fake corpers + demo login 0803 000 0001 / PIN 1234
 npm run dev                   # open http://localhost:3000
 ```

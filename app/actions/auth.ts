@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { createSession, destroySession, getCurrentUser } from "@/lib/session";
@@ -18,6 +19,8 @@ import {
 } from "@/lib/signup";
 import { track } from "@/lib/stats";
 import { checkAutoBadges } from "@/lib/badges";
+import { notifyFriendJoined } from "@/lib/push";
+import { giveFreeze } from "@/lib/streaks";
 import { MAX_PIN_ATTEMPTS, PIN_LOCK_MINUTES } from "@/lib/config";
 
 export type FormState = { error?: string; fields?: Record<string, string> } | undefined;
@@ -67,7 +70,11 @@ export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<F
   await createSession(userId);
   await followFromCookie(userId);
   await track("signup_completed", userId, { method: "phone", referred: Boolean(referrer) });
-  if (referrer) await track("referral_completed", referrer.id, { referred: userId });
+  if (referrer) {
+    await track("referral_completed", referrer.id, { referred: userId });
+    const freeze = await giveFreeze(referrer.id);
+    after(() => notifyFriendJoined(referrer.id, nick.value, freeze));
+  }
   // Early Corper for the new user; First Invite (and maybe Profile Complete) for whoever invited them.
   await checkAutoBadges([userId, referrer?.id]);
   revalidateTag("stats");
@@ -105,7 +112,11 @@ export async function finishSignup(_prev: FormState, fd: FormData): Promise<Form
 
   await followFromCookie(user.id);
   await track("signup_completed", user.id, { method: "google", referred: Boolean(referrer) });
-  if (referrer) await track("referral_completed", referrer.id, { referred: user.id });
+  if (referrer) {
+    await track("referral_completed", referrer.id, { referred: user.id });
+    const freeze = await giveFreeze(referrer.id);
+    after(() => notifyFriendJoined(referrer.id, nick.value, freeze));
+  }
   await checkAutoBadges([user.id, referrer?.id]);
   revalidateTag("stats");
   redirect("/home?welcome=1");
