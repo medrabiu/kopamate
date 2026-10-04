@@ -16,25 +16,6 @@ function Bar({ percent }: { percent: number }) {
   );
 }
 
-/** Home: one slim row, "Your profile is 33% done · Add a photo", with a thin bar. Hidden at 100%. */
-export function ProfileProgressRow({ steps }: { steps: ProfileSteps }) {
-  const { percent, next } = completion(steps);
-  if (!next) return null;
-  return (
-    <Link href={next.href} className="flex items-center gap-3.5 rounded-[20px] border border-line px-4 py-3">
-      <span className="h-display w-11 shrink-0 text-lg text-lime-ink">{percent}%</span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="truncate text-sm">
-          <span className="font-bold">Profile</span>
-          <span className="text-muted"> · next: {next.action.toLowerCase()}</span>
-        </span>
-        <Bar percent={percent} />
-      </span>
-      <ChevronRight size={18} className="shrink-0 text-lime-ink" />
-    </Link>
-  );
-}
-
 /** Profile: every step with a tick. Hidden at 100% (the Profile Complete badge shows it instead). */
 export function ProfileChecklist({ steps }: { steps: ProfileSteps }) {
   const { percent } = completion(steps);

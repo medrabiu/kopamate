@@ -5,14 +5,12 @@ import Avatar from "@/components/Avatar";
 import BadgeCelebration from "@/components/BadgeCelebration";
 import BadgeIcon from "@/components/BadgeIcon";
 import VerifiedBadge from "@/components/VerifiedBadge";
-import { ProfileProgressRow } from "@/components/ProfileProgress";
 import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
 import RewardBanner from "@/components/RewardBanner";
 import AnnouncementCard from "@/components/AnnouncementCard";
 import Carousel from "@/components/Carousel";
-import OpportunitiesTeaser from "@/components/OpportunitiesTeaser";
 import { BellIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
@@ -24,7 +22,7 @@ import { getStandings, weekStart } from "@/lib/league";
 import { getQuizStatus } from "@/lib/quiz";
 import { getStreak } from "@/lib/streaks";
 import { vapidPublicKey } from "@/lib/push";
-import PushPrompt from "@/components/PushPrompt";
+import SetupCard from "@/components/SetupCard";
 import { StreakChip, StreakProvider } from "@/components/Streak";
 import { sql } from "@/lib/db";
 import { formatNumber, lagosDate, nextLagosMidnight } from "@/lib/util";
@@ -88,6 +86,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     );
   }
 
+  const quizFirst = quiz.kind === "ready" || quiz.kind === "playing";
+  const quizCard = (
+    <QuizCard status={quiz} streak={streak} state={user.state ?? "your state"} standing={standing} above={above} nextAt={nextLagosMidnight()} />
+  );
+  const news =
+    slides.length > 0 ? (
+      <Carousel label="Updates from the Kopamate team">
+        {slides.map((a) => (
+          <AnnouncementCard key={a.id} a={a} slide />
+        ))}
+      </Carousel>
+    ) : null;
+
   return (
     <StreakProvider initial={streak}>
       <Confetti fire={celebrate} />
@@ -125,19 +136,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         underReview={user.is_flagged}
       />
 
-      <QuizCard status={quiz} streak={streak} state={user.state ?? "your state"} standing={standing} above={above} nextAt={nextLagosMidnight()} />
+      {/* Before today's quiz is played it leads the page; once it's done (or there's none), the news comes first. */}
+      {quizFirst && quizCard}
+      {news}
+      {!quizFirst && quizCard}
 
-      {vapidPublicKey && <PushPrompt publicKey={vapidPublicKey} />}
-
-      {slides.length > 0 && (
-        <Carousel label="Updates from the Kopamate team">
-          {slides.map((a) => (
-            <AnnouncementCard key={a.id} a={a} slide />
-          ))}
-        </Carousel>
-      )}
-
-      <ProfileProgressRow steps={steps} />
+      <SetupCard steps={steps} publicKey={vapidPublicKey} />
 
       {newcomers.length > 0 && (
         <section className="flex flex-col gap-3" aria-labelledby="new-title">
@@ -164,14 +168,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </section>
       )}
-
-      {/* Coming soon: applying will happen inside Kopamate, so nothing here leads out of the app. */}
-      <section className="flex flex-col gap-3" aria-labelledby="opps-title">
-        <h2 id="opps-title" className="h-display text-xl">
-          Opportunities
-        </h2>
-        <OpportunitiesTeaser />
-      </section>
 
       <ComingSoon state={user.state} />
     </StreakProvider>
