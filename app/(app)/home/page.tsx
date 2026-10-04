@@ -3,7 +3,6 @@ import Link from "next/link";
 import { after } from "next/server";
 import Avatar from "@/components/Avatar";
 import BadgeCelebration from "@/components/BadgeCelebration";
-import BadgeIcon from "@/components/BadgeIcon";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
@@ -16,8 +15,7 @@ import { requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
 import { getPublicStats, track } from "@/lib/stats";
 import { getAnnouncements, getUnreadCount } from "@/lib/notifications";
-import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified, topBadge } from "@/lib/badges";
-import type { BadgeInfo } from "@/lib/badge-meta";
+import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified } from "@/lib/badges";
 import { getStandings, weekStart } from "@/lib/league";
 import { getQuizStatus } from "@/lib/quiz";
 import { getStreak } from "@/lib/streaks";
@@ -43,8 +41,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getRank(user.id),
     getPublicStats(),
     getAnnouncements(20),
-    sql<{ id: string; nickname: string; photo_version: number; top_badge: BadgeInfo | null; verified: boolean }[]>`
-      SELECT u.id, u.nickname, u.photo_version, ${topBadge()}, ${isVerified()} FROM users u
+    sql<{ id: string; nickname: string; photo_version: number; verified: boolean }[]>`
+      SELECT u.id, u.nickname, u.photo_version, ${isVerified()} FROM users u
       WHERE u.state = ${user.state} AND u.id <> ${user.id} AND u.completed_at IS NOT NULL
         AND NOT u.is_banned AND u.show_in_list
       ORDER BY u.completed_at DESC LIMIT 5
@@ -166,7 +164,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 <span className="flex w-full items-center justify-center gap-1 text-xs text-muted">
                   <span className="truncate">{n.nickname}</span>
                   {n.verified && <VerifiedBadge size={14} />}
-                  <BadgeIcon badge={n.top_badge} size={14} />
                 </span>
               </PersonButton>
             ))}

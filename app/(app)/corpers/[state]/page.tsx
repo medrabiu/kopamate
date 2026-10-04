@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
-import BadgeIcon from "@/components/BadgeIcon";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { PersonButton } from "@/components/PersonSheet";
 import { ChevronLeft } from "@/components/icons";
@@ -115,7 +114,6 @@ export default async function StatePage({ params, searchParams }: Props) {
                       {me ? " (you)" : ""}
                     </span>
                     {m.verified && <VerifiedBadge />}
-                    <BadgeIcon badge={m.top_badge} />
                   </span>
                   {m.position !== null && <span className="text-xs text-faint">#{formatNumber(m.position)}</span>}
                 </PersonButton>

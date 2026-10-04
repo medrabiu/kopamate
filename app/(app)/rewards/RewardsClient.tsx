@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Avatar from "@/components/Avatar";
-import BadgeIcon from "@/components/BadgeIcon";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
 import Sheet from "@/components/Sheet";
 import ShareButtons from "@/components/ShareButtons";
 import { CheckIcon, ChevronRight, CrownIcon, LockIcon } from "@/components/icons";
-import type { BadgeInfo } from "@/lib/badge-meta";
 
 export type BoardRow = {
   id: string;
@@ -18,7 +16,6 @@ export type BoardRow = {
   state: string | null;
   refs: number;
   rank: number;
-  top_badge: BadgeInfo | null;
   verified: boolean;
 };
 
@@ -32,7 +29,6 @@ function Row({ r, me, last }: { r: BoardRow; me: boolean; last?: boolean }) {
           <span className={`flex min-w-0 items-center gap-1.5 ${me ? "font-bold text-lime-ink" : "font-medium"}`}>
             <span className="truncate">{me ? "You" : r.nickname}</span>
             {r.verified && <VerifiedBadge />}
-            <BadgeIcon badge={r.top_badge} />
           </span>
           {r.state && <span className="truncate text-xs text-muted">{r.state}</span>}
         </span>
