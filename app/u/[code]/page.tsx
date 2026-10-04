@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/FollowButton";
+import ProfileHeader from "@/components/ProfileHeader";
 import ShareProfile from "@/components/ShareProfile";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { APP_NAME, APP_URL } from "@/lib/config";
@@ -67,52 +68,53 @@ export default async function ProfileLinkPage({ params }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-[480px] flex-col gap-5 px-5 pb-12 pt-6">
-        <section className="card flex flex-col gap-4 !p-[22px]" aria-label={`${p.nickname}'s profile`}>
-          <Avatar id={p.id} nickname={p.nickname} photoVersion={p.photo_version} size={96} ring={me} />
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="flex items-center gap-1.5 h-display text-[26px] leading-tight">
-                {p.nickname}
-                {p.verified && <VerifiedBadge size={24} />}
-              </h1>
+      <main className="mx-auto flex max-w-[480px] flex-col gap-5 px-5 pb-12 pt-5">
+        <ProfileHeader
+          id={p.id}
+          avatar={<Avatar id={p.id} nickname={p.nickname} photoVersion={p.photo_version} size={84} />}
+          name={
+            <>
+              <h1 className="h-display truncate text-2xl leading-tight">{p.nickname}</h1>
+              {p.verified && <VerifiedBadge size={22} />}
               {!me && p.follows_you && (
-                <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted">Follows you</span>
+                <span className="ml-1 shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted">Follows you</span>
               )}
-            </div>
-            <p className="mt-1 text-[15px] text-muted">
-              {p.state ? `Serving in ${p.state}` : "Corper"} · Joined {joinedOn(p.joined)}
-            </p>
-          </div>
-          <div className="flex gap-5 text-[15px]">
-            <span>
-              <span className="font-bold">{fmt(p.following)}</span> <span className="text-muted">Following</span>
-            </span>
-            <span>
-              <span className="font-bold">{fmt(p.followers)}</span>{" "}
-              <span className="text-muted">{p.followers === 1 ? "Follower" : "Followers"}</span>
-            </span>
-          </div>
-
-          {me ? (
-            <div className="flex flex-col gap-3 border-t border-line pt-4">
-              <p className="text-sm text-muted">This is your profile. Share it so people can follow you.</p>
-              <ShareProfile link={`${APP_URL}/u/${code.toLowerCase()}`} nickname={p.nickname} />
-            </div>
-          ) : viewerId ? (
-            <FollowButton id={p.id} following={p.is_following} followsYou={p.follows_you} />
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              <Link href="/join" className="btn-primary h-12 text-[15px]">
-                Join {APP_NAME} to follow {p.nickname}
-              </Link>
-              <Link href="/login" className="btn-secondary h-12 text-[15px]">
-                Log in to follow
-              </Link>
-              <p className="text-center text-xs text-faint">You&apos;ll follow {p.nickname} as soon as you&apos;re in.</p>
-            </div>
-          )}
-        </section>
+            </>
+          }
+          username={p.nickname}
+          meta={`${p.state ? `Serving in ${p.state}` : "Corper"} · Joined ${joinedOn(p.joined)}`}
+          stats={
+            <>
+              <span>
+                <span className="font-bold">{fmt(p.following)}</span> <span className="text-muted">Following</span>
+              </span>
+              <span>
+                <span className="font-bold">{fmt(p.followers)}</span>{" "}
+                <span className="text-muted">{p.followers === 1 ? "Follower" : "Followers"}</span>
+              </span>
+            </>
+          }
+          actions={
+            me ? (
+              <div className="flex flex-col gap-3 border-t border-line pt-4">
+                <p className="text-sm text-muted">This is your profile. Share it so people can follow you.</p>
+                <ShareProfile link={`${APP_URL}/u/${code.toLowerCase()}`} nickname={p.nickname} />
+              </div>
+            ) : viewerId ? (
+              <FollowButton id={p.id} following={p.is_following} followsYou={p.follows_you} />
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                <Link href="/join" className="btn-primary h-12 text-[15px]">
+                  Join {APP_NAME} to follow {p.nickname}
+                </Link>
+                <Link href="/login" className="btn-secondary h-12 text-[15px]">
+                  Log in to follow
+                </Link>
+                <p className="text-center text-xs text-faint">You&apos;ll follow {p.nickname} as soon as you&apos;re in.</p>
+              </div>
+            )
+          }
+        />
 
         {!viewerId && (
           <section className="flex flex-col gap-1.5 rounded-3xl border border-line p-5">

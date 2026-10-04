@@ -71,7 +71,8 @@ export default function ShareProfile({ link, nickname }: { link: string; nicknam
  * A small "Share profile" pill. On phones it opens the share sheet straight away; elsewhere (or if that
  * fails) it opens a small sheet with WhatsApp and Copy.
  */
-export function ShareProfileButton({ link, nickname }: { link: string; nickname: string }) {
+/** `className` replaces the default small pill (the Profile header uses a full-width button). */
+export function ShareProfileButton({ link, nickname, className }: { link: string; nickname: string; className?: string }) {
   const [open, setOpen] = useState(false);
   async function share() {
     logShare("profile_button");
@@ -90,7 +91,7 @@ export function ShareProfileButton({ link, nickname }: { link: string; nickname:
       <button
         type="button"
         onClick={share}
-        className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-bold hover:bg-surface-2"
+        className={className ?? "flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-bold hover:bg-surface-2"}
       >
         <ShareIcon size={15} />
         Share

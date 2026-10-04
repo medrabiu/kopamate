@@ -347,7 +347,7 @@ export function VerificationCard({ status, note, stateCode, fullName, codePrefix
 }
 
 /** Avatar with a camera button. With a photo already, the button offers "Choose a new photo" or "Remove photo". */
-export function PhotoPicker({ id, nickname, photoVersion }: { id: string; nickname: string; photoVersion: number }) {
+export function PhotoPicker({ id, nickname, photoVersion, size = 76 }: { id: string; nickname: string; photoVersion: number; size?: number }) {
   const input = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
   const [menu, setMenu] = useState(false);
@@ -376,7 +376,7 @@ export function PhotoPicker({ id, nickname, photoVersion }: { id: string; nickna
   return (
     <div className="relative shrink-0">
       <div className={pending ? "animate-pulse opacity-50" : ""}>
-        <Avatar id={id} nickname={nickname} photoVersion={photoVersion} size={76} />
+        <Avatar id={id} nickname={nickname} photoVersion={photoVersion} size={size} />
       </div>
       <button
         type="button"
@@ -609,14 +609,13 @@ export function AccountActions({ admin }: { admin: boolean }) {
   );
 }
 
-/** Followers / Following on your own profile header; tapping opens the list in the profile sheet. */
+/** "3 Following" / "0 Followers" in your profile header (X style); tapping opens the list in the profile sheet. */
 export function FollowStat({ userId, list, count }: { userId: string; list: "followers" | "following"; count: number }) {
   const open = useOpenPerson();
   const label = list === "followers" ? (count === 1 ? "Follower" : "Followers") : "Following";
   return (
-    <button type="button" onClick={() => open?.(userId, list)} className="flex flex-col items-center gap-0.5">
-      <span className="h-display text-xl leading-tight">{new Intl.NumberFormat("en-NG").format(count)}</span>
-      <span className="text-xs text-muted">{label}</span>
+    <button type="button" onClick={() => open?.(userId, list)} className="hover:underline">
+      <span className="font-bold">{new Intl.NumberFormat("en-NG").format(count)}</span> <span className="text-muted">{label}</span>
     </button>
   );
 }
