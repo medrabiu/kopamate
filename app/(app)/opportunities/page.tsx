@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { after } from "next/server";
 import OpportunityCard from "@/components/OpportunityCard";
 import { ChevronLeft } from "@/components/icons";
-import { CATEGORIES, CATEGORY_LABEL, getOpportunities, isCategory } from "@/lib/opportunities";
+import { CATEGORIES, CATEGORY_LABEL, getOpportunities, isCategory, refreshIfStale } from "@/lib/opportunities";
 import { requireUser } from "@/lib/session";
+import CheckButton from "./CheckButton";
 
 export const metadata: Metadata = { title: "Opportunities" };
 
@@ -16,7 +18,14 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
   const { c, page: p } = await searchParams;
   const category = isCategory(c) ? c : undefined;
   const page = Math.max(1, Math.min(20, Number(p) || 1));
-  const rows = await getOpportunities({ category, limit: page * PAGE_SIZE + 1 });
+  let rows = await getOpportunities({ category, limit: page * PAGE_SIZE + 1 });
+  if (rows.length === 0 && !category) {
+    // Nothing at all yet (first visit before the morning run, or the run failed): fetch now, once.
+    if (await refreshIfStale(10 * 60 * 1000)) rows = await getOpportunities({ limit: page * PAGE_SIZE + 1 });
+  } else {
+    // Backup for a missed morning run; never makes this visit wait.
+    after(() => refreshIfStale(20 * 60 * 60 * 1000).catch(() => {}));
+  }
   const hasMore = rows.length > page * PAGE_SIZE;
   const shown = rows.slice(0, page * PAGE_SIZE);
   const href = (cat?: string, n?: number) => {
@@ -57,7 +66,24 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
       </nav>
 
       {shown.length === 0 ? (
-        <p className="card text-[15px] text-muted">Nothing here right now. New opportunities arrive every morning.</p>
+        <section className="card flex flex-col gap-3 !p-[22px]">
+          <p className="h-display text-xl">{category ? `No ${CATEGORY_LABEL[category].toLowerCase()} right now` : "Nothing here yet"}</p>
+          <p className="text-[15px] text-muted">
+            {category
+              ? "New ones come in every morning. Try another category, or check again now."
+              : "We collect new jobs, internships and scholarships every morning. Check now to pull the latest."}
+          </p>
+          {category ? (
+            <div className="grid grid-cols-2 gap-2.5">
+              <Link href={href()} scroll={false} className="btn-secondary h-12 text-[15px]">
+                See all
+              </Link>
+              <CheckButton />
+            </div>
+          ) : (
+            <CheckButton />
+          )}
+        </section>
       ) : (
         <ul className="flex flex-col gap-3">
           {shown.map((o) => (

@@ -47,6 +47,8 @@ const FEEDS: Feed[] = [
 const PER_FEED = 40;
 /** Fetched items older than this are deleted (pinned and admin-added ones stay). */
 const KEEP_DAYS = 60;
+/** settings row holding when the feeds were last fetched (ISO time). */
+const FETCHED_KEY = "opportunities_fetched_at";
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", hellip: "…", ndash: "–", mdash: "—", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“" };
 
@@ -158,7 +160,27 @@ export async function fetchOpportunities() {
     DELETE FROM opportunities
     WHERE NOT pinned AND added_by IS NULL AND published_at < now() - ${KEEP_DAYS} * interval '1 day'
   `;
+  await sql`
+    INSERT INTO settings (key, value) VALUES (${FETCHED_KEY}, ${new Date().toISOString()})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `;
   return { added, feeds: results.map((r) => ({ feed: r.feed, found: r.items.length, ...(r.error ? { error: r.error } : {}) })) };
+}
+
+/**
+ * Fetches only when the last run is older than `maxAgeMs` (or there was none). The run is claimed first in one
+ * statement, so many people opening an empty page at once cause one fetch, not one each. True if it fetched.
+ */
+export async function refreshIfStale(maxAgeMs: number) {
+  const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
+  const claimed = await sql`
+    INSERT INTO settings (key, value) VALUES (${FETCHED_KEY}, ${new Date().toISOString()})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value WHERE settings.value < ${cutoff}
+    RETURNING 1
+  `;
+  if (claimed.length === 0) return false;
+  await fetchOpportunities();
+  return true;
 }
 
 /** Newest first, pinned ones on top. `category` narrows the list. */

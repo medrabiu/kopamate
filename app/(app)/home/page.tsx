@@ -11,6 +11,7 @@ import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
 import RewardBanner from "@/components/RewardBanner";
 import AnnouncementCard from "@/components/AnnouncementCard";
+import CardArt from "@/components/CardArt";
 import OpportunityCard from "@/components/OpportunityCard";
 import { ArrowDownIcon, ArrowUpIcon, BellIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
@@ -173,24 +174,36 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </section>
       )}
 
-      {opportunities.length > 0 && (
-        <section className="flex flex-col gap-3" aria-labelledby="opps-title">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 id="opps-title" className="h-display text-xl">
-              Opportunities
-            </h2>
-            <Link href="/opportunities" className="flex items-center gap-0.5 py-1 text-sm font-medium text-lime-ink">
-              See all
-              <ChevronRight size={16} />
-            </Link>
-          </div>
+      <section className="flex flex-col gap-3" aria-labelledby="opps-title">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="opps-title" className="h-display text-xl">
+            Opportunities
+          </h2>
+          <Link href="/opportunities" className="flex items-center gap-0.5 py-1 text-sm font-medium text-lime-ink">
+            See all
+            <ChevronRight size={16} />
+          </Link>
+        </div>
+        {opportunities.length > 0 ? (
           <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5">
             {opportunities.map((o) => (
               <OpportunityCard key={o.id} o={o} compact />
             ))}
           </div>
-        </section>
-      )}
+        ) : (
+          // Nothing fetched yet: opening the page pulls the latest straight away.
+          <Link href="/opportunities" className="card flex items-center gap-4 !p-4 active:bg-surface-2">
+            <span className="block h-14 w-28 shrink-0 overflow-hidden rounded-xl">
+              <CardArt art="jobs" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold leading-snug">Jobs, internships and scholarships</span>
+              <span className="block text-sm text-muted">Tap to see the latest</span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-faint" />
+          </Link>
+        )}
+      </section>
 
       <ComingSoon state={user.state} newOpportunities={newOpportunities} />
 
