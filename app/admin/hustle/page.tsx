@@ -7,6 +7,8 @@ import { sql } from "@/lib/db";
 import { abuseSignals, economy, ledgerFor } from "@/lib/hustle/admin";
 import { getTypes } from "@/lib/hustle/data";
 import { getHustleSettings } from "@/lib/hustle/settings";
+import { getGlobalUiSetting } from "@/lib/hustle/ui-mode";
+import { UI_SETTING_HELP, UI_SETTING_LABEL, UI_SETTINGS } from "@/lib/hustle/ui-rules";
 import type { DecisionCard } from "@/lib/hustle/types";
 import { naira } from "@/lib/hustle/types";
 import { requireAdmin } from "@/lib/session";
@@ -355,7 +357,14 @@ async function Cards({ edit }: { edit?: string }) {
 }
 
 async function Settings() {
-  const s = await getHustleSettings();
+  const [s, ui, changes] = await Promise.all([
+    getHustleSettings(),
+    getGlobalUiSetting(),
+    sql<{ at: Date; nickname: string | null; meta: { from: string; to: string } }[]>`
+      SELECT e.created_at AS at, u.nickname, e.meta FROM events e LEFT JOIN users u ON u.id = e.user_id
+      WHERE e.name = 'hustle_ui_mode_changed' ORDER BY e.created_at DESC LIMIT 5
+    `,
+  ]);
   const fields: [string, string, number][] = [
     ["hustle_grant", "Startup grant (₦)", s.grant],
     ["hustle_allawee", "Monthly Allawee (₦)", s.allawee],
@@ -378,6 +387,25 @@ async function Settings() {
             <option value="all">Everyone</option>
           </select>
         </label>
+        <fieldset className="flex flex-col gap-2 rounded-lg border border-line p-3">
+          <legend className="px-1 text-sm text-muted">Display mode (applies to everyone on their next page load)</legend>
+          {UI_SETTINGS.map((m) => (
+            <label key={m} className="flex items-start gap-2 text-sm">
+              <input type="radio" name="hustle_ui_mode" value={m} defaultChecked={ui === m} className="mt-1" />
+              <span>
+                <strong>{UI_SETTING_LABEL[m]}</strong>
+                <span className="block text-xs text-muted">{UI_SETTING_HELP[m]}</span>
+              </span>
+            </label>
+          ))}
+          {changes.length > 0 && (
+            <p className="text-xs text-faint">
+              Last changes:{" "}
+              {changes.map((c) => `${UI_SETTING_LABEL[c.meta.to as keyof typeof UI_SETTING_LABEL] ?? c.meta.to} by ${c.nickname ?? "admin"} (${new Date(c.at).toLocaleString("en-GB", { timeZone: "Africa/Lagos", dateStyle: "short", timeStyle: "short" })})`).join(" · ")}
+            </p>
+          )}
+          <p className="text-xs text-faint">Admins can compare modes on their own phone with the &quot;Viewing&quot; pill at the top of every My Hustle page.</p>
+        </fieldset>
         <div className="grid gap-3 md:grid-cols-2">
           {fields.map(([key, label, value]) => (
             <label key={key} className="flex flex-col gap-1 text-sm text-muted">

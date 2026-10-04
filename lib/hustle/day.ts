@@ -54,7 +54,7 @@ export type PlanContext = {
   rivalCount: number;
   rivalLow: number | null;
   rivalHigh: number | null;
-  card: { id: number; prompt: string; options: string[] } | null;
+  card: { id: number; slug: string | null; prompt: string; options: string[] } | null;
   events: { headline: string; body: string }[];
   supplyName: string | null;
   inventoryLots: number;
@@ -153,7 +153,7 @@ export async function getPlanContext(b: Business, date = lagosDate()): Promise<P
     rivalCount: c.rivalPrices.length,
     rivalLow: c.rivalPrices.length ? Math.min(...c.rivalPrices) : null,
     rivalHigh: c.rivalPrices.length ? Math.max(...c.rivalPrices) : null,
-    card: card ? { id: card.id, prompt: cardText(card.prompt, t), options: card.options.map((o) => cardText(o.label, t)) } : null,
+    card: card ? { id: card.id, slug: card.slug, prompt: cardText(card.prompt, t), options: card.options.map((o) => cardText(o.label, t)) } : null,
     events: c.events.map((e) => ({ headline: e.headline, body: e.body })),
     supplyName: c.supply?.name ?? null,
     inventoryLots: stock.lots,

@@ -133,6 +133,7 @@ const REASON_LABEL: Record<string, string> = {
   owner_draw: "Paid myself",
   admin_adjust: "Adjustment by Kopamate",
   restructure: "Restructure",
+  backup_market: "Backup shop",
 };
 
 const TASK_LABEL: Record<string, string> = {
@@ -169,6 +170,7 @@ export async function getWalletView(userId: string): Promise<WalletView> {
         label = `Allawee · ${new Date(Date.UTC(yy, mm - 1, 1)).toLocaleString("en-GB", { month: "long", timeZone: "UTC" })}`;
       }
       if ((r.reason === "purchase_need" || r.reason === "prize") && r.note) label = `${label} · ${r.note}`;
+      if (r.reason === "backup_market" && r.note) label = r.note;
       return { at: r.at, label, amount: r.incoming ? Number(r.amount) : -Number(r.amount) };
     }),
   };

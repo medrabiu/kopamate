@@ -6,6 +6,8 @@ import { naira, signedNaira } from "@/lib/hustle/types";
 import { ensureWallet, getWalletView } from "@/lib/hustle/wallet";
 import { requireUser } from "@/lib/session";
 import { lagosDate } from "@/lib/util";
+import LiteToggle from "@/components/hustle/LiteToggle";
+import { getHustleUiMode } from "@/lib/hustle/ui-mode";
 import MoneyMover from "./MoneyMover";
 
 export const metadata: Metadata = { title: "Wallet" };
@@ -23,7 +25,7 @@ export default async function WalletPage() {
   const b = await getBusinessByOwner(sql, user.id);
   // Opening the wallet also pays this month's Allawee if it's due (the monthly cron does the same).
   if (b) await transaction((tx) => ensureWallet(tx, user.id));
-  const w = await getWalletView(user.id);
+  const [w, ui] = await Promise.all([getWalletView(user.id), getHustleUiMode(user)]);
   const today = lagosDate();
   const daysLeft = daysBetween(today, w.nextAllaweeOn);
   const monthDays = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)).getUTCDate();
@@ -64,6 +66,9 @@ export default async function WalletPage() {
         <Bar value={w.taskToday / Math.max(1, w.taskCap)} tone="amber" />
         <span className="text-[13px] text-muted">Daily Quiz ₦100, following a corper ₦20, a friend getting verified ₦200.</span>
       </section>
+
+      {/* Only offered when everyone gets the graphical screens by default. */}
+      {ui.liteToggle && <LiteToggle on={ui.lite} />}
 
       <section className="flex flex-col gap-2" aria-labelledby="recent-title">
         <h2 id="recent-title" className="h-display text-lg">

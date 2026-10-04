@@ -9,11 +9,14 @@ import { ChevronLeft } from "@/components/icons";
 import { sql } from "@/lib/db";
 import { getBusinessByOwner, getType } from "@/lib/hustle/data";
 import { availability, getReviews, getShop } from "@/lib/hustle/market";
-import { needFor } from "@/lib/hustle/needs";
-import { buyMode, SERVICE_EFFECT } from "@/lib/hustle/trade";
+import { offerFor } from "@/lib/hustle/offer";
 import { naira } from "@/lib/hustle/types";
+import { LazyBarberInterior } from "@/components/hustle/scene/lazy";
 import { requireUser } from "@/lib/session";
 import { timeAgo } from "@/lib/util";
+import { getNeeds } from "@/lib/hustle/needs";
+import { getHustleUiMode } from "@/lib/hustle/ui-mode";
+
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const shop = await getShop((await params).slug);
@@ -39,28 +42,53 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   const myType = mine ? await getType(sql, mine.type_slug) : null;
   const sellerType = (await getType(sql, shop.type_slug))!;
   const isMine = shop.owner_id === user.id;
-  const mode = isMine ? null : buyMode(sellerType, myType);
-  const a = availability(shop);
-  const need = shop.need_key ? needFor(shop.need_key) : null;
   const sameState = user.state === shop.state;
+  const { mode, offer, why } = offerFor(sellerType, myType, { isMine, sameState, viewerState: user.state, unitName: shop.unit_name, slots: shop.slots });
+  const a = availability(shop);
 
-  const offer =
-    shop.kind === "supplier" || mode === "supply"
-      ? { title: `${sellerType.kind === "supplier" ? sellerType.name : "Supplies"} · 1 lot`, unit: " a lot", cta: "Order", pay: "Paid from your business cash." }
-      : shop.kind === "b2b"
-        ? { title: `1 ${shop.unit_name} · ${SERVICE_EFFECT[shop.type_slug] ?? ""}`, unit: "", cta: "Order", pay: "Paid from your business cash." }
-        : { title: `1 ${shop.unit_name}${need ? ` · sorts your ${need.label.toLowerCase()}` : ""}`, unit: "", cta: shop.slots ? "Book" : "Buy", pay: "Paid from your wallet." };
-  const why = isMine
-    ? "This is your business."
-    : !sameState
-      ? `You can buy from businesses in ${user.state ?? "your state"} for now.`
-      : !mode
-        ? shop.kind === "supplier"
-          ? `Only businesses that use ${sellerType.name.toLowerCase()} supplies can order here.`
-          : shop.kind === "b2b"
-            ? "Start a business to order this."
-            : "Nothing here for you to buy."
-        : null;
+  const reviewsSection = (
+    <section className="flex flex-col gap-2.5" aria-labelledby="reviews-title">
+      <h2 id="reviews-title" className="h-display text-lg">
+        Reviews
+      </h2>
+      {reviews.length === 0 ? (
+        <p className="text-sm text-muted">No reviews yet.</p>
+      ) : (
+        reviews.map((r) => (
+          <div key={r.id} className="flex flex-col gap-1 rounded-2xl bg-surface-2 px-3.5 py-3">
+            <span className="text-[13px] font-bold">
+              <span className="text-lime-ink">{"★".repeat(r.stars)}</span>
+              <span className="text-line">{"★".repeat(5 - r.stars)}</span> · {r.nickname}{" "}
+              <span className="font-normal text-faint">· {timeAgo(r.created_at)}</span>
+            </span>
+            {r.text && <span className="text-sm">{r.text}</span>}
+          </div>
+        ))
+      )}
+    </section>
+  );
+
+  // Graphical mode: walk into the barber's (other types keep this page; they also get a buy sheet on the street).
+  if (shop.type_slug === "barber" && !isMine && (await getHustleUiMode(user)).view === "graphical") {
+    const { needs } = await getNeeds(sql, user.id);
+    return (
+      <>
+        <LazyBarberInterior
+          viewerId={user.id}
+          barberId={shop.owner_id}
+          barber={shop.owner}
+          shop={shop.name}
+          rating={shop.rating}
+          reviews={shop.rating_count}
+          note={`Run by ${shop.owner} · ${a.text}`}
+          hair={needs.find((n) => n.key === "grooming")?.state === "overdue" ? "messy" : "neat"}
+          offer={shop.listing_id !== null && shop.price !== null ? { listingId: shop.listing_id, price: shop.price, left: shop.left ?? 0 } : null}
+          why={why}
+        />
+        {reviewsSection}
+      </>
+    );
+  }
 
   return (
     <div className="-mx-5 -mt-5 flex flex-col">
@@ -122,7 +150,7 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
                   left={shop.left ?? 0}
                   label={offer.cta}
                   multi={mode === "supply"}
-                  payNote={offer.pay}
+                  payNote={offer.payNote}
                 />
               )}
             </div>
@@ -130,25 +158,7 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
           {why && <p className="text-xs text-faint">{why}</p>}
         </section>
 
-        <section className="flex flex-col gap-2.5" aria-labelledby="reviews-title">
-          <h2 id="reviews-title" className="h-display text-lg">
-            Reviews
-          </h2>
-          {reviews.length === 0 ? (
-            <p className="text-sm text-muted">No reviews yet.</p>
-          ) : (
-            reviews.map((r) => (
-              <div key={r.id} className="flex flex-col gap-1 rounded-2xl bg-surface-2 px-3.5 py-3">
-                <span className="text-[13px] font-bold">
-                  <span className="text-lime-ink">{"★".repeat(r.stars)}</span>
-                  <span className="text-line">{"★".repeat(5 - r.stars)}</span> · {r.nickname}{" "}
-                  <span className="font-normal text-faint">· {timeAgo(r.created_at)}</span>
-                </span>
-                {r.text && <span className="text-sm">{r.text}</span>}
-              </div>
-            ))
-          )}
-        </section>
+        {reviewsSection}
       </div>
     </div>
   );

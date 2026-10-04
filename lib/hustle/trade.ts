@@ -18,23 +18,8 @@ type Tx = postgres.ReservedSql;
 export const MAX_DAILY_FROM_SELLER = 3;
 const DAY_MS = 86400_000;
 
-/** Who pays for a purchase: the buyer's wallet (needs), or their business (supplies and B2B services). */
-export type BuyMode = "need" | "supply" | "service";
-
-/** What buying from this seller means for this buyer, or why they can't. */
-export function buyMode(seller: BusinessType, buyerType: BusinessType | null): BuyMode | null {
-  if (seller.kind === "b2b") return buyerType ? "service" : null;
-  if (seller.kind === "supplier") return buyerType?.supply_type === seller.slug ? "supply" : null;
-  if (seller.sells_supply && buyerType?.supply_type === seller.slug) return "supply";
-  return seller.need_key ? "need" : null;
-}
-
-/** B2B services: what a carpenter's piece, a creator's campaign or a mechanic's job does for the buyer. */
-export const SERVICE_EFFECT: Record<string, string> = {
-  content_creator: "+5% customers for 7 days",
-  carpenter: "+0.1 to your rating",
-  mechanic: "+10% capacity for 3 days",
-};
+export { buyMode, SERVICE_EFFECT, type BuyMode } from "./offer";
+import { buyMode, SERVICE_EFFECT } from "./offer";
 
 async function applyService(tx: Tx, buyer: Business, sellerType: string, date: string) {
   if (sellerType === "content_creator") {

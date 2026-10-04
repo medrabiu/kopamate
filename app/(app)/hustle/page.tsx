@@ -10,6 +10,8 @@ import { getBoard, getRegulars } from "@/lib/hustle/market";
 import { getNeeds, needText } from "@/lib/hustle/needs";
 import { getHustleSettings } from "@/lib/hustle/settings";
 import { naira, signedNaira } from "@/lib/hustle/types";
+import HomeScene from "@/components/hustle/scene/HomeScene";
+import { getHustleUiMode } from "@/lib/hustle/ui-mode";
 import { requireUser } from "@/lib/session";
 import { lagosDate } from "@/lib/util";
 
@@ -87,6 +89,7 @@ export default async function HustlePage() {
   const biz = b!;
   const type = t!;
   const opened = Boolean(todayDay?.opened);
+  const graphical = (await getHustleUiMode(user)).view === "graphical";
 
   return (
     <>
@@ -100,76 +103,91 @@ export default async function HustlePage() {
       </div>
       <HustleTabs />
 
-      <section className="card overflow-hidden !p-0" aria-label={biz.name}>
-        <Shopfront color={biz.color} category={type.category} />
-        <div className="flex flex-col gap-3 px-4 pb-4">
-          <div className="flex items-end gap-3">
-            <div className="relative -mt-7 shrink-0">
-              <BizLogo icon={biz.icon} color={biz.color} size={60} ring />
+      {graphical ? (
+        <HomeScene
+          userId={user.id}
+          business={biz}
+          type={type}
+          wallet={wallet?.balance ?? 0}
+          today={todayDay}
+          dayNo={dayNumber(biz, today)}
+          vibe={vibe}
+          needs={needs}
+        />
+      ) : (
+        <>
+        <section className="card overflow-hidden !p-0" aria-label={biz.name}>
+          <Shopfront color={biz.color} category={type.category} />
+          <div className="flex flex-col gap-3 px-4 pb-4">
+            <div className="flex items-end gap-3">
+              <div className="relative -mt-7 shrink-0">
+                <BizLogo icon={biz.icon} color={biz.color} size={60} ring />
+              </div>
+              <div className="min-w-0 pt-2">
+                <h1 className="h-display truncate text-[22px] leading-tight">{biz.name}</h1>
+                <p className="truncate text-[13px] text-muted">
+                  {type.name} · {biz.state} · Stage {biz.stage} · ★ {biz.rating.toFixed(1)}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 pt-2">
-              <h1 className="h-display truncate text-[22px] leading-tight">{biz.name}</h1>
-              <p className="truncate text-[13px] text-muted">
-                {type.name} · {biz.state} · Stage {biz.stage} · ★ {biz.rating.toFixed(1)}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="flex flex-col gap-0.5 rounded-2xl bg-surface-2 p-3">
+                <span className="text-xs text-muted">Business cash</span>
+                <span className={`h-display text-[22px] tabular-nums ${biz.cash < 0 ? "text-pink-ink" : ""}`}>{naira(biz.cash)}</span>
+              </div>
+              <Link href="/hustle/wallet" className="flex flex-col gap-0.5 rounded-2xl bg-surface-2 p-3">
+                <span className="text-xs text-muted">My wallet</span>
+                <span className="h-display text-[22px] tabular-nums">{naira(wallet?.balance ?? 0)}</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {!opened ? (
+          <section className="flex flex-col gap-3 rounded-3xl bg-lime p-[18px] text-on-accent" aria-labelledby="today-title">
+            <div className="flex flex-col gap-1">
+              <h2 id="today-title" className="text-xs font-bold tracking-[0.08em]">
+                SHOP CLOSED · PLAN YOUR DAY
+              </h2>
+              <p className="text-[15px] leading-snug">
+                {events[0] ? `${events[0].headline}. ` : ""}
+                {type.kind === "supplier"
+                  ? "Decide how many lots to produce, set your price and open."
+                  : type.supply_type
+                    ? "Buy supplies, set your price and open."
+                    : "Set how many you can serve, your price, and open."}
               </p>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="flex flex-col gap-0.5 rounded-2xl bg-surface-2 p-3">
-              <span className="text-xs text-muted">Business cash</span>
-              <span className={`h-display text-[22px] tabular-nums ${biz.cash < 0 ? "text-pink-ink" : ""}`}>{naira(biz.cash)}</span>
-            </div>
-            <Link href="/hustle/wallet" className="flex flex-col gap-0.5 rounded-2xl bg-surface-2 p-3">
-              <span className="text-xs text-muted">My wallet</span>
-              <span className="h-display text-[22px] tabular-nums">{naira(wallet?.balance ?? 0)}</span>
+            <Link href="/hustle/plan" className="flex h-[52px] items-center justify-center rounded-full bg-on-accent text-base font-bold text-lime">
+              Plan today
             </Link>
-          </div>
-        </div>
-      </section>
-
-      {!opened ? (
-        <section className="flex flex-col gap-3 rounded-3xl bg-lime p-[18px] text-on-accent" aria-labelledby="today-title">
-          <div className="flex flex-col gap-1">
-            <h2 id="today-title" className="text-xs font-bold tracking-[0.08em]">
-              SHOP CLOSED · PLAN YOUR DAY
-            </h2>
-            <p className="text-[15px] leading-snug">
-              {events[0] ? `${events[0].headline}. ` : ""}
-              {type.kind === "supplier"
-                ? "Decide how many lots to produce, set your price and open."
-                : type.supply_type
-                  ? "Buy supplies, set your price and open."
-                  : "Set how many you can serve, your price, and open."}
-            </p>
-          </div>
-          <Link href="/hustle/plan" className="flex h-[52px] items-center justify-center rounded-full bg-on-accent text-base font-bold text-lime">
-            Plan today
+          </section>
+        ) : todayDay!.closed ? (
+          <Link href={`/hustle/day/${today}`} className="card flex items-center justify-between gap-3" aria-label="Today's results">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold tracking-[0.08em] text-muted">DAY {dayNumber(biz, today)} CLOSED</span>
+              <span className={`h-display text-2xl ${(todayDay!.profit ?? 0) < 0 ? "text-pink-ink" : "text-lime-ink"}`}>{signedNaira(todayDay!.profit ?? 0)} profit</span>
+              <span className="text-sm text-muted">Your next business day opens tomorrow morning.</span>
+            </div>
+            <ChevronRight className="shrink-0 text-muted" />
           </Link>
-        </section>
-      ) : todayDay!.closed ? (
-        <Link href={`/hustle/day/${today}`} className="card flex items-center justify-between gap-3" aria-label="Today's results">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-bold tracking-[0.08em] text-muted">DAY {dayNumber(biz, today)} CLOSED</span>
-            <span className={`h-display text-2xl ${(todayDay!.profit ?? 0) < 0 ? "text-pink-ink" : "text-lime-ink"}`}>{signedNaira(todayDay!.profit ?? 0)} profit</span>
-            <span className="text-sm text-muted">Your next business day opens tomorrow morning.</span>
-          </div>
-          <ChevronRight className="shrink-0 text-muted" />
-        </Link>
-      ) : (
-        <Link href={`/hustle/day/${today}`} className="card flex items-center justify-between gap-3" aria-label="Today's results">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-bold tracking-[0.08em] text-lime-ink">OPEN · DAY {dayNumber(biz, today)}</span>
-            <span className="h-display text-xl">
-              {signedNaira(todayDay!.revenue - todayDay!.cost_of_goods + todayDay!.other - type.rent_per_day - type.upkeep_per_day - type.marketing_per_day)} so far
-            </span>
-            <span className="text-sm text-muted">
-              {todayDay!.units_left > 0
-                ? `${todayDay!.units_left} ${type.unit_name}${todayDay!.units_left === 1 ? "" : "s"} still on sale to players until midnight`
-                : "Sold out for today. Plan again tomorrow."}
-            </span>
-          </div>
-          <ChevronRight className="shrink-0 text-muted" />
-        </Link>
+        ) : (
+          <Link href={`/hustle/day/${today}`} className="card flex items-center justify-between gap-3" aria-label="Today's results">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold tracking-[0.08em] text-lime-ink">OPEN · DAY {dayNumber(biz, today)}</span>
+              <span className="h-display text-xl">
+                {signedNaira(todayDay!.revenue - todayDay!.cost_of_goods + todayDay!.other - type.rent_per_day - type.upkeep_per_day - type.marketing_per_day)} so far
+              </span>
+              <span className="text-sm text-muted">
+                {todayDay!.units_left > 0
+                  ? `${todayDay!.units_left} ${type.unit_name}${todayDay!.units_left === 1 ? "" : "s"} still on sale to players until midnight`
+                  : "Sold out for today. Plan again tomorrow."}
+              </span>
+            </div>
+            <ChevronRight className="shrink-0 text-muted" />
+          </Link>
+        )}
+        </>
       )}
 
       {lastDay?.closed && (

@@ -21,6 +21,7 @@ const { seeded, townCustomers, withNoise, ratingFactor, scoreBand } = await impo
 const { buyFromListing, buyBackup, submitReview, MAX_DAILY_FROM_SELLER } = await import("../lib/hustle/trade.ts");
 const { getNeeds, firstDueDays } = await import("../lib/hustle/needs.ts");
 const { lagosDate } = await import("../lib/util.ts");
+const { resolveUiMode } = await import("../lib/hustle/ui-rules.ts");
 
 const today = lagosDate();
 let failures = 0;
@@ -70,6 +71,26 @@ try {
   const [A, B, C, D, E, F, G, H, J, K, L, M, N, O] = users;
   const person = async (id: string) =>
     (await sql<{ id: string; nickname: string; state: string; is_flagged: boolean }[]>`SELECT id, nickname, state, is_flagged FROM users WHERE id = ${id}`)[0];
+
+  await check("display mode: admin preview > text > graphical only > Lite/Save-Data in graphical", () => {
+    const base = { preview: null, isAdmin: false, lite: false, saveData: false } as const;
+    const v = (o: Partial<Parameters<typeof resolveUiMode>[0]> & { global: "graphical" | "text" | "graphical_only" }) => resolveUiMode({ ...base, ...o });
+    assert.equal(v({ global: "graphical" }).view, "graphical");
+    assert.equal(v({ global: "graphical", lite: true }).view, "text");
+    assert.equal(v({ global: "graphical", saveData: true }).view, "text");
+    assert.equal(v({ global: "text" }).view, "text");
+    assert.equal(v({ global: "graphical_only", lite: true, saveData: true }).view, "graphical", "Lite and Save-Data only count in graphical");
+    assert.equal(v({ global: "graphical_only" }).listView, false);
+    assert.equal(v({ global: "graphical_only" }).liteToggle, false);
+    assert.equal(v({ global: "text" }).liteToggle, false);
+    assert.equal(v({ global: "graphical" }).liteToggle, true);
+    // The preview cookie only counts for admins, and beats everything.
+    assert.equal(v({ global: "text", preview: "graphical" }).view, "text", "non-admin cookie ignored");
+    assert.equal(v({ global: "text", preview: "graphical", isAdmin: true }).view, "graphical");
+    assert.equal(v({ global: "graphical", preview: "text", isAdmin: true }).view, "text");
+    assert.equal(v({ global: "graphical", preview: "graphical", isAdmin: true, lite: true }).view, "graphical");
+    assert.equal(v({ global: "graphical", preview: "graphical_only", isAdmin: true }).listView, false);
+  });
 
   await check("name filter blocks brands and bad words, allows normal names", () => {
     assert.equal(validateBusinessName("Ada's Kitchen").ok, true);

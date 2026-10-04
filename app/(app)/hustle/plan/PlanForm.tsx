@@ -94,7 +94,10 @@ export default function PlanForm({ p }: { p: P }) {
     start(async () => {
       const r = await openShop({ units, price, card: p.card?.id ?? null, choice });
       if ("error" in r) setError(r.error);
-      else router.push(`/hustle/day/${r.date}`);
+      else {
+        router.push(`/hustle/day/${r.date}`);
+        router.refresh();
+      }
     });
   }
 

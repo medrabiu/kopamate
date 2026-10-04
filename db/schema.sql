@@ -807,3 +807,9 @@ INSERT INTO hustle_decision_cards (slug, applies_to_types, prompt, options) VALU
   ('rain', '{suya_spot,keke_rider,dispatch_rider,crop_farm}', 'Rain all day. Fewer people are out.',
     '[{"label":"OK","effects":{"demand":0.7}}]')
 ON CONFLICT (slug) DO NOTHING;
+
+-- My Hustle display mode (docs/MY_HUSTLE_VISUAL_PROMPT.md): graphical (default, players can pick Lite mode),
+-- text (text screens only), graphical_only (testing: no list view or Lite mode). See lib/hustle/ui-mode.ts.
+INSERT INTO settings (key, value) VALUES ('hustle_ui_mode', 'graphical') ON CONFLICT (key) DO NOTHING;
+-- A player's own choice of the simpler text screens ("Lite mode: simpler screens, less data").
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hustle_lite boolean NOT NULL DEFAULT false;

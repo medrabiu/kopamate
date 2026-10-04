@@ -8,6 +8,9 @@ import { HUSTLE_SETTING_DEFAULTS } from "@/lib/hustle/settings";
 import { grantPrize } from "@/lib/hustle/wallet";
 import { isState } from "@/lib/states";
 import { requireAdmin } from "@/lib/session";
+import { getGlobalUiSetting } from "@/lib/hustle/ui-mode";
+import { isUiSetting } from "@/lib/hustle/ui-rules";
+import { track } from "@/lib/stats";
 
 const text = (fd: FormData, name: string, max: number) => String(fd.get(name) ?? "").trim().replace(/\s+/g, " ").slice(0, max);
 const back = (tab: string, q: string) => redirect(`/admin/hustle?tab=${tab}&${q}`);
@@ -23,10 +26,13 @@ function changed() {
 const NUMERIC = ["hustle_grant", "hustle_allawee", "hustle_task_cap", "hustle_town_multiplier", "hustle_backup_markup", "hustle_salvage_pct", "hustle_need_vibe_effect", "hustle_grace_days"];
 
 export async function saveHustleSettings(fd: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const enabled = String(fd.get("hustle_enabled"));
   if (!["off", "admins", "all"].includes(enabled)) back("settings", "error=flag");
-  const values: [string, string][] = [["hustle_enabled", enabled]];
+  const ui = String(fd.get("hustle_ui_mode"));
+  if (!isUiSetting(ui)) back("settings", "error=flag");
+  const before = await getGlobalUiSetting();
+  const values: [string, string][] = [["hustle_enabled", enabled], ["hustle_ui_mode", ui]];
   for (const key of NUMERIC) {
     const raw = String(fd.get(key) ?? HUSTLE_SETTING_DEFAULTS[key]).trim();
     const n = Number(raw);
@@ -36,6 +42,8 @@ export async function saveHustleSettings(fd: FormData) {
   for (const [key, value] of values) {
     await sql`INSERT INTO settings (key, value) VALUES (${key}, ${value}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`;
   }
+  // Display mode changes are logged in the events table (admin id, old and new mode).
+  if (ui !== before) await track("hustle_ui_mode_changed", admin.id, { from: before, to: ui });
   changed();
   revalidatePath("/", "layout");
   back("settings", "saved=1");
