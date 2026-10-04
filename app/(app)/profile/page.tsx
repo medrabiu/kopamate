@@ -43,7 +43,7 @@ export default async function ProfilePage() {
         <BadgeCelebration slug="profile_complete" name="Profile Complete" awardedAt={new Date(complete.awarded_at).toISOString()} />
       )}
       <header className="-mb-2 flex h-11 items-center justify-between">
-        <h1 className="h-display min-w-0 truncate text-xl">@{user.nickname}</h1>
+        <h1 className="h-display text-[28px]">Profile</h1>
         <Link href="/profile/settings" aria-label="Settings" className="-mr-2 flex size-11 items-center justify-center">
           <SettingsIcon size={22} />
         </Link>
