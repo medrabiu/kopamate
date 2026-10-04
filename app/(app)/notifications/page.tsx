@@ -12,8 +12,6 @@ import MarkSeen from "./MarkSeen";
 
 export const metadata: Metadata = { title: "Notifications" };
 
-type Props = { searchParams: Promise<{ tab?: string }> };
-
 function Row({ n, unread }: { n: Notification; unread: boolean }) {
   const icon = n.actor ? (
     <Avatar id={n.actor.id} nickname={n.actor.nickname} photoVersion={n.actor.photo_version} size={40} />
@@ -39,15 +37,22 @@ function Row({ n, unread }: { n: Notification; unread: boolean }) {
   return <div className={cls}>{content}</div>;
 }
 
-export default async function NotificationsPage({ searchParams }: Props) {
+/** One list, newest first: personal notifications and Kopamate team announcements from the last 30 days. */
+export default async function NotificationsPage() {
   const user = await requireUser();
-  const updates = (await searchParams).tab === "updates";
   const [[seen], notifications, announcements] = await Promise.all([
     sql<{ at: Date }[]>`SELECT notifications_seen_at AS at FROM users WHERE id = ${user.id}`,
-    updates ? Promise.resolve([]) : getNotifications(user.id),
-    updates ? getAnnouncements(30) : Promise.resolve([]),
+    getNotifications(user.id),
+    getAnnouncements(30),
   ]);
   const seenAt = seen?.at.getTime() ?? Date.now();
+  const monthAgo = Date.now() - 30 * 86_400_000;
+  const items = [
+    ...notifications.map((n) => ({ type: "personal" as const, at: new Date(n.created_at).getTime(), n })),
+    ...announcements
+      .filter((a) => new Date(a.created_at).getTime() > monthAgo)
+      .map((a) => ({ type: "announcement" as const, at: new Date(a.created_at).getTime(), a })),
+  ].sort((x, y) => y.at - x.at);
 
   return (
     <>
@@ -59,44 +64,20 @@ export default async function NotificationsPage({ searchParams }: Props) {
         </Link>
       </header>
 
-      <nav aria-label="Notification types" className="-mt-1 grid grid-cols-2 gap-1 rounded-full bg-surface-2 p-1">
-        {[
-          { label: "For you", href: "/notifications", on: !updates },
-          { label: "Updates", href: "/notifications?tab=updates", on: updates },
-        ].map((t) => (
-          <Link
-            key={t.label}
-            href={t.href}
-            replace
-            scroll={false}
-            aria-current={t.on ? "page" : undefined}
-            className={`flex h-10 items-center justify-center rounded-full text-sm font-bold ${t.on ? "bg-bg text-ink" : "text-muted"}`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
-
-      {updates ? (
-        announcements.length === 0 ? (
-          <p className="card text-[15px] text-muted">No updates from the Kopamate team yet.</p>
-        ) : (
-          <div className="card flex flex-col divide-y divide-line !p-0">
-            {announcements.map((a) => (
-              <AnnouncementCard key={a.id} a={a} />
-            ))}
-          </div>
-        )
-      ) : notifications.length === 0 ? (
+      {items.length === 0 ? (
         <div className="card flex flex-col gap-1 text-[15px]">
           <p className="font-bold">Nothing yet</p>
-          <p className="text-muted">New followers, badges, rewards and friends who join with your link show up here.</p>
+          <p className="text-muted">Updates from the Kopamate team, new followers, badges, rewards and friends who join with your link show up here.</p>
         </div>
       ) : (
         <div className="card flex flex-col divide-y divide-line !p-0">
-          {notifications.map((n) => (
-            <Row key={n.id} n={n} unread={new Date(n.created_at).getTime() > seenAt} />
-          ))}
+          {items.map((item) =>
+            item.type === "announcement" ? (
+              <AnnouncementCard key={`a${item.a.id}`} a={item.a} unread={item.at > seenAt} />
+            ) : (
+              <Row key={`n${item.n.id}`} n={item.n} unread={item.at > seenAt} />
+            ),
+          )}
         </div>
       )}
     </>

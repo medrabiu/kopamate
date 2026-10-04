@@ -11,6 +11,7 @@ import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
 import RewardBanner from "@/components/RewardBanner";
 import AnnouncementCard from "@/components/AnnouncementCard";
+import Carousel from "@/components/Carousel";
 import OpportunitiesTeaser from "@/components/OpportunitiesTeaser";
 import { ArrowDownIcon, ArrowUpIcon, BellIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
@@ -61,9 +62,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getStandings(weekStart(today)),
     getUnreadCount(user.id),
   ]);
-  // The newest pinned announcement is the banner up top; the rest are the latest updates near the bottom.
-  const announcement = announcements.find((a) => a.pinned) ?? null;
-  const updates = announcements.filter((a) => a !== announcement).slice(0, 3);
+  // The carousel: the last 30 days of announcements, pinned ones first, then newest.
+  const monthAgo = Date.now() - 30 * 86_400_000;
+  const slides = announcements
+    .filter((a) => a.pinned || new Date(a.created_at).getTime() > monthAgo)
+    .sort((x, y) => Number(y.pinned) - Number(x.pinned))
+    .slice(0, 6);
   const unclaimed = myRewards.filter((r) => r.status === "unclaimed");
   const profileComplete = badges.find((b) => b.slug === "profile_complete");
 
@@ -140,7 +144,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
       {vapidPublicKey && <PushPrompt publicKey={vapidPublicKey} />}
 
-      {announcement && <AnnouncementCard a={announcement} banner />}
+      {slides.length > 0 && (
+        <Carousel label="Updates from the Kopamate team">
+          {slides.map((a) => (
+            <AnnouncementCard key={a.id} a={a} slide />
+          ))}
+        </Carousel>
+      )}
 
       <ProfileProgressRow steps={steps} />
 
@@ -179,25 +189,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </section>
 
       <ComingSoon state={user.state} />
-
-      {updates.length > 0 && (
-        <section className="flex flex-col gap-3" aria-labelledby="updates-title">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 id="updates-title" className="h-display text-xl">
-              Updates
-            </h2>
-            <Link href="/notifications?tab=updates" className="flex items-center gap-0.5 py-1 text-sm font-medium text-lime-ink">
-              See all
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-          <div className="card flex flex-col divide-y divide-line !p-0">
-            {updates.map((a) => (
-              <AnnouncementCard key={a.id} a={a} />
-            ))}
-          </div>
-        </section>
-      )}
     </StreakProvider>
   );
 }

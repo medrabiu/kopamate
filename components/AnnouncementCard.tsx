@@ -13,28 +13,38 @@ function Button({ a, className }: { a: Announcement; className: string }) {
 }
 
 /**
- * A post from the Kopamate team. `banner`: the pinned one at the top of Home (pink border, bigger title);
- * otherwise a row in the Updates list.
+ * A post from the Kopamate team. `slide`: one card of the Home carousel (pink border, bigger title);
+ * otherwise a row in Notifications.
  */
-export default function AnnouncementCard({ a, banner = false }: { a: Announcement; banner?: boolean }) {
-  if (banner) {
+export default function AnnouncementCard({ a, slide = false, unread = false }: { a: Announcement; slide?: boolean; unread?: boolean }) {
+  if (slide) {
     return (
-      <section className="flex flex-col gap-2 rounded-3xl border-[1.5px] border-pink p-[22px]" aria-label="Announcement">
-        <h2 className="h-display text-[22px] leading-tight text-pink-ink">{a.title}</h2>
-        {a.body && <p className="text-[15px] leading-normal">{a.body}</p>}
-        <Button a={a} className="mt-1 flex h-11 items-center justify-center self-start rounded-full bg-pink px-5 text-[15px] font-bold text-on-accent" />
-      </section>
+      <article className="flex h-full flex-col gap-2 rounded-3xl border-[1.5px] border-pink p-5">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-pink-ink">
+          📣 Kopamate team
+          <span className="font-normal text-muted">· {timeAgo(a.created_at)}</span>
+        </p>
+        <h3 className="h-display text-[21px] leading-tight">{a.title}</h3>
+        {a.body && <p className="line-clamp-3 text-[15px] leading-normal text-muted">{a.body}</p>}
+        <Button
+          a={a}
+          className="mt-auto flex h-11 items-center justify-center self-start rounded-full bg-pink px-5 text-[15px] font-bold text-on-accent"
+        />
+      </article>
     );
   }
   return (
-    <article className="flex flex-col gap-1.5 px-4 py-3.5">
-      <p className="flex items-center gap-1.5 text-xs text-muted">
-        <span aria-hidden="true" className="size-1.5 rounded-full bg-pink" />
-        Kopamate team · {timeAgo(a.created_at)}
-      </p>
-      <h3 className="font-bold leading-snug">{a.title}</h3>
-      {a.body && <p className="text-sm leading-snug text-muted">{a.body}</p>}
-      <Button a={a} className="mt-1 self-start text-sm font-bold text-lime-ink" />
+    <article className="flex items-start gap-3 px-4 py-3.5">
+      <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg">
+        📣
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-[15px] font-bold leading-snug">{a.title}</span>
+        {a.body && <span className="text-sm leading-snug text-muted">{a.body}</span>}
+        <span className="text-xs text-faint">Kopamate team · {timeAgo(a.created_at)}</span>
+        <Button a={a} className="self-start text-sm font-bold text-lime-ink" />
+      </span>
+      {unread && <span aria-label="New" className="mt-1.5 size-2 shrink-0 rounded-full bg-lime" />}
     </article>
   );
 }

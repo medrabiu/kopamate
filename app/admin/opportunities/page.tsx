@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { addOpportunity, refreshOpportunities, setOpportunityFlag } from "@/app/actions/admin-content";
+import { addOpportunity, setOpportunityFlag } from "@/app/actions/admin-content";
 import { sql } from "@/lib/db";
 import { CATEGORIES, CATEGORY_LABEL, type Opportunity } from "@/lib/opportunities";
 import { requireAdmin } from "@/lib/session";
@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Opportunities" };
 
 type Row = Opportunity & { hidden: boolean; added_by: string | null };
 
-type Props = { searchParams: Promise<{ added?: string; failed?: string; msg?: string; show?: string }> };
+type Props = { searchParams: Promise<{ msg?: string; show?: string }> };
 
 function Flag({ id, flag, on, label }: { id: string; flag: "hidden" | "pinned"; on: boolean; label: string }) {
   return (
@@ -42,11 +42,6 @@ export default async function AdminOpportunitiesPage({ searchParams }: Props) {
 
   return (
     <>
-      {sp.added !== undefined && (
-        <p role="status" className="rounded-2xl border border-lime p-4 text-sm">
-          Fetched: {sp.added} new.{sp.failed && ` These feeds failed: ${sp.failed}.`}
-        </p>
-      )}
       {sp.msg === "added" && <p role="status" className="rounded-2xl border border-lime p-4 text-sm">Opportunity added.</p>}
       {sp.msg === "invalid" && (
         <p role="alert" className="rounded-2xl border border-pink p-4 text-sm">
@@ -58,13 +53,8 @@ export default async function AdminOpportunitiesPage({ searchParams }: Props) {
         <h2 className="h-display mb-1 text-lg">Opportunities</h2>
         <p className="mb-3 text-sm text-muted">
           Not shown to users yet: the app shows a blurred &quot;coming soon&quot; until people can apply inside Kopamate. {counts.live} live ·{" "}
-          {counts.week} new this week · {counts.hidden} hidden. &quot;Fetch now&quot; collects from Opportunities For Africans, Opportunity Desk,
-          Opportunities for Youth and Hot Nigerian Jobs (entry-level jobs only). Items older than 60 days are removed unless pinned or added
-          here.
+          {counts.hidden} hidden.
         </p>
-        <form action={refreshOpportunities}>
-          <button className={btnPrimary}>Fetch now</button>
-        </form>
       </section>
 
       <section className={panel}>

@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { sql } from "@/lib/db";
-import { fetchOpportunities, isCategory } from "@/lib/opportunities";
+import { isCategory } from "@/lib/opportunities";
 import { sendPush } from "@/lib/push";
 import { requireAdmin } from "@/lib/session";
 
@@ -32,7 +32,7 @@ function announcementsChanged() {
   revalidatePath("/admin/announcements");
 }
 
-/** Posts an announcement. "Pin" makes it the Home banner; "Push" also sends it to everyone with notifications on. */
+/** Posts an announcement. "Pin" puts it first in the Home carousel; "Push" also sends it to everyone with notifications on. */
 export async function createAnnouncement(fd: FormData) {
   const admin = await requireAdmin();
   const title = text(fd, "title", 80);
@@ -55,7 +55,7 @@ export async function createAnnouncement(fd: FormData) {
         await sendPush(ids.slice(i, i + 200), {
           title: `📣 ${title}`,
           body: body ?? "New from the Kopamate team",
-          url: "/notifications?tab=updates",
+          url: "/notifications",
           tag: "announcement",
         });
       }
@@ -82,15 +82,6 @@ function opportunitiesChanged() {
   revalidatePath("/opportunities");
   revalidatePath("/home");
   revalidatePath("/admin/opportunities");
-}
-
-/** Runs the daily fetch now, and shows how many new ones came in. */
-export async function refreshOpportunities() {
-  await requireAdmin();
-  const { added, feeds } = await fetchOpportunities();
-  opportunitiesChanged();
-  const failed = feeds.filter((f) => "error" in f).map((f) => f.feed);
-  redirect(`/admin/opportunities?added=${added}${failed.length ? `&failed=${encodeURIComponent(failed.join(", "))}` : ""}`);
 }
 
 /** An opportunity the team found itself. Starts pinned (Featured) unless unticked. */

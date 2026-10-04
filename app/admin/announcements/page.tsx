@@ -8,7 +8,7 @@ import { btn, btnPrimary, input, panel } from "../ui";
 export const metadata: Metadata = { title: "Announcements" };
 
 const MESSAGES: Record<string, [string, boolean]> = {
-  posted: ["Posted. It's on Home and in everyone's Notifications.", true],
+  posted: ["Posted. It's in the Home carousel and in everyone's Notifications.", true],
   need_title: ["An announcement needs a title. Nothing was posted.", false],
 };
 
@@ -33,8 +33,8 @@ export default async function AdminAnnouncementsPage({ searchParams }: { searchP
       <section className={panel}>
         <h2 className="h-display mb-1 text-lg">New announcement</h2>
         <p className="mb-3 text-xs text-muted">
-          Shows under Updates on Home and in Notifications, and counts as new on everyone&apos;s bell. Pinned: also the pink banner at the
-          top of Home (the newest pinned one).
+          Shows as a slide in the Home carousel (the last 30 days, up to 6) and in everyone&apos;s Notifications, where it counts as new on
+          their bell. Pinned ones come first in the carousel and stay there after 30 days.
         </p>
         <form action={createAnnouncement} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm text-muted">
@@ -57,7 +57,7 @@ export default async function AdminAnnouncementsPage({ searchParams }: { searchP
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="pinned" value="1" className="size-4 accent-lime" />
-            Pin as the Home banner
+            Pin: show first in the Home carousel
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="push" value="1" className="size-4 accent-lime" />
