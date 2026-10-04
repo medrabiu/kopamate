@@ -376,3 +376,121 @@ BEGIN
     CREATE UNIQUE INDEX users_username_idx ON users (lower(nickname));
   END IF;
 END $$;
+
+-- Opportunities: jobs, internships, scholarships and more, pulled daily from public RSS feeds by
+-- /api/cron/opportunities (lib/opportunities.ts) or added by an admin. Admins can hide or pin any of them.
+CREATE TABLE IF NOT EXISTS opportunities (
+  id            bigserial PRIMARY KEY,
+  url           text NOT NULL UNIQUE,
+  title         text NOT NULL,
+  summary       text,
+  source        text NOT NULL,                 -- site name, or 'Kopamate' for admin posts
+  category      text NOT NULL CHECK (category IN ('jobs', 'internships', 'scholarships', 'fellowships', 'grants', 'contests', 'programs')),
+  deadline      text,                          -- as the source wrote it ("31 October 2026", "Ongoing")
+  published_at  timestamptz NOT NULL DEFAULT now(),
+  hidden        boolean NOT NULL DEFAULT false,
+  pinned        boolean NOT NULL DEFAULT false,
+  added_by      uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS opportunities_list_idx ON opportunities (published_at DESC) WHERE NOT hidden;
+CREATE INDEX IF NOT EXISTS opportunities_category_idx ON opportunities (category, published_at DESC) WHERE NOT hidden;
+
+-- Announcements from the Kopamate team, newest first on Home and in Notifications. A pinned one shows as the
+-- banner at the top of Home.
+CREATE TABLE IF NOT EXISTS announcements (
+  id            bigserial PRIMARY KEY,
+  title         text NOT NULL,
+  body          text,
+  button_label  text,
+  button_url    text,                          -- in-app ("/…") or https
+  pinned        boolean NOT NULL DEFAULT false,
+  created_by    uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS announcements_time_idx ON announcements (created_at DESC);
+
+-- The old single Home announcement (settings announcement_*) becomes the first pinned announcement. Runs once.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM settings WHERE key = 'announcements_migrated') THEN
+    INSERT INTO announcements (title, body, button_label, button_url, pinned)
+    SELECT t.value, NULLIF(b.value, ''), NULLIF(l.value, ''), NULLIF(u.value, ''), true
+    FROM settings a
+    JOIN settings t ON t.key = 'announcement_title' AND t.value <> ''
+    LEFT JOIN settings b ON b.key = 'announcement_body'
+    LEFT JOIN settings l ON l.key = 'announcement_button_label'
+    LEFT JOIN settings u ON u.key = 'announcement_button_url'
+    WHERE a.key = 'announcement_active' AND a.value = '1';
+    INSERT INTO settings (key, value) VALUES ('announcements_migrated', '1');
+  END IF;
+END $$;
+
+-- Personal notifications (the bell on Home). Written by the triggers below, so every code path that follows,
+-- awards a badge, reveals or pays a reward, or finishes a referred sign-up creates one.
+-- Unread = newer than users.notifications_seen_at (announcements count too).
+CREATE TABLE IF NOT EXISTS notifications (
+  id          bigserial PRIMARY KEY,
+  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind        text NOT NULL,                   -- follow | badge | reward | paid | friend
+  title       text NOT NULL,
+  body        text,
+  url         text,
+  actor_id    uuid REFERENCES users(id) ON DELETE CASCADE,  -- the person it's about (opens their profile)
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id, created_at DESC);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_seen_at timestamptz NOT NULL DEFAULT now();
+
+CREATE OR REPLACE FUNCTION notify_follow() RETURNS trigger AS $$
+DECLARE nick text;
+BEGIN
+  SELECT nickname INTO nick FROM users WHERE id = NEW.follower_id;
+  -- Unfollow then follow again within a day doesn't notify twice.
+  IF NOT EXISTS (
+    SELECT 1 FROM notifications
+    WHERE user_id = NEW.following_id AND kind = 'follow' AND actor_id = NEW.follower_id AND created_at > now() - interval '1 day'
+  ) THEN
+    INSERT INTO notifications (user_id, kind, title, actor_id) VALUES (NEW.following_id, 'follow', nick || ' followed you', NEW.follower_id);
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS follows_notify ON follows;
+CREATE TRIGGER follows_notify AFTER INSERT ON follows FOR EACH ROW EXECUTE FUNCTION notify_follow();
+
+CREATE OR REPLACE FUNCTION notify_badge() RETURNS trigger AS $$
+BEGIN
+  INSERT INTO notifications (user_id, kind, title, body, url)
+  SELECT NEW.user_id, 'badge', 'You earned the ' || b.name || ' badge', b.description, '/profile'
+  FROM badges b WHERE b.slug = NEW.badge_slug;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS user_badges_notify ON user_badges;
+CREATE TRIGGER user_badges_notify AFTER INSERT ON user_badges FOR EACH ROW EXECUTE FUNCTION notify_badge();
+
+-- A reward becoming visible (unclaimed) or paid. Hidden rewards stay secret until the admin reveals them.
+CREATE OR REPLACE FUNCTION notify_reward() RETURNS trigger AS $$
+BEGIN
+  IF NEW.status = 'unclaimed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'unclaimed') THEN
+    INSERT INTO notifications (user_id, kind, title, body, url)
+    VALUES (NEW.user_id, 'reward', 'You won: ' || NEW.title, 'Claim it on your Rewards page.', '/rewards');
+  ELSIF NEW.status = 'paid' AND TG_OP = 'UPDATE' AND OLD.status IS DISTINCT FROM 'paid' THEN
+    INSERT INTO notifications (user_id, kind, title, url) VALUES (NEW.user_id, 'paid', 'Paid: ' || NEW.title, '/rewards');
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS rewards_notify ON rewards;
+CREATE TRIGGER rewards_notify AFTER INSERT OR UPDATE OF status ON rewards FOR EACH ROW EXECUTE FUNCTION notify_reward();
+
+-- Someone finished sign-up with a friend's link (sign-up inserts a finished user; Google sign-up finishes later).
+CREATE OR REPLACE FUNCTION notify_friend_joined() RETURNS trigger AS $$
+BEGIN
+  IF NEW.referred_by IS NOT NULL AND NEW.completed_at IS NOT NULL AND NOT NEW.is_seed
+     AND (TG_OP = 'INSERT' OR OLD.completed_at IS NULL) THEN
+    INSERT INTO notifications (user_id, kind, title, actor_id)
+    VALUES (NEW.referred_by, 'friend', NEW.nickname || ' joined with your link', NEW.id);
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS users_friend_notify ON users;
+CREATE TRIGGER users_friend_notify AFTER INSERT OR UPDATE OF completed_at ON users FOR EACH ROW EXECUTE FUNCTION notify_friend_joined();

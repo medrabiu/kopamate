@@ -193,30 +193,6 @@ export async function revokeVerification(fd: FormData) {
   done();
 }
 
-/** Home announcement slide. Links must be in-app ("/…") or https. */
-export async function saveAnnouncement(fd: FormData) {
-  await requireAdmin();
-  const text = (name: string, max: number) => String(fd.get(name) ?? "").trim().slice(0, max);
-  let url = text("announcement_button_url", 300);
-  if (url && !(url.startsWith("/") && !url.startsWith("//")) && !url.startsWith("https://")) url = "";
-  const values: [string, string][] = [
-    ["announcement_active", fd.get("announcement_active") === "1" ? "1" : "0"],
-    ["announcement_title", text("announcement_title", 60)],
-    ["announcement_body", text("announcement_body", 200)],
-    ["announcement_button_label", text("announcement_button_label", 24)],
-    ["announcement_button_url", url],
-  ];
-  for (const [key, value] of values) {
-    await sql`
-      INSERT INTO settings (key, value) VALUES (${key}, ${value})
-      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-    `;
-  }
-  revalidateTag("settings");
-  revalidatePath("/home");
-  revalidatePath("/admin", "layout");
-}
-
 /** Sets a temporary 4-digit PIN (for people who forgot theirs) and shows it once on the admin page. */
 export async function resetPin(fd: FormData) {
   await requireAdmin();

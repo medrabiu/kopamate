@@ -1,5 +1,5 @@
 /**
- * Small illustrations for the "Coming soon" cards on Home, in the Social Night palette.
+ * Small illustrations for the Explore tiles on Home and the "coming soon" sheets, in the Social Night palette.
  * Inline SVG: no extra network requests, sharp on every screen, and ships inside the
  * component's JS chunk (hashed and cached for a year). Ink and background use theme classes
  * (SVG attributes can't read CSS variables), so they follow light/dark mode; accents stay fixed.
@@ -23,11 +23,7 @@ export type ArtKey =
   | "comedian"
   | "mvp"
   | "stylish"
-  | "jobs"
-  | "remote"
-  | "retention"
-  | "saed"
-  | "scholarships";
+  | "jobs";
 
 function Frame({ glow, children }: { glow: string; children: React.ReactNode }) {
   return (
@@ -217,63 +213,6 @@ const ART: Record<ArtKey, () => React.ReactElement> = {
       <path d="M68 64h84" className="stroke-ink" strokeWidth="3" opacity="0.4" />
       <rect x="104" y="58" width="12" height="12" rx="2" className="fill-ink" />
       <path d="M168 76V30m-12 12 12-12 12 12" fill="none" stroke={PINK} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-    </Frame>
-  ),
-  remote: () => (
-    <Frame glow={TEAL}>
-      {/* Laptop with Wi-Fi waves */}
-      <rect x="66" y="34" width="88" height="54" rx="6" className="fill-ink" />
-      <rect x="72" y="40" width="76" height="42" rx="3" fill={TEAL} />
-      <path d="M56 92h108l-6 8H62Z" className="fill-ink" opacity="0.85" />
-      <path d="M92 70h36M92 62h24" className="stroke-ink" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
-      <path d="M160 30a26 26 0 0 1 26 0M166 38a14 14 0 0 1 14 0" fill="none" stroke={LIME} strokeWidth="3.5" strokeLinecap="round" />
-      <circle cx="173" cy="45" r="3.5" fill={LIME} />
-      <text x="36" y="30" fontSize="16" fontWeight="800" fill={PINK} fontFamily="system-ui, sans-serif">
-        ₦
-      </text>
-    </Frame>
-  ),
-  retention: () => (
-    <Frame glow={VIOLET}>
-      {/* Office building with a check badge */}
-      <rect x="70" y="24" width="60" height="80" rx="3" fill={VIOLET} />
-      {[0, 1, 2, 3].map((r) =>
-        [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={80 + c * 16} y={34 + r * 15} width="8" height="8" rx="1" className="fill-surface-2" opacity="0.85" />),
-      )}
-      <rect x="92" y="92" width="16" height="12" className="fill-ink" />
-      <circle cx="146" cy="44" r="18" fill={LIME} />
-      <path d="m137 44 6 6 12-12" fill="none" className="stroke-ink" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M40 104h140" className="stroke-ink" strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
-    </Frame>
-  ),
-  saed: () => (
-    <Frame glow={AMBER}>
-      {/* Lightbulb with tools */}
-      <path d="M110 18a26 26 0 0 0-15 47v11h30V65a26 26 0 0 0-15-47Z" fill={AMBER} />
-      <path d="M97 84h26M100 92h20" className="stroke-ink" strokeWidth="3.5" strokeLinecap="round" />
-      <path d="M104 50l6 8 6-8" fill="none" className="stroke-ink" strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
-      <g transform="rotate(-40 62 70)">
-        <rect x="58" y="58" width="8" height="40" rx="4" fill={TEAL} />
-        <circle cx="62" cy="52" r="12" fill={TEAL} />
-        <rect x="58" y="38" width="8" height="14" rx="1" className="fill-surface-2" />
-      </g>
-      <circle cx="158" cy="80" r="7" fill="none" stroke={PINK} strokeWidth="3.5" />
-      <circle cx="174" cy="80" r="7" fill="none" stroke={PINK} strokeWidth="3.5" />
-      <path d="m162 74 18-30M170 74l-18-30" stroke={PINK} strokeWidth="3.5" strokeLinecap="round" />
-    </Frame>
-  ),
-  scholarships: () => (
-    <Frame glow={PINK}>
-      {/* Graduation cap and coins */}
-      <path d="m110 22 52 22-52 22-52-22Z" className="fill-ink" />
-      <path d="M78 54v18q32 16 64 0V54l-32 12Z" className="fill-ink" opacity="0.85" />
-      <path d="M156 46v24" stroke={AMBER} strokeWidth="3" />
-      <circle cx="156" cy="74" r="4" fill={AMBER} />
-      {[0, 1, 2].map((i) => (
-        <ellipse key={i} cx="52" cy={96 - i * 8} rx="16" ry="5" fill={i === 2 ? LIME : AMBER} className="stroke-ink" strokeOpacity="0.25" />
-      ))}
-      <ellipse cx="178" cy="98" rx="14" ry="4.5" fill={AMBER} className="stroke-ink" strokeOpacity="0.25" />
-      <Sparkle x={184} y={24} s={0.9} c={LIME} />
     </Frame>
   ),
 };

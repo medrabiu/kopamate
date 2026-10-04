@@ -10,10 +10,14 @@ import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
 import RewardBanner from "@/components/RewardBanner";
-import { ArrowDownIcon, ArrowUpIcon, ChevronRight } from "@/components/icons";
+import AnnouncementCard from "@/components/AnnouncementCard";
+import OpportunityCard from "@/components/OpportunityCard";
+import { ArrowDownIcon, ArrowUpIcon, BellIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getSnapshotPosition } from "@/lib/ranking";
-import { getAnnouncement, getPublicStats, track } from "@/lib/stats";
+import { getPublicStats, track } from "@/lib/stats";
+import { getAnnouncements, getUnreadCount } from "@/lib/notifications";
+import { countNewOpportunities, getOpportunities } from "@/lib/opportunities";
 import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
 import { getStandings, weekStart } from "@/lib/league";
@@ -36,10 +40,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, announcement, snapshot, newcomers, steps, badges, myRewards, quiz, streak, standings] = await Promise.all([
+  const [rank, stats, announcements, snapshot, newcomers, steps, badges, myRewards, quiz, streak, standings, unread, opportunities, newOpportunities] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
-    getAnnouncement(),
+    getAnnouncements(20),
     getSnapshotPosition(user.id, today),
     sql<{ id: string; nickname: string; photo_version: number; top_badge: BadgeInfo | null; verified: boolean }[]>`
       SELECT u.id, u.nickname, u.photo_version, ${topBadge()}, ${isVerified()} FROM users u
@@ -56,7 +60,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getQuizStatus(user.id),
     getStreak(user.id),
     getStandings(weekStart(today)),
+    getUnreadCount(user.id),
+    getOpportunities({ limit: 6 }),
+    countNewOpportunities(),
   ]);
+  // The newest pinned announcement is the banner up top; the rest are the latest updates near the bottom.
+  const announcement = announcements.find((a) => a.pinned) ?? null;
+  const updates = announcements.filter((a) => a !== announcement).slice(0, 3);
   const unclaimed = myRewards.filter((r) => r.status === "unclaimed");
   const profileComplete = badges.find((b) => b.slug === "profile_complete");
 
@@ -104,6 +114,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               )}
             </Link>
           )}
+          <Link
+            href="/notifications"
+            aria-label={unread > 0 ? `Notifications, ${unread} new` : "Notifications"}
+            className="relative flex size-10 items-center justify-center rounded-full border border-line"
+          >
+            <BellIcon size={20} />
+            {unread > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink px-1 text-[11px] font-bold text-on-accent">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </Link>
           <Link href="/profile" aria-label="Your profile">
             <Avatar id={user.id} nickname={user.nickname} photoVersion={user.photo_version} size={40} />
           </Link>
@@ -121,21 +143,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
       {vapidPublicKey && <PushPrompt publicKey={vapidPublicKey} />}
 
-      {announcement && (
-        <section className="flex flex-col gap-2 rounded-3xl border-[1.5px] border-pink p-[22px]" aria-label="Announcement">
-          <h2 className="h-display text-[22px] leading-tight text-pink-ink">{announcement.title}</h2>
-          {announcement.body && <p className="text-[15px] leading-normal">{announcement.body}</p>}
-          {announcement.buttonLabel && announcement.buttonUrl && (
-            <a
-              href={announcement.buttonUrl}
-              {...(announcement.buttonUrl.startsWith("https://") ? { target: "_blank", rel: "noopener" } : {})}
-              className="mt-1 flex h-11 items-center justify-center self-start rounded-full bg-pink px-5 text-[15px] font-bold text-on-accent"
-            >
-              {announcement.buttonLabel}
-            </a>
-          )}
-        </section>
-      )}
+      {announcement && <AnnouncementCard a={announcement} banner />}
 
       <ProfileProgressRow steps={steps} />
 
@@ -165,7 +173,45 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </section>
       )}
 
-      <ComingSoon layout="tiles" state={user.state} />
+      {opportunities.length > 0 && (
+        <section className="flex flex-col gap-3" aria-labelledby="opps-title">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="opps-title" className="h-display text-xl">
+              Opportunities
+            </h2>
+            <Link href="/opportunities" className="flex items-center gap-0.5 py-1 text-sm font-medium text-lime-ink">
+              See all
+              <ChevronRight size={16} />
+            </Link>
+          </div>
+          <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5">
+            {opportunities.map((o) => (
+              <OpportunityCard key={o.id} o={o} compact />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <ComingSoon state={user.state} newOpportunities={newOpportunities} />
+
+      {updates.length > 0 && (
+        <section className="flex flex-col gap-3" aria-labelledby="updates-title">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="updates-title" className="h-display text-xl">
+              Updates
+            </h2>
+            <Link href="/notifications?tab=updates" className="flex items-center gap-0.5 py-1 text-sm font-medium text-lime-ink">
+              See all
+              <ChevronRight size={16} />
+            </Link>
+          </div>
+          <div className="card flex flex-col divide-y divide-line !p-0">
+            {updates.map((a) => (
+              <AnnouncementCard key={a.id} a={a} />
+            ))}
+          </div>
+        </section>
+      )}
     </StreakProvider>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/session";
-import { getAnnouncementSettings, getFirstNMode, getRewardSettings } from "@/lib/stats";
-import { saveAnnouncement, saveRewardSettings, saveSettings } from "@/app/actions/admin";
+import { getFirstNMode, getRewardSettings } from "@/lib/stats";
+import { saveRewardSettings, saveSettings } from "@/app/actions/admin";
 import { saveMoneySettings } from "@/app/actions/admin-rewards";
 import { getMoneySettings } from "@/lib/rewards";
 import { getBonusSettings } from "@/lib/referral-bonus";
@@ -24,9 +24,8 @@ const lagosTime = (iso: string) =>
 export default async function AdminSettingsPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string }> }) {
   await requireAdmin();
   const { error, saved } = await searchParams;
-  const [mode, announcement, rewards, money, bonus] = await Promise.all([
+  const [mode, rewards, money, bonus] = await Promise.all([
     getFirstNMode(),
-    getAnnouncementSettings(),
     getRewardSettings(),
     getMoneySettings(),
     getBonusSettings(),
@@ -131,50 +130,13 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
         </form>
       </section>
 
-      <section className={panel}>
-        <h2 className="h-display mb-1 text-lg">Announcement</h2>
-        <p className="mb-3 text-xs text-muted">A pink card on Home, under your position. Hidden when switched off or the title is empty.</p>
-        <form action={saveAnnouncement} className="flex flex-col gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="announcement_active" value="1" defaultChecked={announcement.active} className="size-4 accent-lime" />
-            Show on Home
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            Title
-            <input name="announcement_title" defaultValue={announcement.title} maxLength={60} className={input} />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            Text
-            <textarea
-              name="announcement_body"
-              defaultValue={announcement.body}
-              rows={2}
-              maxLength={200}
-              className="rounded-lg border border-line bg-bg p-3 text-sm text-ink"
-            />
-          </label>
-          <div className="grid gap-3 md:grid-cols-[1fr_2fr]">
-            <label className="flex flex-col gap-1 text-sm text-muted">
-              Button label (optional)
-              <input name="announcement_button_label" defaultValue={announcement.buttonLabel} maxLength={24} className={input} />
-            </label>
-            <label className="flex flex-col gap-1 text-sm text-muted">
-              Button link: starts with / or https://
-              <input
-                name="announcement_button_url"
-                defaultValue={announcement.buttonUrl}
-                maxLength={300}
-                placeholder="/invite"
-                pattern="(/[^/].*|/|https://.+)"
-                className={input}
-              />
-            </label>
-          </div>
-          <button type="submit" className={`${btnPrimary} self-start`}>
-            Save
-          </button>
-        </form>
-      </section>
+      <p className="text-sm text-muted">
+        Announcements moved to{" "}
+        <a href="/admin/announcements" className="font-bold text-lime-ink">
+          Announcements
+        </a>
+        .
+      </p>
     </>
   );
 }

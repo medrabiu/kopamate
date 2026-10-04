@@ -1,12 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import CardArt, { type ArtKey } from "./CardArt";
-import { BriefcaseIcon, LockIcon, MedalIcon, TrophyIcon } from "./icons";
+import { LockIcon } from "./icons";
 import Sheet from "./Sheet";
-import { useToast } from "./Toast";
-
-const TILES = ["Contests", "Awards", "Opportunities"];
 
 type Item = { title: string; text: string; art: ArtKey };
 
@@ -14,7 +12,7 @@ function sections(state: string | null) {
   return [
     {
       heading: "Contests",
-      Icon: TrophyIcon,
+      art: "talent",
       items: [
         { title: "Best Khaki Drip", text: "Show off your khaki style. Your state votes.", art: "khaki" },
         { title: "Camp Talent Showdown", text: "Sing, dance or make us laugh.", art: "talent" },
@@ -25,7 +23,7 @@ function sections(state: string | null) {
     },
     {
       heading: "Awards",
-      Icon: MedalIcon,
+      art: "corper-month",
       items: [
         { title: "Corper of the Month", text: "Voted by corpers in your state.", art: "corper-month" },
         { title: "Best Platoon", text: "Platoon pride, settled by votes.", art: "platoon" },
@@ -34,76 +32,50 @@ function sections(state: string | null) {
         { title: `Most Stylish in ${state || "your state"}`, text: "Your state picks its best dressed.", art: "stylish" },
       ],
     },
-    {
-      heading: "Opportunities",
-      Icon: BriefcaseIcon,
-      items: [
-        { title: "Jobs from ex-corpers", text: "Openings shared by people who served before you.", art: "jobs" },
-        { title: "Remote gigs", text: "Paid online work you can do during service.", art: "remote" },
-        { title: "Retention at your PPA", text: "Tips and openings to get retained.", art: "retention" },
-        { title: "Skills and SAED", text: "Training to start your own business.", art: "saed" },
-        { title: "Scholarships and grants", text: "Funding for your next step.", art: "scholarships" },
-      ],
-    },
-  ] satisfies { heading: string; Icon: typeof TrophyIcon; items: Item[] }[];
+  ] satisfies { heading: string; art: ArtKey; items: Item[] }[];
+}
+
+const tile = "flex min-w-0 flex-col overflow-hidden rounded-[18px] border border-line text-left active:bg-surface-2";
+
+function TileBody({ art, heading, note, locked }: { art: ArtKey; heading: string; note: string; locked: boolean }) {
+  return (
+    <>
+      <span className="block aspect-[2/1] w-full">
+        <CardArt art={art} />
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5 px-2.5 pb-3 pt-2">
+        <span className="truncate text-[13px] font-bold" title={heading}>
+          {heading}
+        </span>
+        <span className={`flex items-center gap-1 truncate text-xs ${locked ? "text-muted" : "font-bold text-lime-ink"}`}>
+          {locked && <LockIcon size={11} strokeWidth={2.5} />}
+          {note}
+        </span>
+      </span>
+    </>
+  );
 }
 
 /**
- * "Coming soon".
- * `grid`: three small tiles (landing). `tiles`: three tiles in a card (home); each opens a sheet listing what's planned.
+ * "Explore" on Home: Opportunities (live, opens /opportunities) and Contests and Awards (coming soon; each opens
+ * a sheet listing what's planned). Each tile has its illustration on top.
  */
-export default function ComingSoon(props: { layout: "grid" } | { layout: "tiles"; state: string | null }) {
-  const [toast, show] = useToast();
+export default function ComingSoon({ state, newOpportunities }: { state: string | null; newOpportunities: number }) {
   const [open, setOpen] = useState<string | null>(null);
-
-  if (props.layout === "grid") {
-    return (
-      <section className="flex flex-col gap-3">
-        <h2 className="h-display text-xl">Coming soon</h2>
-        <div className="grid grid-cols-3 gap-2.5">
-          {TILES.map((title) => (
-            <button
-              key={title}
-              type="button"
-              onClick={() => show(`${title} is coming soon`)}
-              className="flex flex-col gap-2.5 rounded-[18px] border border-line px-3 py-3.5 text-left"
-            >
-              <LockIcon size={20} className="text-muted" />
-              <span className="text-sm font-medium">{title}</span>
-            </button>
-          ))}
-        </div>
-        {toast}
-      </section>
-    );
-  }
-
-  const all = sections(props.state);
+  const all = sections(state);
   const current = all.find((s) => s.heading === open);
   return (
-    <section className="flex flex-col gap-3" aria-labelledby="soon-title">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 id="soon-title" className="h-display text-xl">
-          Coming soon
-        </h2>
-        <span className="flex items-center gap-1 text-xs text-faint">
-          <LockIcon size={12} strokeWidth={2.5} />
-          Tap to see what&apos;s planned
-        </span>
-      </div>
+    <section className="flex flex-col gap-3" aria-labelledby="explore-title">
+      <h2 id="explore-title" className="h-display text-xl">
+        Explore
+      </h2>
       <div className="grid grid-cols-3 gap-2.5">
-        {all.map(({ heading, Icon, items }) => (
-          <button
-            key={heading}
-            type="button"
-            onClick={() => setOpen(heading)}
-            className="flex flex-col gap-2 rounded-[18px] border border-line px-3 py-3.5 text-left"
-          >
-            <span className="flex size-9 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
-              <Icon size={18} />
-            </span>
-            <span className="text-sm font-bold">{heading}</span>
-            <span className="-mt-1.5 text-xs text-muted">{items.length} coming</span>
+        <Link href="/opportunities" className={tile}>
+          <TileBody art="jobs" heading="Opportunities" note={newOpportunities > 0 ? `${newOpportunities} new` : "Open"} locked={false} />
+        </Link>
+        {all.map(({ heading, art, items }) => (
+          <button key={heading} type="button" onClick={() => setOpen(heading)} className={tile}>
+            <TileBody art={art} heading={heading} note={`${items.length} coming`} locked />
           </button>
         ))}
       </div>
