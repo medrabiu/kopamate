@@ -6,7 +6,7 @@ import Countdown from "@/components/Countdown";
 import { PersonButton } from "@/components/PersonSheet";
 import { ChevronLeft } from "@/components/icons";
 import { sql } from "@/lib/db";
-import { getMyLeagueRank, getStandings, getTopPlayers, MIN_MEMBERS, playsInLeague, weekEndsAt, weekStart, type PlayerRow } from "@/lib/league";
+import { getMyLeagueRank, getStandings, getTopPlayers, MIN_MEMBERS, weekEndsAt, weekStart, type PlayerRow } from "@/lib/league";
 import { getQuizStatus } from "@/lib/quiz";
 import { requireUser } from "@/lib/session";
 import { formatNumber } from "@/lib/util";
@@ -76,7 +76,6 @@ export default async function LeaguePage() {
   const above = me?.rank ? ranked[me.rank - 2] : undefined;
   const below = me?.rank ? ranked[me.rank] : undefined;
   const played = quiz.kind === "done";
-  const scores = playsInLeague(user.nysc_stage);
 
   return (
     <>
@@ -117,14 +116,6 @@ export default async function LeaguePage() {
               {me.players} of {formatNumber(me.members)} corpers played this week.
             </span>
           </p>
-          {!scores && (
-            <p className="rounded-2xl bg-surface-2 px-4 py-3 text-sm text-muted">
-              Only corpers who are serving or posted score for a state. Your quiz still counts for your streak.{" "}
-              <Link href="/profile/settings" className="font-bold text-lime-ink">
-                Update NYSC status
-              </Link>
-            </p>
-          )}
           {!played && quiz.kind !== "unavailable" && (
             <Link href="/quiz" className="btn-primary h-12 text-[15px]">
               {quiz.kind === "playing" ? "Finish today's quiz" : "Play today's quiz"}
@@ -136,7 +127,7 @@ export default async function LeaguePage() {
       <details className="-mt-1 px-1 text-[13px] text-faint">
         <summary className="cursor-pointer select-none py-1 font-bold text-muted">How the League works</summary>
         <p className="mt-1">
-          Every quiz point counts for the state you&apos;re serving in (or posted to). States are ranked by points per corper, so every member counts and small
+          Every quiz point counts for your state. States are ranked by points per corper, so every member counts and small
           states can win. The winning state&apos;s players (3+ days) get the Champion State badge; the top player gets Quiz MVP.
           {last?.winner_state && ` Last week: ${last.winner_state} won.`}
         </p>

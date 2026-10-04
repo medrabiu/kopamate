@@ -18,7 +18,7 @@ import { getPublicStats, track } from "@/lib/stats";
 import { getAnnouncements, getUnreadCount } from "@/lib/notifications";
 import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
-import { getStandings, playsInLeague, weekStart } from "@/lib/league";
+import { getStandings, weekStart } from "@/lib/league";
 import { getQuizStatus } from "@/lib/quiz";
 import { getStreak } from "@/lib/streaks";
 import { vapidPublicKey } from "@/lib/push";
@@ -89,7 +89,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const quizFirst = quiz.kind === "ready" || quiz.kind === "playing";
   const quizCard = (
-    <QuizCard status={quiz} streak={streak} state={user.state ?? "your state"} standing={standing} above={above} nextAt={nextLagosMidnight()} scores={playsInLeague(user.nysc_stage)} />
+    <QuizCard status={quiz} streak={streak} state={user.state ?? "your state"} standing={standing} above={above} nextAt={nextLagosMidnight()} />
   );
   const news =
     slides.length > 0 ? (

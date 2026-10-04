@@ -512,7 +512,7 @@ END $$;
 CREATE INDEX IF NOT EXISTS announcements_published_idx ON announcements (published_at DESC) WHERE visible;
 
 -- Where someone is in NYSC (lib/nysc.ts): waiting (no call-up yet), posted (call-up, camp not started),
--- serving, served (passed out). Only posted and serving count in the State League. The batch ("2026B2":
+-- serving, served (passed out). Everyone plays the quiz and League whatever their stage. The batch ("2026B2":
 -- year, letter, stream) lets the daily cron move people on. Everyone who joined before this is 'serving'
 -- until they confirm on Home (stage_confirmed_at stays null till then).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS nysc_stage text NOT NULL DEFAULT 'serving';

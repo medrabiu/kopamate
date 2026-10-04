@@ -12,7 +12,7 @@
 export const STAGES = ["serving", "posted", "waiting", "served"] as const;
 export type Stage = (typeof STAGES)[number];
 
-/** Stages that count as corpers in the State League and the "Serving" list of each state. */
+/** Stages listed under "Serving" on each state's page. */
 export const IN_SERVICE: Stage[] = ["posted", "serving"];
 
 export function isStage(value: unknown): value is Stage {

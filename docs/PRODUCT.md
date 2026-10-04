@@ -121,7 +121,7 @@ Corpers who are serving, about to serve and done serving all join, so each accou
 - **Batch** (`users.nysc_batch`, like `2026B2`: year, letter, stream; stream optional). Not asked at sign-up. Asked in Settings and on the Home confirm card, required for Serving and Got call-up, optional for Passed out. Filled from the state code (`LA/26B/…` → `2026B`) on a verification request if empty.
 - **Moving on by itself:** the nightly cron (`/api/cron/snapshot`) moves `posted` → `serving` about a month after the batch's camp month, and `serving` → `served` 14 months after it (camp months: A Apr/Jun, B Jul/Sep, C Nov/Jan for streams I/II; unknown stream counts as II). Saving a stage that clearly doesn't fit the batch is refused ("2023 Batch A has passed out already…").
 - **Where it shows:** the line under names on Profile, the profile sheet and `/u/[code]`: "Serving in Lagos · 2026 Batch B", "Posted to Kano", "Awaiting call-up", "Served in Oyo · 2019 Batch A".
-- **State League:** only `serving` and `posted` users count as members and score. Others still play the quiz for their streak; Home's quiz card says "Play today's quiz" instead of "Play for {state}", and the League page explains why.
+- **Daily Quiz and State League:** everyone plays and scores for their state, whatever their stage (ex-corpers and people awaiting call-up included).
 - **Corpers in a state:** tabs **Serving** (serving + posted, default), **Ex-corpers** and **Awaiting call-up**.
 - **Verification** (and so prizes) is only for `serving` and `posted`; already-verified people stay verified if they pass out.
 - **Changing it:** Settings → NYSC → Edit. People awaiting call-up can pick their state there when they're posted; everyone else keeps their state (admins can change it).
