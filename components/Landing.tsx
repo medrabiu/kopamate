@@ -114,7 +114,7 @@ export default function Landing({ stats, earlyDeadline }: Props) {
   ];
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-screen-safe">
       <script
         type="application/ld+json"
         // JSON with "<" escaped, so nothing in it can close the script tag.

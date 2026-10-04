@@ -73,6 +73,22 @@ html:has(.app-shell) body {
   overflow: hidden;
 }
 
+/*
+ * Installed on iPhone, the status bar is see-through (black-translucent + viewport-fit=cover), so pages start
+ * under the clock and notch. Keep content below it: the app shell pads itself (its scrolling area then stops
+ * under the status bar), other pages pad the body. env() is 0 in a normal browser tab, so nothing moves there.
+ */
+.app-shell {
+  padding-top: env(safe-area-inset-top);
+}
+html:not(:has(.app-shell)) body {
+  padding-top: env(safe-area-inset-top);
+}
+/* One screen tall, less that padding (min-h-dvh would scroll by the status bar's height). */
+.min-h-screen-safe {
+  min-height: calc(100dvh - env(safe-area-inset-top));
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-ink);

@@ -20,7 +20,7 @@ export default async function JoinPage() {
   const referrer = await referrerFromCookie(user?.id);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col gap-5 px-5 pb-8 pt-5">
+    <main className="mx-auto flex min-h-screen-safe max-w-[480px] flex-col gap-5 px-5 pb-8 pt-5">
       <div className="flex h-11 items-center">
         <Link href="/" aria-label="Back" className="flex size-11 items-center">
           <ChevronLeft size={24} />

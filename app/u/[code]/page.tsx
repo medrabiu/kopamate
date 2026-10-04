@@ -58,7 +58,7 @@ export default async function ProfileLinkPage({ params }: Props) {
   after(() => track("profile_link_view", viewerId, { profile: p.id, logged_in: Boolean(viewerId) }));
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-screen-safe">
       <header className="border-b border-line">
         <div className="mx-auto flex h-14 max-w-[480px] items-center justify-between px-5">
           <Link href={viewerId ? "/home" : "/"} className="h-display text-xl">
