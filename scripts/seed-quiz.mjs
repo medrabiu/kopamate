@@ -1,5 +1,6 @@
 // Loads the starting Daily Quiz questions (scripts/quiz-bank.mjs) into DATABASE_URL.
 // Safe to run again: questions already in the bank (same wording) are skipped, and edits made in admin are kept.
+// A fact is only filled in where the question doesn't have one yet.
 // Usage: npm run db:quiz   (reads DATABASE_URL from .env if it isn't set)
 import { readFileSync, existsSync } from "node:fs";
 import postgres from "postgres";
@@ -20,13 +21,15 @@ if (!process.env.DATABASE_URL) {
 const sql = postgres({ ...parseConnectionString(process.env.DATABASE_URL), prepare: false, max: 1 });
 try {
   let added = 0;
-  for (const [category, difficulty, question, ...options] of QUIZ_BANK) {
+  for (const [category, difficulty, question, right, w1, w2, w3, fact = null] of QUIZ_BANK) {
     const rows = await sql`
-      INSERT INTO quiz_questions (category, difficulty, question, options)
-      VALUES (${category}, ${difficulty}, ${question}, ${options}::text[])
-      ON CONFLICT (question) DO NOTHING RETURNING id
+      INSERT INTO quiz_questions (category, difficulty, question, options, fact)
+      VALUES (${category}, ${difficulty}, ${question}, ${[right, w1, w2, w3]}::text[], ${fact})
+      ON CONFLICT (question) DO UPDATE SET fact = EXCLUDED.fact
+        WHERE quiz_questions.fact IS NULL AND EXCLUDED.fact IS NOT NULL
+      RETURNING (xmax = 0) AS inserted
     `;
-    added += rows.length;
+    added += rows.filter((r) => r.inserted).length;
   }
   console.log(`Added ${added} of ${QUIZ_BANK.length} questions (the rest were already there).`);
 } catch (err) {

@@ -269,6 +269,8 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
   last_used_on  date,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
+-- A line shown on the back of the card after answering (optional).
+ALTER TABLE quiz_questions ADD COLUMN IF NOT EXISTS fact text;
 CREATE TABLE IF NOT EXISTS quiz_days (
   day           date PRIMARY KEY,
   question_ids  int[] NOT NULL

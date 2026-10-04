@@ -227,7 +227,7 @@ export async function startQuiz(db: Db, userId: string, state: string): Promise<
 
 export type Answered = Step & {
   /** Feedback for the question just answered; null when it wasn't the open question (another tab, or too late). */
-  feedback: { idx: number; correct: boolean; timedOut: boolean; rightChoice: number; points: number } | null;
+  feedback: { idx: number; correct: boolean; timedOut: boolean; rightChoice: number; points: number; fact: string | null } | null;
 };
 
 /**
@@ -255,7 +255,8 @@ export async function answerQuestion(db: Db, userId: string, day: string, idx: n
     UPDATE quiz_attempts SET points = points + ${points}, correct = correct + ${correct ? 1 : 0}
     WHERE user_id = ${userId} AND day = ${day}::date
   `;
-  const feedback = { idx, correct, timedOut, rightChoice: row.perm.indexOf(0), points };
+  const [q] = await db<{ fact: string | null }[]>`SELECT fact FROM quiz_questions WHERE id = ${row.question_id}`;
+  const feedback = { idx, correct, timedOut, rightChoice: row.perm.indexOf(0), points, fact: q?.fact ?? null };
   // The next question is served when the player moves on (startQuiz), so its clock doesn't run during the reveal.
   if (idx + 1 >= QUESTIONS_PER_DAY) return { ...(await finish(db, userId, day)), feedback };
   return { question: null, result: null, streak: null, feedback };

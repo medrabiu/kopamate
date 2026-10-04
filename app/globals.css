@@ -153,6 +153,114 @@ textarea {
   animation: countdown-tick 300ms ease-out;
 }
 
+/* Daily Quiz (app/(app)/quiz) */
+@keyframes quiz-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.quiz-rise {
+  animation: quiz-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes quiz-pop {
+  40% {
+    transform: scale(1.04);
+  }
+}
+.quiz-pop {
+  animation: quiz-pop 320ms ease-out;
+}
+@keyframes quiz-shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+.quiz-shake {
+  animation: quiz-shake 360ms ease-in-out;
+}
+@keyframes quiz-float {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+}
+.quiz-float {
+  display: inline-block;
+  animation: quiz-float 500ms ease-out both;
+}
+@keyframes quiz-pulse {
+  50% {
+    transform: scale(1.12);
+  }
+}
+.quiz-pulse {
+  animation: quiz-pulse 1s ease-in-out infinite;
+}
+@keyframes quiz-count {
+  from {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.quiz-count {
+  animation: quiz-count 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Quiz cards: each question is dealt in, then flips to show how it went. */
+.flip-scene {
+  perspective: 1400px;
+}
+.flip-card {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 600ms cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+.flip-card.is-flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+@keyframes quiz-deal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(-3deg) scale(0.95);
+  }
+}
+.quiz-deal {
+  animation: quiz-deal 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes quiz-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.quiz-drain {
+  animation: quiz-drain linear forwards;
+}
+
 /* Bottom sheet (components/Sheet.tsx) */
 @keyframes sheet-up {
   from {

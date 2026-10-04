@@ -105,6 +105,7 @@ export default async function AdminQuizPage({ searchParams }: { searchParams: Pr
           <input name="wrong1" placeholder="Wrong answer" className={input} required />
           <input name="wrong2" placeholder="Wrong answer" className={input} required />
           <input name="wrong3" placeholder="Wrong answer" className={input} required />
+          <input name="fact" placeholder="Fun fact for the back of the card (optional)" className={`${input} sm:col-span-2`} />
           <div>
             <button className={btnPrimary}>Add question</button>
           </div>

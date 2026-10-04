@@ -15,14 +15,15 @@ export async function addQuizQuestion(fd: FormData) {
   const difficulty = Number(fd.get("difficulty"));
   const question = clean(fd.get("question")).slice(0, 300);
   const options = ["right", "wrong1", "wrong2", "wrong3"].map((k) => clean(fd.get(k)).slice(0, 120));
+  const fact = clean(fd.get("fact")).slice(0, 200) || null;
   if (!category || !question || options.some((o) => !o) || ![1, 2, 3].includes(difficulty)) {
     redirect("/admin/quiz?error=missing");
   }
   if (new Set(options.map((o) => o.toLowerCase())).size < 4) redirect("/admin/quiz?error=duplicate-options");
   try {
     await sql`
-      INSERT INTO quiz_questions (category, difficulty, question, options)
-      VALUES (${category}, ${difficulty}, ${question}, ${options}::text[])
+      INSERT INTO quiz_questions (category, difficulty, question, options, fact)
+      VALUES (${category}, ${difficulty}, ${question}, ${options}::text[], ${fact})
     `;
   } catch (err) {
     if (isUniqueViolation(err)) redirect("/admin/quiz?error=exists");
