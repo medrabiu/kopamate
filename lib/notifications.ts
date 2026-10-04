@@ -23,7 +23,7 @@ export type Announcement = {
 
 export type Notification = {
   id: string;
-  kind: "follow" | "badge" | "reward" | "paid" | "friend";
+  kind: "follow" | "badge" | "reward" | "paid" | "friend" | "hustle";
   title: string;
   body: string | null;
   url: string | null;

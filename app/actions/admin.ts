@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
+import { creditTaskReward, TASK_REWARDS } from "@/lib/hustle/wallet";
 import { requireAdmin } from "@/lib/session";
 import { normalizeStateCode, validateUsername } from "@/lib/validate";
 import { isState } from "@/lib/states";
@@ -133,8 +134,13 @@ export async function approveVerification(fd: FormData) {
   const [row] = await sql<{ verification_status: string }[]>`SELECT verification_status FROM users WHERE id = ${userId}`;
   await logVerification(userId, row?.verification_status === "verified" ? "approved" : "rejected", admin.id,
     row?.verification_status === "verified" ? null : "State code already verified on another account");
-  // Whoever invited them earns their referral bonus now.
+  // Whoever invited them earns their referral bonus now, and a My Hustle task reward (once per friend).
   await recordBonuses({ referredId: userId });
+  const [inviter] = await sql<{ referred_by: string }[]>`
+    SELECT r.referred_by FROM users r JOIN users p ON p.id = r.referred_by
+    WHERE r.id = ${userId} AND r.verification_status = 'verified' AND NOT r.is_seed AND NOT p.is_flagged
+  `;
+  if (inviter) await creditTaskReward(inviter.referred_by, "invite", TASK_REWARDS.invite, userId);
   done();
 }
 

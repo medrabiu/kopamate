@@ -4,7 +4,9 @@ import { revalidateTag } from "next/cache";
 import { checkAutoBadges } from "@/lib/badges";
 import { transaction } from "@/lib/db";
 import { answerQuestion, startQuiz, type Answered, type Step } from "@/lib/quiz";
+import { creditTaskReward, TASK_REWARDS } from "@/lib/hustle/wallet";
 import { getCurrentUser } from "@/lib/session";
+import { lagosDate } from "@/lib/util";
 import { track } from "@/lib/stats";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -32,6 +34,7 @@ export async function submitAnswer(day: string, idx: number, choice: number | nu
     revalidateTag("league");
     await track("quiz_finished", user.id, { points: step.result.points + step.result.bonus, correct: step.result.correct });
     if (step.streak?.milestone) await checkAutoBadges(user.id);
+    if (day === lagosDate()) await creditTaskReward(user.id, "quiz", TASK_REWARDS.quiz, day);
   }
   return step;
 }

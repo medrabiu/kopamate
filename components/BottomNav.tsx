@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { GiftIcon, HomeIcon, LinkIcon, UserIcon, UsersIcon } from "./icons";
+import { GiftIcon, HomeIcon, LinkIcon, StoreIcon, UserIcon, UsersIcon } from "./icons";
 
 const TABS = [
   { href: "/home", label: "Home", Icon: HomeIcon },
@@ -13,9 +13,18 @@ const TABS = [
   { href: "/profile", label: "Profile", Icon: UserIcon },
 ];
 
+/** With My Hustle switched on, Hustle takes the centre and Rewards moves to Home and Profile links. */
+const HUSTLE_TABS = [
+  { href: "/home", label: "Home", Icon: HomeIcon },
+  { href: "/corpers", label: "Corpers", Icon: UsersIcon },
+  { href: "/hustle", label: "Hustle", Icon: StoreIcon },
+  { href: "/invite", label: "Invite", Icon: LinkIcon },
+  { href: "/profile", label: "Profile", Icon: UserIcon },
+];
+
 const matches = (path: string, href: string) => path === href || path.startsWith(href + "/");
 
-export default function BottomNav() {
+export default function BottomNav({ hustle = false }: { hustle?: boolean }) {
   const path = usePathname();
   // The tab you just tapped lights up straight away, before its page has loaded.
   const [tapped, setTapped] = useState<string | null>(null);
@@ -29,7 +38,7 @@ export default function BottomNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto grid h-[76px] max-w-[480px] grid-cols-5">
-        {TABS.map(({ href, label, Icon }) => {
+        {(hustle ? HUSTLE_TABS : TABS).map(({ href, label, Icon }) => {
           const active = tapped ? tapped === href : matches(path, href);
           return (
             <Link

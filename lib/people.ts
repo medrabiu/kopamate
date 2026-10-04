@@ -22,6 +22,8 @@ export type PublicProfile = {
   is_following: boolean;
   /** This person follows the viewer. */
   follows_you: boolean;
+  /** Their My Hustle business (added by /api/person for viewers with My Hustle). */
+  business?: import("./hustle/market").PublicBusiness | null;
 };
 
 /** Null for unknown, banned or unfinished accounts. `viewerId` is null for logged-out visitors (profile links). */

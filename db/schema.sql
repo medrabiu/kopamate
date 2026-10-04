@@ -530,3 +530,286 @@ BEGIN
   END IF;
 END $$;
 CREATE INDEX IF NOT EXISTS users_state_stage_idx ON users (state, nysc_stage);
+
+-- ============================================================================================================
+-- My Hustle (docs/MY_HUSTLE_PROMPT.md): a business game played with game naira, which can never be withdrawn,
+-- bought or converted. Money is whole naira. Every balance change goes through lib/hustle/ledger.ts move(),
+-- which writes hustle_ledger in the same transaction, so balances always equal the sum of the ledger.
+-- ============================================================================================================
+
+-- Business types. Admins edit every number; a change applies from the next business day.
+CREATE TABLE IF NOT EXISTS hustle_business_types (
+  slug                        text PRIMARY KEY,
+  name                        text NOT NULL,
+  blurb                       text NOT NULL DEFAULT '',
+  category                    text NOT NULL CHECK (category IN ('food', 'services', 'supply')),
+  tier                        text NOT NULL DEFAULT 'starter' CHECK (tier IN ('starter', 'growth')),
+  unit_name                   text NOT NULL,                 -- "plate", "haircut", "lot"
+  kind                        text NOT NULL CHECK (kind IN ('consumer', 'supplier', 'b2b')),
+  sells_supply                boolean NOT NULL DEFAULT false, -- a consumer business that also sells lots (provision store)
+  perishable                  boolean NOT NULL DEFAULT false, -- unsold units are wasted at close
+  slots                       boolean NOT NULL DEFAULT false, -- units are appointments: unused ones expire, nothing spoils
+  open_air                    boolean NOT NULL DEFAULT false, -- rain hits demand
+  expiry_days                 int,                            -- for supply lots bought from this type
+  default_price               int NOT NULL CHECK (default_price > 0),
+  cost_per_unit               int NOT NULL CHECK (cost_per_unit >= 0),
+  capacity_per_day            int NOT NULL CHECK (capacity_per_day > 0),
+  rent_per_day                int NOT NULL DEFAULT 0,
+  upkeep_per_day              int NOT NULL DEFAULT 0,
+  upkeep_provider_type        text,
+  marketing_per_day           int NOT NULL DEFAULT 0,
+  supply_type                 text,                           -- the supplier type it buys lots from
+  units_per_supply_lot        int,
+  setup_cost                  int NOT NULL,
+  townspeople_demand_per_day  int NOT NULL,                   -- naira a day per state, before multipliers
+  price_floor_pct             numeric(4,2) NOT NULL DEFAULT 0.5,
+  price_ceiling_pct           numeric(4,2) NOT NULL DEFAULT 1.5,
+  need_key                    text,                           -- the player need it satisfies
+  need_days                   int,                            -- how long one purchase satisfies it
+  is_active                   boolean NOT NULL DEFAULT true,
+  sort                        int NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS hustle_businesses (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_user_id   uuid NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,  -- one business per user (MVP)
+  type_slug       text NOT NULL REFERENCES hustle_business_types(slug),
+  name            text NOT NULL,
+  slug            text NOT NULL UNIQUE,
+  icon            text NOT NULL,
+  color           text NOT NULL,
+  state           text NOT NULL,                  -- copied from the owner at creation, never changes
+  stage           int NOT NULL DEFAULT 1 CHECK (stage BETWEEN 1 AND 2),
+  rating          numeric(3,2) NOT NULL DEFAULT 4.0,
+  rating_count    int NOT NULL DEFAULT 0,
+  cash            bigint NOT NULL DEFAULT 0,
+  status          text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'restructured', 'closed')),
+  hot_until       date,                           -- started as a "hot" type: +20% townspeople demand until then
+  closed_through  date NOT NULL,                  -- last business day that has been closed (rent charged etc.)
+  restructures    int NOT NULL DEFAULT 0,
+  trading_frozen  boolean NOT NULL DEFAULT false,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS hustle_businesses_state_type_idx ON hustle_businesses (state, type_slug);
+
+CREATE TABLE IF NOT EXISTS hustle_wallets (
+  user_id             uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  balance             bigint NOT NULL DEFAULT 0,
+  last_allawee_month  text,                       -- "2026-10"
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS hustle_ledger (
+  id         bigserial PRIMARY KEY,
+  at         timestamptz NOT NULL DEFAULT now(),
+  from_kind  text NOT NULL CHECK (from_kind IN ('wallet', 'business', 'system')),
+  from_id    uuid,                                -- user id for a wallet, business id for a business
+  to_kind    text NOT NULL CHECK (to_kind IN ('wallet', 'business', 'system')),
+  to_id      uuid,
+  amount     bigint NOT NULL CHECK (amount > 0),
+  reason     text NOT NULL CHECK (reason IN ('grant', 'allawee', 'task', 'prize', 'purchase_need', 'purchase_supply', 'sale',
+               'rent', 'upkeep', 'marketing', 'running_cost', 'backup_market', 'townspeople', 'spoilage_salvage', 'credit_repaid',
+               'decision', 'invest', 'owner_draw', 'admin_adjust', 'restructure')),
+  source     text,                                -- task source ("quiz", "follow"...) or a short label
+  ref_id     text,
+  note       text
+);
+CREATE INDEX IF NOT EXISTS hustle_ledger_from_idx ON hustle_ledger (from_id, at DESC) WHERE from_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS hustle_ledger_to_idx ON hustle_ledger (to_id, at DESC) WHERE to_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS hustle_ledger_reason_idx ON hustle_ledger (reason, at);
+
+CREATE TABLE IF NOT EXISTS hustle_days (
+  business_id         uuid NOT NULL REFERENCES hustle_businesses(id) ON DELETE CASCADE,
+  day_date            date NOT NULL,
+  plan                jsonb,                      -- { units, price, card, choice }
+  opened_at           timestamptz,
+  units_prepared      int NOT NULL DEFAULT 0,
+  units_credit        int NOT NULL DEFAULT 0,
+  units_sold_town     int NOT NULL DEFAULT 0,
+  units_sold_players  int NOT NULL DEFAULT 0,
+  units_wasted        int NOT NULL DEFAULT 0,
+  town_demand         int NOT NULL DEFAULT 0,     -- customers who came from town (turned away = this - sold)
+  revenue             bigint NOT NULL DEFAULT 0,
+  cost_of_goods       bigint NOT NULL DEFAULT 0,
+  fixed_costs         bigint NOT NULL DEFAULT 0,
+  other               bigint NOT NULL DEFAULT 0,  -- decision card cash, + or -
+  profit              bigint,
+  rating_delta        numeric(4,2) NOT NULL DEFAULT 0,
+  supply_extra        bigint NOT NULL DEFAULT 0,  -- paid above the normal lot price (backup market markup)
+  tips                jsonb,
+  closed_at           timestamptz,
+  PRIMARY KEY (business_id, day_date)
+);
+CREATE INDEX IF NOT EXISTS hustle_days_date_idx ON hustle_days (day_date);
+
+-- Supply lots held (fractional: a buka uses a quarter lot per plate).
+CREATE TABLE IF NOT EXISTS hustle_inventory (
+  id           bigserial PRIMARY KEY,
+  business_id  uuid NOT NULL REFERENCES hustle_businesses(id) ON DELETE CASCADE,
+  item_type    text NOT NULL,                     -- supply type slug
+  qty_lots     numeric(10,3) NOT NULL CHECK (qty_lots >= 0),
+  lot_cost     int NOT NULL,                      -- what one lot cost, for cost of goods
+  source       text NOT NULL DEFAULT 'backup',    -- 'backup' or the seller business id
+  acquired_at  timestamptz NOT NULL DEFAULT now(),
+  expires_at   date
+);
+CREATE INDEX IF NOT EXISTS hustle_inventory_biz_idx ON hustle_inventory (business_id, item_type, acquired_at) WHERE qty_lots > 0;
+
+-- What a business offers players today.
+CREATE TABLE IF NOT EXISTS hustle_listings (
+  id               bigserial PRIMARY KEY,
+  business_id      uuid NOT NULL REFERENCES hustle_businesses(id) ON DELETE CASCADE,
+  day_date         date NOT NULL,
+  units_available  int NOT NULL CHECK (units_available >= 0),
+  price            int NOT NULL CHECK (price > 0),
+  UNIQUE (business_id, day_date)
+);
+
+CREATE TABLE IF NOT EXISTS hustle_orders (
+  id                  bigserial PRIMARY KEY,
+  buyer_kind          text NOT NULL CHECK (buyer_kind IN ('user', 'business')),
+  buyer_id            uuid NOT NULL,
+  buyer_user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  seller_business_id  uuid REFERENCES hustle_businesses(id) ON DELETE CASCADE,  -- null: backup shop
+  listing_id          bigint REFERENCES hustle_listings(id) ON DELETE SET NULL,
+  qty                 int NOT NULL CHECK (qty > 0),
+  unit_price          int NOT NULL,
+  total               bigint NOT NULL,
+  need_key            text,
+  status              text NOT NULL DEFAULT 'done' CHECK (status IN ('done', 'reversed')),
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS hustle_orders_seller_idx ON hustle_orders (seller_business_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS hustle_orders_buyer_idx ON hustle_orders (buyer_user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS hustle_reviews (
+  id                bigserial PRIMARY KEY,
+  business_id       uuid NOT NULL REFERENCES hustle_businesses(id) ON DELETE CASCADE,
+  reviewer_user_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  order_id          bigint NOT NULL UNIQUE REFERENCES hustle_orders(id) ON DELETE CASCADE,
+  stars             int NOT NULL CHECK (stars BETWEEN 1 AND 5),
+  text              text CHECK (char_length(text) <= 140),
+  created_at        timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS hustle_reviews_biz_idx ON hustle_reviews (business_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS hustle_needs (
+  user_id            uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  need_key           text NOT NULL,
+  last_satisfied_at  timestamptz NOT NULL,
+  satisfied_until    timestamptz NOT NULL,          -- last purchase + that seller's interval (backup shop: half)
+  PRIMARY KEY (user_id, need_key)
+);
+
+-- Market news. effects: {"demand": {"buka": 1.2, "food": 1.2}, "cost": {"keke_rider": 1.15}} (type slug or category).
+CREATE TABLE IF NOT EXISTS hustle_events (
+  id          bigserial PRIMARY KEY,
+  starts_on   date NOT NULL,
+  ends_on     date NOT NULL,
+  state       text,                               -- null: every state
+  headline    text NOT NULL,
+  body        text NOT NULL DEFAULT '',
+  effects     jsonb NOT NULL DEFAULT '{}',
+  created_by  uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+-- One decision a day. options: [{ "label": "...", "effects": { ... } }] (see lib/hustle/cards.ts).
+CREATE TABLE IF NOT EXISTS hustle_decision_cards (
+  id                bigserial PRIMARY KEY,
+  slug              text UNIQUE,
+  applies_to_types  text[],                       -- null: every type
+  prompt            text NOT NULL,
+  options           jsonb NOT NULL,
+  is_active         boolean NOT NULL DEFAULT true
+);
+
+CREATE TABLE IF NOT EXISTS hustle_receivables (
+  id            bigserial PRIMARY KEY,
+  business_id   uuid NOT NULL REFERENCES hustle_businesses(id) ON DELETE CASCADE,
+  amount        bigint NOT NULL CHECK (amount > 0),
+  due_on        date NOT NULL,
+  from_label    text NOT NULL,
+  repay_chance  numeric(3,2) NOT NULL,
+  status        text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'defaulted')),
+  created_on    date NOT NULL
+);
+CREATE INDEX IF NOT EXISTS hustle_receivables_due_idx ON hustle_receivables (due_on) WHERE status = 'pending';
+
+-- Effects that last several days: a helper's raise, a short-staffed week, a creator's campaign.
+CREATE TABLE IF NOT EXISTS hustle_modifiers (
+  id           bigserial PRIMARY KEY,
+  business_id  uuid NOT NULL REFERENCES hustle_businesses(id) ON DELETE CASCADE,
+  kind         text NOT NULL CHECK (kind IN ('demand', 'capacity', 'daily_cost')),
+  value        numeric(10,2) NOT NULL,            -- a multiplier, or naira a day for daily_cost
+  starts_on    date NOT NULL,
+  ends_on      date NOT NULL,
+  label        text NOT NULL
+);
+CREATE INDEX IF NOT EXISTS hustle_modifiers_biz_idx ON hustle_modifiers (business_id, ends_on);
+
+INSERT INTO settings (key, value) VALUES
+  ('hustle_enabled', 'admins'),
+  ('hustle_grant', '50000'),
+  ('hustle_allawee', '20000'),
+  ('hustle_task_cap', '500'),
+  ('hustle_town_multiplier', '1.0'),
+  ('hustle_backup_markup', '0.25'),
+  ('hustle_salvage_pct', '0.7'),
+  ('hustle_need_vibe_effect', '0.05'),
+  ('hustle_grace_days', '7')
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO badges (slug, name, description, icon, color, priority, kind, qualifies_for_rewards) VALUES
+  ('hustle_comeback', 'Comeback', 'Restructured a business and kept going', 'flame', 'amber', 15, 'auto', false)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO hustle_business_types (slug, name, blurb, category, unit_name, kind, sells_supply, perishable, slots, open_air, expiry_days,
+  default_price, cost_per_unit, capacity_per_day, rent_per_day, upkeep_per_day, upkeep_provider_type, marketing_per_day,
+  supply_type, units_per_supply_lot, setup_cost, townspeople_demand_per_day, need_key, need_days, sort) VALUES
+  ('buka', 'Buka', 'Daily meals for everyone', 'food', 'plate', 'consumer', false, true, false, false, NULL, 500, 250, 20, 1000, 150, 'carpenter', 100, 'crop_farm', 4, 35000, 9000, 'food', 1, 10),
+  ('suya_spot', 'Suya spot', 'Evening suya and wraps', 'food', 'wrap', 'consumer', false, true, false, true, NULL, 1000, 500, 15, 800, 100, 'carpenter', 100, 'poultry', 2, 30000, 5000, 'food', 1, 20),
+  ('provision_store', 'Provision store', 'Everyday items, and supplies for shops', 'food', 'basket', 'consumer', true, false, false, false, NULL, 1000, 800, 25, 700, 100, 'carpenter', 100, NULL, NULL, 30000, 8000, 'food', 1, 30),
+  ('barber', 'Barber', 'Weekly cuts, local only', 'services', 'haircut', 'consumer', false, false, true, false, NULL, 1500, 150, 10, 1000, 100, 'carpenter', 100, 'cosmetics_supplier', 7, 30000, 4500, 'grooming', 7, 40),
+  ('salon', 'Salon', 'Braids and styling', 'services', 'styling', 'consumer', false, false, true, false, NULL, 4000, 800, 3, 1200, 150, 'carpenter', 100, 'cosmetics_supplier', 1, 35000, 4000, 'grooming', 10, 50),
+  ('tailor', 'Tailor', 'Outfits made to measure', 'services', 'outfit', 'consumer', false, false, false, false, NULL, 5000, 2400, 1, 800, 100, 'carpenter', 100, 'fabric_trader', 1, 30000, 4000, 'clothes', 30, 60),
+  ('laundry', 'Laundry', 'Wash, iron, fold', 'services', 'load', 'consumer', false, false, true, false, NULL, 800, 200, 12, 900, 100, 'carpenter', 100, 'provision_store', 5, 25000, 3000, 'laundry', 7, 70),
+  ('cyber_cafe', 'Cyber café', 'Printing, typing and forms', 'services', 'job', 'consumer', false, false, true, false, NULL, 500, 150, 25, 1000, 150, 'phone_repair', 100, 'provision_store', 7, 30000, 4000, 'printing', 14, 80),
+  ('pos_agent', 'POS agent', 'Cash-outs and transfers', 'services', 'cash-out', 'consumer', false, false, true, false, NULL, 100, 20, 60, 500, 100, 'phone_repair', 0, NULL, NULL, 20000, 3000, 'cash', 7, 90),
+  ('keke_rider', 'Keke rider', 'Rides around town', 'services', 'ride', 'consumer', false, false, true, true, NULL, 300, 100, 25, 800, 300, 'mechanic', 0, NULL, NULL, 15000, 4500, 'rides', 2, 100),
+  ('dispatch_rider', 'Dispatch rider', 'Deliveries across town', 'services', 'delivery', 'consumer', false, false, true, true, NULL, 500, 150, 15, 700, 300, 'mechanic', 0, NULL, NULL, 20000, 3000, NULL, NULL, 110),
+  ('phone_repair', 'Phone repair & data', 'Data, screens and chargers', 'services', 'job', 'consumer', false, false, false, false, NULL, 1500, 1050, 15, 800, 0, NULL, 100, 'phone_accessories', 1, 30000, 4000, 'data', 7, 120),
+  ('mechanic', 'Mechanic & vulcanizer', 'Keeps kekes and bikes running', 'services', 'job', 'b2b', false, false, true, false, NULL, 1500, 600, 6, 600, 0, NULL, 0, NULL, NULL, 25000, 3000, NULL, NULL, 130),
+  ('carpenter', 'Carpenter', 'Benches, stalls and shop fittings', 'services', 'piece', 'b2b', false, false, true, false, NULL, 5000, 2500, 2, 600, 0, NULL, 0, NULL, NULL, 30000, 2500, NULL, NULL, 140),
+  ('content_creator', 'Content creator', 'Sells promo to businesses', 'services', 'campaign', 'b2b', false, false, true, false, NULL, 3000, 500, 3, 300, 0, NULL, 0, NULL, NULL, 15000, 1500, NULL, NULL, 150),
+  ('crop_farm', 'Crop farm', 'Sells to bukas and suya spots', 'supply', 'lot', 'supplier', false, true, false, true, 3, 1000, 400, 15, 500, 0, NULL, 0, NULL, NULL, 30000, 3000, NULL, NULL, 160),
+  ('poultry', 'Poultry', 'Chicken for suya and bukas', 'supply', 'lot', 'supplier', false, true, false, false, 3, 1000, 450, 12, 600, 0, NULL, 0, NULL, NULL, 35000, 2500, NULL, NULL, 170),
+  ('fabric_trader', 'Fabric trader', 'Ankara and lace for tailors', 'supply', 'lot', 'supplier', false, false, false, false, NULL, 1000, 700, 20, 700, 0, NULL, 0, NULL, NULL, 20000, 2000, NULL, NULL, 180),
+  ('cosmetics_supplier', 'Cosmetics & hair', 'Supplies for barbers and salons', 'supply', 'lot', 'supplier', false, false, false, false, NULL, 1000, 680, 20, 700, 0, NULL, 0, NULL, NULL, 20000, 3000, NULL, NULL, 190),
+  ('phone_accessories', 'Phone accessories', 'Parts and data for phone shops', 'supply', 'lot', 'supplier', false, false, false, false, NULL, 1000, 720, 20, 700, 0, NULL, 0, NULL, NULL, 20000, 2500, NULL, NULL, 200)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO hustle_decision_cards (slug, applies_to_types, prompt, options) VALUES
+  ('credit', NULL, 'A regular wants 3 {units} on credit. They say they''ll pay in 3 days.',
+    '[{"label":"Give credit","effects":{"credit":{"units":3,"due_days":3,"repay_chance":0.8},"rating":0.1}},{"label":"Decline politely","effects":{}}]'),
+  ('bulk_discount', '{buka,suya_spot,barber,salon,tailor,laundry,cyber_cafe,phone_repair}', 'Your supplier offers 10% off if you buy 5 lots today.',
+    '[{"label":"Buy 5 lots","effects":{"buy_lots":{"lots":5,"discount":0.1}}},{"label":"Not today","effects":{}}]'),
+  ('levy', NULL, 'A local government officer says you owe a ₦1,500 levy.',
+    '[{"label":"Pay it","effects":{"cash":-1500}},{"label":"Argue","effects":{"chance":{"p":0.5,"then":{"cash":-3000},"else":{}}}}]'),
+  ('nepa', '{buka,suya_spot,barber,salon,tailor,laundry,cyber_cafe,phone_repair,provision_store,pos_agent}', 'NEPA has taken light. Run the generator?',
+    '[{"label":"Run it (₦600 fuel)","effects":{"cash":-600}},{"label":"No, manage","effects":{"demand":0.6}}]'),
+  ('price_war', NULL, 'A competitor cut prices by 20%.',
+    '[{"label":"Match their price","effects":{"price":0.8}},{"label":"Hold my price","effects":{"demand":0.85,"rating":0.05}}]'),
+  ('helper_raise', NULL, 'Your helper asks for a ₦2,000 raise.',
+    '[{"label":"Yes","effects":{"modifiers":[{"kind":"daily_cost","value":300,"days":7,"label":"Helper''s raise"},{"kind":"capacity","value":1.05,"days":7,"label":"Happy helper"}]}},{"label":"No","effects":{"chance":{"p":0.3,"then":{"modifiers":[{"kind":"capacity","value":0.8,"days":3,"label":"Helper not happy"}]},"else":{}}}}]'),
+  ('complaint', NULL, 'A customer is complaining loudly online.',
+    '[{"label":"Refund 1 {unit}","effects":{"refund_units":1,"rating":0.1}},{"label":"Ignore it","effects":{"rating":-0.2}}]'),
+  ('rain', '{suya_spot,keke_rider,dispatch_rider,crop_farm}', 'Rain all day. Fewer people are out.',
+    '[{"label":"OK","effects":{"demand":0.7}}]')
+ON CONFLICT (slug) DO NOTHING;
+
+-- My Hustle display mode (docs/MY_HUSTLE_VISUAL_PROMPT.md): graphical (default, players can pick Lite mode),
+-- text (text screens only), graphical_only (testing: no list view or Lite mode). See lib/hustle/ui-mode.ts.
+INSERT INTO settings (key, value) VALUES ('hustle_ui_mode', 'graphical') ON CONFLICT (key) DO NOTHING;
+-- A player's own choice of the simpler text screens ("Lite mode: simpler screens, less data").
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hustle_lite boolean NOT NULL DEFAULT false;

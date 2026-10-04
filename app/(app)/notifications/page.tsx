@@ -3,7 +3,7 @@ import Link from "next/link";
 import AnnouncementCard from "@/components/AnnouncementCard";
 import Avatar from "@/components/Avatar";
 import { PersonButton } from "@/components/PersonSheet";
-import { ChevronLeft, GiftIcon, MedalIcon } from "@/components/icons";
+import { ChevronLeft, GiftIcon, MedalIcon, StoreIcon } from "@/components/icons";
 import { sql } from "@/lib/db";
 import { getAnnouncements, getNotifications, type Notification } from "@/lib/notifications";
 import { requireUser } from "@/lib/session";
@@ -17,7 +17,7 @@ function Row({ n, unread }: { n: Notification; unread: boolean }) {
     <Avatar id={n.actor.id} nickname={n.actor.nickname} photoVersion={n.actor.photo_version} size={40} />
   ) : (
     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lime-ink">
-      {n.kind === "badge" ? <MedalIcon size={20} /> : <GiftIcon size={20} />}
+      {n.kind === "badge" ? <MedalIcon size={20} /> : n.kind === "hustle" ? <StoreIcon size={20} /> : <GiftIcon size={20} />}
     </span>
   );
   const content = (
