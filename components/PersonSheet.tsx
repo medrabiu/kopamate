@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight } from "./icons";
 import { setFollow } from "@/app/actions/follows";
 import type { FollowRow, PublicProfile } from "@/lib/people";
 import { stateSlug } from "@/lib/states";
+import { stageLine } from "@/lib/nysc";
 
 const joinedOn = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date(iso));
@@ -200,7 +201,7 @@ export function PeopleProvider({ viewerId, children }: { viewerId: string; child
                 )}
               </div>
               <div className="mt-1 text-[15px] text-muted">
-                {profile.state ? `Serving in ${profile.state}` : "Corper"} · Joined {joinedOn(profile.joined)}
+                {stageLine(profile.nysc_stage, profile.state, profile.nysc_batch)} · Joined {joinedOn(profile.joined)}
               </div>
             </div>
 

@@ -7,10 +7,13 @@ export const VERIFICATION_RETRY_HOURS = 24;
 
 /** Why someone can't send a verification request right now, or null if they can. */
 export function verificationBlock(
-  u: { verification_status: string; verification_attempts: number; verification_rejected_at: Date | string | null },
+  u: { verification_status: string; verification_attempts: number; verification_rejected_at: Date | string | null; nysc_stage: string },
   now = Date.now(),
 ): string | null {
   if (u.verification_status === "verified" || u.verification_status === "pending") return null;
+  // Prizes are for serving corpers, so only they (and those heading to camp) can get verified.
+  if (u.nysc_stage === "waiting") return "You can get verified once you're in camp and have your NYSC ID card.";
+  if (u.nysc_stage === "served") return "Verification is for serving corpers, since prizes are for them.";
   if (u.verification_attempts >= MAX_VERIFICATION_ATTEMPTS) {
     return "You've used all your verification tries. Message us on WhatsApp and we'll help you get verified.";
   }

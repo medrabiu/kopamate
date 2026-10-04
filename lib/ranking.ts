@@ -4,6 +4,7 @@ import { sql } from "./db";
 import { PLACES_PER_REFERRAL } from "./config";
 import { isVerified, topBadge } from "./badges";
 import type { BadgeInfo } from "./badge-meta";
+import { IN_SERVICE } from "./nysc";
 
 /**
  * Positions.
@@ -165,16 +166,33 @@ export type MemberRow = {
 };
 
 /** Everyone listed in a state: ranked users by position first, then seed accounts by join time. */
-export async function getStateMembers(state: string, limit: number): Promise<MemberRow[]> {
+/** Who to list on a state's page: serving there (and posted), ex-corpers who served there, or awaiting call-up. */
+export type MemberGroup = "serving" | "served" | "waiting";
+
+const groupStages = (group: MemberGroup) => (group === "serving" ? IN_SERVICE : [group]);
+
+export async function getStateMembers(state: string, limit: number, group: MemberGroup = "serving"): Promise<MemberRow[]> {
   return sql<MemberRow[]>`
     ${ranked()}
     SELECT u.id, u.nickname, u.photo_version, r.position, ${topBadge()}, ${isVerified()}
     FROM users u LEFT JOIN ranked r ON r.id = u.id
     WHERE u.state = ${state} AND u.show_in_list AND u.completed_at IS NOT NULL AND NOT u.is_banned
+      AND u.nysc_stage IN ${sql(groupStages(group))}
       AND (r.id IS NOT NULL OR u.is_seed)
     ORDER BY r.position NULLS LAST, u.completed_at DESC
     LIMIT ${limit}
   `;
+}
+
+/** How many people in a state are in each group (everyone who finished sign-up, listed or not). */
+export async function getStateGroupCounts(state: string): Promise<Record<MemberGroup, number>> {
+  const [row] = await sql<Record<MemberGroup, number>[]>`
+    SELECT count(*) FILTER (WHERE nysc_stage IN ${sql(IN_SERVICE)})::int AS serving,
+           count(*) FILTER (WHERE nysc_stage = 'served')::int AS served,
+           count(*) FILTER (WHERE nysc_stage = 'waiting')::int AS waiting
+    FROM users WHERE state = ${state} AND completed_at IS NOT NULL AND NOT is_banned
+  `;
+  return row;
 }
 
 /** Next goal shown on Home, e.g. "Invite 2 more to reach the top 300". */

@@ -6,6 +6,7 @@ import { sql } from "./db";
 import { randomToken, sha256 } from "./util";
 import { SESSION_DAYS } from "./config";
 import { normalizeNigerianPhone } from "./validate";
+import type { Stage } from "./nysc";
 
 export const SESSION_COOKIE = "km_session";
 
@@ -17,6 +18,11 @@ export type User = {
   whatsapp_e164: string | null;
   state: string | null;
   state_code: string | null;
+  nysc_stage: Stage;
+  /** Like "2026B2" (see lib/nysc.ts). */
+  nysc_batch: string | null;
+  /** Null for people who joined before NYSC stages existed and haven't confirmed theirs yet. */
+  stage_confirmed_at: Date | null;
   photo_version: number;
   google_id: string | null;
   email: string | null;
@@ -39,7 +45,7 @@ export type User = {
 };
 
 export const userColumns = () => sql`
-  u.id, u.nickname, u.full_name, u.whatsapp_e164, u.state, u.state_code, u.photo_version, u.google_id, u.email,
+  u.id, u.nickname, u.full_name, u.whatsapp_e164, u.state, u.state_code, u.nysc_stage, u.nysc_batch, u.stage_confirmed_at, u.photo_version, u.google_id, u.email,
   (u.pin_hash IS NOT NULL) AS has_pin, u.referral_code, u.referred_by, u.signup_number, u.completed_at,
   u.show_in_list, u.state_changed_at, u.is_flagged, u.is_banned, u.last_seen_on::text AS last_seen_on,
   u.last_seen_position, u.created_at, u.verification_status, u.verification_note,

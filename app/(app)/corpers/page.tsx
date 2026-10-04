@@ -55,7 +55,7 @@ export default async function CorpersPage() {
               </span>
             )}
             <span className="min-w-0 flex-1 text-sm text-muted">
-              {formatNumber(mine.count)} {mine.count === 1 ? "corper" : "corpers"} serving here
+              {formatNumber(mine.count)} {mine.count === 1 ? "corper" : "corpers"} here
             </span>
             <ChevronRight size={20} className="shrink-0 text-lime-ink" />
           </div>

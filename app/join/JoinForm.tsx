@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { signupWithPhone, finishSignup, type FormState } from "@/app/actions/auth";
-import { Divider, Field, FormError, GoogleButton, PhoneInput, PinInput, StateSelect, UsernameInput } from "@/components/forms";
+import { Divider, Field, FormError, GoogleButton, PhoneInput, PinInput, StageAndState, UsernameInput } from "@/components/forms";
 
 export function PhoneSignupForm({ googleOn }: { googleOn: boolean }) {
   const [state, action, pending] = useActionState<FormState, FormData>(signupWithPhone, undefined);
@@ -23,9 +23,7 @@ export function PhoneSignupForm({ googleOn }: { googleOn: boolean }) {
         <Field label="WhatsApp number" id="whatsapp">
           <PhoneInput defaultValue={f.whatsapp} />
         </Field>
-        <Field label="State you're serving in" id="state">
-          <StateSelect defaultValue={f.state} />
-        </Field>
+        <StageAndState defaultStage={f.stage} defaultState={f.state} />
         <Field label="Create a 4-digit PIN (to log in later)" id="pin">
           <PinInput />
         </Field>
@@ -50,9 +48,7 @@ export function FinishForm({ nickname }: { nickname: string }) {
       <Field label="WhatsApp number" id="whatsapp">
         <PhoneInput defaultValue={f.whatsapp} autoFocus />
       </Field>
-      <Field label="State you're serving in" id="state">
-        <StateSelect defaultValue={f.state} />
-      </Field>
+      <StageAndState defaultStage={f.stage} defaultState={f.state} />
       <button type="submit" disabled={pending} className="btn-primary mt-2">
         {pending ? "Finishing…" : "Finish"}
       </button>

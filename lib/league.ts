@@ -4,16 +4,25 @@ import { awardBadge } from "./badges";
 import { sql } from "./db";
 import { sendPush } from "./push";
 import { STATES } from "./states";
+import { IN_SERVICE, type Stage } from "./nysc";
 import { lagosDate } from "./util";
 
 /**
  * State League. Weeks run Monday to Sunday, Lagos time. Every Daily Quiz point a corper scores counts for
  * the state they serve in. States are ranked by points per corper (total points ÷ every corper in the
  * state), so a small state that plays hard beats a big one that doesn't, and every member counts.
- * A state needs MIN_MEMBERS corpers to be ranked. Seed accounts, flagged and banned users never score
- * and don't count as members.
+ * A state needs MIN_MEMBERS corpers to be ranked. Only corpers serving or posted there count (see
+ * lib/nysc.ts); anyone awaiting call-up or passed out still plays for their streak but doesn't score.
+ * Seed accounts, flagged and banned users never score and don't count as members.
  */
 export const MIN_MEMBERS = 10;
+/** True (in SQL) for users who count in the League: posted or serving. */
+export const inLeague = (alias: string) => sql`${sql(alias)}.nysc_stage IN ${sql(IN_SERVICE)}`;
+
+export function playsInLeague(stage: Stage) {
+  return IN_SERVICE.includes(stage);
+}
+
 /** Days played in a week to share in a Champion State badge. */
 export const CHAMPION_MIN_DAYS = 3;
 
@@ -49,12 +58,12 @@ async function loadStandings(week: string): Promise<StateStanding[]> {
       SELECT a.state, sum(a.points + a.bonus)::int AS points, count(DISTINCT a.user_id)::int AS players
       FROM quiz_attempts a JOIN users u ON u.id = a.user_id
       WHERE a.day >= ${week}::date AND a.day < ${week}::date + 7
-        AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed
+        AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed AND ${inLeague("u")}
       GROUP BY a.state
     ),
     mem AS (
-      SELECT state, count(*)::int AS members FROM users
-      WHERE completed_at IS NOT NULL AND NOT is_banned AND NOT is_seed AND state IS NOT NULL
+      SELECT state, count(*)::int AS members FROM users u
+      WHERE completed_at IS NOT NULL AND NOT is_banned AND NOT is_seed AND state IS NOT NULL AND ${inLeague("u")}
       GROUP BY state
     )
     SELECT mem.state, mem.members, COALESCE(pts.players, 0) AS players, COALESCE(pts.points, 0) AS points
@@ -87,7 +96,7 @@ const playerTotals = (week: string) => sql`
          min(a.started_at) AS first_at
   FROM quiz_attempts a JOIN users u ON u.id = a.user_id
   WHERE a.day >= ${week}::date AND a.day < ${week}::date + 7
-    AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed
+    AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed AND ${inLeague("u")}
   GROUP BY a.user_id, u.nickname, u.photo_version, u.verification_status, a.state
 `;
 
@@ -138,7 +147,7 @@ export async function closeWeek(week: string) {
     const rows = await sql<{ id: string }[]>`
       SELECT a.user_id AS id FROM quiz_attempts a JOIN users u ON u.id = a.user_id
       WHERE a.day >= ${week}::date AND a.day < ${week}::date + 7 AND a.state = ${winner.state}
-        AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed
+        AND NOT u.is_flagged AND NOT u.is_banned AND NOT u.is_seed AND ${inLeague("u")}
       GROUP BY a.user_id HAVING count(*) >= ${CHAMPION_MIN_DAYS}
     `;
     champions = rows.map((r) => r.id);

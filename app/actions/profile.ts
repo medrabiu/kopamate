@@ -9,7 +9,8 @@ import { destroySession, getCurrentUser } from "@/lib/session";
 import { normalizeNigerianPhone, normalizeStateCode, validateFullName, validatePin, validateUsername } from "@/lib/validate";
 import { isUniqueViolation, isUsernameViolation, usernameTaken, usernameTakenError, whatsappTaken } from "@/lib/signup";
 import { checkAutoBadges } from "@/lib/badges";
-import { stateCodeProblem } from "@/lib/states";
+import { isState, stateCodeProblem } from "@/lib/states";
+import { batchFromStateCode, batchProblem, isStage, STATE_LABEL } from "@/lib/nysc";
 import { verificationBlock } from "@/lib/verification";
 
 export type ProfileState = { error?: string; ok?: boolean } | undefined;
@@ -68,6 +69,53 @@ export async function updateField(_prev: ProfileState, fd: FormData): Promise<Pr
       return { error: "Something went wrong. Try again." };
   }
   await checkAutoBadges(user.id);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Where you are in NYSC, and your batch. Used by Settings and by Home's one-time "confirm" card. Someone
+ * awaiting call-up picked where they live, so they can set their state here once they're posted; everyone
+ * else keeps the state they joined with (an admin can change it).
+ */
+export async function updateNyscStatus(_prev: ProfileState, fd: FormData): Promise<ProfileState> {
+  const user = await me();
+  const stage = String(fd.get("stage") ?? "");
+  if (!isStage(stage)) return { error: "Pick where you are in NYSC." };
+
+  let batch: string | null = null;
+  if (stage !== "waiting") {
+    const year = String(fd.get("batch_year") ?? "");
+    const letter = String(fd.get("batch_letter") ?? "");
+    const stream = String(fd.get("batch_stream") ?? "");
+    if (year || letter) {
+      if (!/^\d{4}$/.test(year) || !/^[ABC]$/.test(letter)) return { error: "Pick both the year and the batch letter." };
+      batch = `${year}${letter}${/^[12]$/.test(stream) ? stream : ""}`;
+    } else if (stage !== "served") {
+      return { error: "Pick your batch. It's on your call-up letter." };
+    }
+  }
+  const problem = batchProblem(stage, batch);
+  if (problem) return { error: problem };
+
+  let state = user.state;
+  if (user.nysc_stage === "waiting" || !user.state) {
+    const picked = String(fd.get("state") ?? "");
+    if (picked) {
+      if (!isState(picked)) return { error: `Choose the ${STATE_LABEL[stage].toLowerCase()}.` };
+      state = picked;
+    } else if (stage !== "waiting") {
+      return { error: `Choose the ${STATE_LABEL[stage].toLowerCase()}.` };
+    }
+  }
+
+  await sql`
+    UPDATE users SET nysc_stage = ${stage}, nysc_batch = ${batch}, stage_confirmed_at = now(), state = ${state},
+      state_changed_at = CASE WHEN state IS DISTINCT FROM ${state} THEN now() ELSE state_changed_at END
+    WHERE id = ${user.id}
+  `;
+  revalidateTag("stats");
+  revalidateTag("league");
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -172,7 +220,7 @@ export async function requestVerification(_prev: ProfileState, fd: FormData): Pr
   const dhash = /^[0-9a-f]{16}$/.test(dhashHex) ? BigInt.asIntN(64, BigInt(`0x${dhashHex}`)).toString() : null;
 
   const updated = await sql`
-    UPDATE users SET full_name = ${name.value}, state_code = ${code},
+    UPDATE users SET full_name = ${name.value}, state_code = ${code}, nysc_batch = COALESCE(nysc_batch, ${batchFromStateCode(code)}),
       id_card_data = ${Buffer.from(bytes).toString("base64")}, id_card_mime = ${mime},
       verification_status = 'pending', verification_requested_at = now(), verification_note = NULL,
       verification_attempts = verification_attempts + 1

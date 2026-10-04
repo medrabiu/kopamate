@@ -510,3 +510,21 @@ BEGIN
   END IF;
 END $$;
 CREATE INDEX IF NOT EXISTS announcements_published_idx ON announcements (published_at DESC) WHERE visible;
+
+-- Where someone is in NYSC (lib/nysc.ts): waiting (no call-up yet), posted (call-up, camp not started),
+-- serving, served (passed out). Only posted and serving count in the State League. The batch ("2026B2":
+-- year, letter, stream) lets the daily cron move people on. Everyone who joined before this is 'serving'
+-- until they confirm on Home (stage_confirmed_at stays null till then).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS nysc_stage text NOT NULL DEFAULT 'serving';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS nysc_batch text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stage_confirmed_at timestamptz;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_nysc_stage_check') THEN
+    ALTER TABLE users ADD CONSTRAINT users_nysc_stage_check CHECK (nysc_stage IN ('waiting', 'posted', 'serving', 'served'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_nysc_batch_check') THEN
+    ALTER TABLE users ADD CONSTRAINT users_nysc_batch_check CHECK (nysc_batch ~ '^\d{4}[ABC][12]?$');
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS users_state_stage_idx ON users (state, nysc_stage);

@@ -11,6 +11,7 @@ import { APP_NAME, APP_URL } from "@/lib/config";
 import { getProfileByCode } from "@/lib/people";
 import { getCurrentUser } from "@/lib/session";
 import { track } from "@/lib/stats";
+import { stageLine, type Stage } from "@/lib/nysc";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,18 @@ const fmt = (n: number) => new Intl.NumberFormat("en-NG").format(n);
 const joinedOn = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date(iso));
 
+/** " is serving in Lagos", for the link preview. */
+function profileBlurb(stage: Stage, state: string | null) {
+  if (stage === "waiting") return " is awaiting call-up";
+  if (!state) return stage === "served" ? " is an ex-corper" : " is a corper";
+  return stage === "served" ? ` served in ${state}` : stage === "posted" ? ` is posted to ${state}` : ` is serving in ${state}`;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await getProfileByCode((await params).code, null);
   if (!p) return { title: "Profile not found", robots: { index: false } };
   const title = `Follow ${p.nickname} on ${APP_NAME}`;
-  const description = `${p.nickname}${p.state ? ` is serving in ${p.state}` : " is a corper"} on ${APP_NAME}, the free app for NYSC corps members. Join to follow them.`;
+  const description = `${p.nickname}${profileBlurb(p.nysc_stage, p.state)} on ${APP_NAME}, the free app for NYSC corps members. Join to follow them.`;
   return {
     title: { absolute: title },
     description,
@@ -82,7 +90,7 @@ export default async function ProfileLinkPage({ params }: Props) {
             </>
           }
           username={p.nickname}
-          meta={`${p.state ? `Serving in ${p.state}` : "Corper"} · Joined ${joinedOn(p.joined)}`}
+          meta={`${stageLine(p.nysc_stage, p.state, p.nysc_batch)} · Joined ${joinedOn(p.joined)}`}
           stats={
             <>
               <span>

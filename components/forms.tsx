@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { STATES } from "@/lib/states";
+import { BATCH_LETTERS, batchYears, parseBatch, STAGE_CHIP, STAGES, STATE_LABEL, type Stage } from "@/lib/nysc";
 import { ChevronDown } from "./icons";
 
 export function FormError({ message }: { message?: string }) {
@@ -77,10 +79,10 @@ export function PhoneInput({ defaultValue, id = "whatsapp", autoFocus }: { defau
   );
 }
 
-export function StateSelect({ defaultValue, id = "state" }: { defaultValue?: string; id?: string }) {
+export function StateSelect({ defaultValue, id = "state", required = true }: { defaultValue?: string; id?: string; required?: boolean }) {
   return (
     <div className="relative">
-      <select id={id} name="state" required defaultValue={defaultValue || ""} className="field appearance-none pr-10">
+      <select id={id} name="state" required={required} defaultValue={defaultValue || ""} className="field appearance-none pr-10">
         <option value="" disabled>
           Choose your state
         </option>
@@ -137,5 +139,83 @@ export function Divider({ text }: { text: string }) {
       {text}
       <span className="h-px flex-1 bg-surface-2" />
     </div>
+  );
+}
+
+/** Where you are in NYSC, as four chips (one tap; "Serving" is picked already). Posts `stage`. */
+export function StageChips({ value, onChange }: { value: Stage; onChange: (stage: Stage) => void }) {
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="label mb-1.5">Where are you in NYSC?</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {STAGES.map((s) => (
+          <label
+            key={s}
+            className="flex h-11 cursor-pointer items-center justify-center rounded-full border border-line px-3 text-[15px] font-medium text-muted has-[:checked]:border-lime has-[:checked]:bg-lime/10 has-[:checked]:font-bold has-[:checked]:text-ink has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-lime"
+          >
+            <input type="radio" name="stage" value={s} checked={value === s} onChange={() => onChange(s)} className="sr-only" />
+            {STAGE_CHIP[s]}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** Stage chips plus the state, whose label follows the stage ("State you're posted to"…). */
+export function StageAndState({ defaultStage, defaultState }: { defaultStage?: string; defaultState?: string }) {
+  const [stage, setStage] = useState<Stage>((STAGES as readonly string[]).includes(defaultStage ?? "") ? (defaultStage as Stage) : "serving");
+  return (
+    <>
+      <StageChips value={stage} onChange={setStage} />
+      <Field label={STATE_LABEL[stage]} id="state">
+        <StateSelect defaultValue={defaultState} />
+      </Field>
+    </>
+  );
+}
+
+const STREAMS = [
+  ["", "Not sure"],
+  ["1", "Stream I"],
+  ["2", "Stream II"],
+] as const;
+
+/** Batch as year + letter + stream. Posts `batch_year`, `batch_letter` and `batch_stream`. */
+export function BatchPicker({ stage, defaultValue, required }: { stage: Stage; defaultValue?: string | null; required?: boolean }) {
+  const b = parseBatch(defaultValue);
+  const select = "field appearance-none pr-8";
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="label mb-1.5">Batch{required ? "" : " (optional)"}</legend>
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { name: "batch_year", label: "Year", value: b ? String(b.year) : "", options: batchYears(stage).map((y) => [String(y), String(y)]) },
+          { name: "batch_letter", label: "Batch", value: b?.letter ?? "", options: BATCH_LETTERS.map((l) => [l, `Batch ${l}`]) },
+        ].map((f) => (
+          <div key={f.name} className="relative">
+            <select name={f.name} aria-label={f.label} required={required} defaultValue={f.value} className={select}>
+              <option value="">{f.label}</option>
+              {f.options.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={18} className="pointer-events-none absolute right-3 top-[17px] text-muted" />
+          </div>
+        ))}
+        <div className="relative">
+          <select name="batch_stream" aria-label="Stream" defaultValue={b?.stream ? String(b.stream) : ""} className={select}>
+            {STREAMS.map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={18} className="pointer-events-none absolute right-3 top-[17px] text-muted" />
+        </div>
+      </div>
+    </fieldset>
   );
 }

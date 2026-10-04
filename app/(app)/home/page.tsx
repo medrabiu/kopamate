@@ -18,7 +18,7 @@ import { getPublicStats, track } from "@/lib/stats";
 import { getAnnouncements, getUnreadCount } from "@/lib/notifications";
 import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
-import { getStandings, weekStart } from "@/lib/league";
+import { getStandings, playsInLeague, weekStart } from "@/lib/league";
 import { getQuizStatus } from "@/lib/quiz";
 import { getStreak } from "@/lib/streaks";
 import { vapidPublicKey } from "@/lib/push";
@@ -28,6 +28,7 @@ import { sql } from "@/lib/db";
 import { formatNumber, lagosDate, nextLagosMidnight } from "@/lib/util";
 import { stateSlug } from "@/lib/states";
 import QuizCard from "./QuizCard";
+import { ConfirmStageCard } from "@/components/NyscStatusForm";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -88,7 +89,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const quizFirst = quiz.kind === "ready" || quiz.kind === "playing";
   const quizCard = (
-    <QuizCard status={quiz} streak={streak} state={user.state ?? "your state"} standing={standing} above={above} nextAt={nextLagosMidnight()} />
+    <QuizCard status={quiz} streak={streak} state={user.state ?? "your state"} standing={standing} above={above} nextAt={nextLagosMidnight()} scores={playsInLeague(user.nysc_stage)} />
   );
   const news =
     slides.length > 0 ? (
@@ -135,6 +136,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         hiddenCount={myRewards.length - unclaimed.length}
         underReview={user.is_flagged}
       />
+
+      {!user.stage_confirmed_at && (
+        <ConfirmStageCard stage={user.nysc_stage} batch={user.nysc_batch} state={user.state} canPickState={false} />
+      )}
 
       {/* Before today's quiz is played it leads the page; once it's done (or there's none), the news comes first. */}
       {quizFirst && quizCard}

@@ -106,13 +106,26 @@ A real landing page that says what Kopamate is, with live numbers. No referral o
 - Fields:
   - **Nickname** (required, 2–20 characters, letters, numbers, spaces, `_` and `.`; filter offensive words)
   - **WhatsApp number** (required; `+234` prefix shown; normalise to E.164; must be a valid Nigerian mobile number; **unique**)
-  - **State you're serving in** (required; dropdown of 36 states + FCT, see section 10)
+  - **Where are you in NYSC?** four chips, **Serving** picked already (so most people don't tap anything): Serving, Got call-up, Awaiting call-up, Passed out. See "NYSC stage" below.
+  - **State** (required; dropdown of 36 states + FCT, see section 10). The label follows the chip: "State you're serving in" / "State you're posted to" / "State you live in" / "State you served in".
   - **4-digit PIN** (phone sign-up only, used to log back in)
 - Note: "You can add a photo and your state code later."
 - Button: **Create my account**.
 - Small print: "Your number is only used to contact you about prizes. It's never shown to other users." plus a link to the privacy notice.
-- **Google flow:** after Google sign-in, show a short "Finish up" step asking for nickname (prefilled from Google first name), WhatsApp number and state. The account isn't complete, and the referral doesn't count, until this step is done.
+- **Google flow:** after Google sign-in, show a short "Finish up" step asking for nickname (prefilled from Google first name), WhatsApp number, NYSC stage and state. The account isn't complete, and the referral doesn't count, until this step is done.
 - After sign-up: a short celebration (confetti) and go to `/home`.
+
+### NYSC stage (`lib/nysc.ts`)
+Corpers who are serving, about to serve and done serving all join, so each account has a stage and, optionally, a batch.
+- **Stages** (`users.nysc_stage`): `serving` (default), `posted` (call-up letter, camp not started), `waiting` (no call-up yet; their state is where they live) and `served` (passed out).
+- **Batch** (`users.nysc_batch`, like `2026B2`: year, letter, stream; stream optional). Not asked at sign-up. Asked in Settings and on the Home confirm card, required for Serving and Got call-up, optional for Passed out. Filled from the state code (`LA/26B/…` → `2026B`) on a verification request if empty.
+- **Moving on by itself:** the nightly cron (`/api/cron/snapshot`) moves `posted` → `serving` about a month after the batch's camp month, and `serving` → `served` 14 months after it (camp months: A Apr/Jun, B Jul/Sep, C Nov/Jan for streams I/II; unknown stream counts as II). Saving a stage that clearly doesn't fit the batch is refused ("2023 Batch A has passed out already…").
+- **Where it shows:** the line under names on Profile, the profile sheet and `/u/[code]`: "Serving in Lagos · 2026 Batch B", "Posted to Kano", "Awaiting call-up", "Served in Oyo · 2019 Batch A".
+- **State League:** only `serving` and `posted` users count as members and score. Others still play the quiz for their streak; Home's quiz card says "Play today's quiz" instead of "Play for {state}", and the League page explains why.
+- **Corpers in a state:** tabs **Serving** (serving + posted, default), **Ex-corpers** and **Awaiting call-up**.
+- **Verification** (and so prizes) is only for `serving` and `posted`; already-verified people stay verified if they pass out.
+- **Changing it:** Settings → NYSC → Edit. People awaiting call-up can pick their state there when they're posted; everyone else keeps their state (admins can change it).
+- **Existing users** (joined before stages) are `serving` with `stage_confirmed_at` empty, and see a one-time "Still serving?" card on Home until they confirm.
 
 ### 4.3 Home (`/home`)
 - Header: "Hi, {nickname}" and the user's avatar (links to Profile).
@@ -133,11 +146,11 @@ A real landing page that says what Kopamate is, with live numbers. No referral o
 
 ### 4.4 Corpers (`/corpers`)
 - Title "Corpers", and "{total} joined across {n} states".
-- **Your state** card (lime outline, links to the state page): state name, "#{rank} of 37 states", the top 5 corpers there as overlapping avatars and "{count} corpers serving here".
+- **Your state** card (lime outline, links to the state page): state name, "#{rank} of 37 states", the top 5 corpers there as overlapping avatars and "{count} corpers here".
 - **All states:** search box to filter states, then one card listing every state sorted by count: rank, name, a bar showing its size next to the biggest state (lime for yours, pink for the rest), count and a chevron. The user's own state has a "You" tag. States with zero signups are listed at the bottom, greyed out.
 
 ### 4.5 Corpers in a state (`/corpers/[state]`)
-- Back button, then a header card: state name, "{count} corpers" and "#{rank} of 37 states"; lime outline and a "Your state" label if it's theirs. "Tap anyone to see their profile." under it.
+- Back button, then a header card: state name, "{n} serving · {m} ex-corpers" and "#{rank} of 37 states"; lime outline and a "Your state" label if it's theirs. "Tap anyone to see their profile." under it.
 - 3-column grid: avatar (photo or default avatar), nickname with their top badge icon, position.
 - The current user is highlighted with a lime ring and "(you)".
 - Paginate or infinite-scroll in pages of 30. Order by position.
@@ -145,7 +158,7 @@ A real landing page that says what Kopamate is, with live numbers. No referral o
 - No messaging.
 
 ### Profile sheet and follows (anywhere in the signed-in app)
-Tapping a person opens a normal profile in a bottom sheet: photo, nickname, "Verified" tag, "Follows you" (when they do), "Serving in {state} · Joined {month year}", **Following** and **Followers** counts, a **Follow** button (white; "Follow back" when they follow you; "Following" outlined once you do, showing "Unfollow" on hover; the change shows at once and is undone if the server refuses) and "See corpers in {state}" (hidden when already on that page). Position, referrals and badges are **not** shown on other people's profiles.
+Tapping a person opens a normal profile in a bottom sheet: photo, nickname, "Verified" tag, "Follows you" (when they do), the stage line ("Serving in {state} · {batch}", see "NYSC stage") · "Joined {month year}", **Following** and **Followers** counts, a **Follow** button (white; "Follow back" when they follow you; "Following" outlined once you do, showing "Unfollow" on hover; the change shows at once and is undone if the server refuses) and "See corpers in {state}" (hidden when already on that page). Position, referrals and badges are **not** shown on other people's profiles.
 - Tapping Following or Followers switches the same sheet to that list (newest first, up to 200; banned and unfinished accounts left out); tapping someone in a list opens their profile, with a back link, so sheets never stack.
 - Works in the state grid, Home's "New from {state}" row, the Rewards leaderboard and Invite's friends list.
 - Data comes from `/api/person/[id]` (and `?list=followers|following`), signed-in users only, never cached, and never includes WhatsApp numbers, emails, state codes, payout details, positions, referrals or badges. Follow/unfollow is the server action `setFollow` (`app/actions/follows.ts`): you can't follow yourself, banned or unfinished accounts; following twice does nothing.
@@ -209,7 +222,7 @@ Top to bottom:
 - **Get verified** (hidden once verified): a one-line card, "Get verified to win" (or "Verification needs another try" with the admin's reason). It opens a bottom sheet with the state code (format `EN/26B/1234`) and a photo of the NYSC ID card. Before a photo is picked, a small drawing (`components/IdCardGuide.tsx`) shows a card inside a camera frame with tips: lay it flat, good light with no glare, all 4 corners in the photo; the phone shrinks the photo (max 1600px JPEG, under 850 KB) before upload. While pending the card reads "Checking your ID". Links to `/profile#verify` (Rewards, the Home progress card, the checklist) open the sheet directly. A state code can only be verified on one account, and this sheet is the only place to enter it.
 - **Complete your profile:** the three completion steps (section 5, "Profile completion") with ticks and a percentage; "Add your state code" opens the verify sheet. Hidden at 100% (reaching it gives the Profile Complete badge with confetti).
 - Badges are not shown on Profile (they still appear as the small icon next to nicknames in lists). Reaching 100% still plays the Profile Complete celebration.
-- **Account** (grouped card, label left, value right, inline edit): Nickname, **Full name** (optional, 2–60 letters; private: only the user and admins see it; "Not added" / **Add**), WhatsApp (masked), **State** (read-only: set when you join; only an admin can change it, from the admin user page) and Change PIN for phone users. Under it: "Only you can see your full name and WhatsApp number (and state code). Your state can't be changed after you join; message us on WhatsApp if it's wrong."
+- **Account** (grouped card, label left, value right, inline edit): Nickname, **Full name** (optional, 2–60 letters; private: only the user and admins see it; "Not added" / **Add**), WhatsApp (masked), **NYSC** (stage line, Edit opens stage chips, batch and, while awaiting call-up, state), **State** (read-only: set when you join; only an admin can change it, from the admin user page) and Change PIN for phone users. Under it: "Only you can see your full name and WhatsApp number (and state code). Your state can't be changed after you join; message us on WhatsApp if it's wrong."
 - **Preferences** (grouped card): **Show me in the Corpers list** ("Others see your nickname and photo only", on by default) and **Light mode** (off by default, saved in the `km_theme` cookie as `light` / `dark` so the server renders the right theme with no flash).
 - A card with **Open admin** (admins only) and **Log out**, then a small "Delete my account" link (type DELETE to confirm).
 - **State code:** optional, free text in the format like `EN/26B/1234`; validate the pattern loosely; never shown publicly in v1.

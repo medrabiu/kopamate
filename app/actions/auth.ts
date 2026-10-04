@@ -8,6 +8,7 @@ import { sql } from "@/lib/db";
 import { createSession, destroySession, getCurrentUser } from "@/lib/session";
 import { normalizeNigerianPhone, validatePin, validateUsername } from "@/lib/validate";
 import { isState } from "@/lib/states";
+import { isStage, STATE_LABEL } from "@/lib/nysc";
 import {
   currentIpHash,
   ipLimited,
@@ -34,13 +35,14 @@ function fieldsOf(fd: FormData, names: string[]) {
 
 /** Sign up with phone number + PIN. */
 export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<FormState> {
-  const fields = fieldsOf(fd, ["nickname", "whatsapp", "state"]);
+  const fields = fieldsOf(fd, ["nickname", "whatsapp", "stage", "state"]);
   const nick = validateUsername(fields.nickname);
   if (!nick.ok) return { error: nick.error, fields };
   if (await usernameTaken(nick.value)) return { error: await usernameTakenError(nick.value), fields };
   const phone = normalizeNigerianPhone(fields.whatsapp);
   if (!phone) return { error: "Enter a valid Nigerian WhatsApp number.", fields };
-  if (!isState(fields.state)) return { error: "Choose the state you're serving in.", fields };
+  const stage = isStage(fields.stage) ? fields.stage : "serving";
+  if (!isState(fields.state)) return { error: `Choose the ${STATE_LABEL[stage].toLowerCase()}.`, fields };
   const pin = String(fd.get("pin") ?? "");
   if (!validatePin(pin)) return { error: "Your PIN must be 4 digits.", fields };
 
@@ -59,9 +61,9 @@ export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<F
   let userId: string;
   try {
     const [row] = await sql<{ id: string }[]>`
-      INSERT INTO users (nickname, whatsapp_e164, state, pin_hash, referral_code, referred_by,
+      INSERT INTO users (nickname, whatsapp_e164, state, nysc_stage, stage_confirmed_at, pin_hash, referral_code, referred_by,
                          signup_number, completed_at, signup_ip_hash)
-      VALUES (${nick.value}, ${phone}, ${fields.state}, ${pinHash}, ${code}, ${referrer?.id ?? null},
+      VALUES (${nick.value}, ${phone}, ${fields.state}, ${stage}, now(), ${pinHash}, ${code}, ${referrer?.id ?? null},
               nextval('signup_number_seq'), now(), ${ipHash})
       RETURNING id
     `;
@@ -86,19 +88,20 @@ export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<F
   redirect("/home?welcome=1");
 }
 
-/** Second step for Google users: WhatsApp number, nickname and state. */
+/** Second step for Google users: WhatsApp number, nickname, NYSC stage and state. */
 export async function finishSignup(_prev: FormState, fd: FormData): Promise<FormState> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.completed_at) redirect("/home");
 
-  const fields = fieldsOf(fd, ["nickname", "whatsapp", "state"]);
+  const fields = fieldsOf(fd, ["nickname", "whatsapp", "stage", "state"]);
   const nick = validateUsername(fields.nickname);
   if (!nick.ok) return { error: nick.error, fields };
   if (await usernameTaken(nick.value, user.id)) return { error: await usernameTakenError(nick.value), fields };
   const phone = normalizeNigerianPhone(fields.whatsapp);
   if (!phone) return { error: "Enter a valid Nigerian WhatsApp number.", fields };
-  if (!isState(fields.state)) return { error: "Choose the state you're serving in.", fields };
+  const stage = isStage(fields.stage) ? fields.stage : "serving";
+  if (!isState(fields.state)) return { error: `Choose the ${STATE_LABEL[stage].toLowerCase()}.`, fields };
   if (await whatsappTaken(phone, user.id)) {
     return { error: "This number is already used by another account.", fields };
   }
@@ -107,7 +110,7 @@ export async function finishSignup(_prev: FormState, fd: FormData): Promise<Form
   try {
     await sql`
       UPDATE users SET nickname = ${nick.value}, whatsapp_e164 = ${phone}, state = ${fields.state},
-        referred_by = ${referrer?.id ?? null},
+        nysc_stage = ${stage}, stage_confirmed_at = now(), referred_by = ${referrer?.id ?? null},
         signup_number = nextval('signup_number_seq'), completed_at = now()
       WHERE id = ${user.id} AND completed_at IS NULL
     `;

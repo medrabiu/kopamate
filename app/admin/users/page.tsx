@@ -8,6 +8,7 @@ import { normalizeNigerianPhone } from "@/lib/validate";
 import { input, PAGE_SIZE } from "../ui";
 import { StatusBadges } from "../badges";
 import BadgeIcon from "@/components/BadgeIcon";
+import { formatBatch, STAGE_CHIP, type Stage } from "@/lib/nysc";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -29,6 +30,8 @@ type Row = {
   whatsapp_e164: string | null;
   email: string | null;
   state: string | null;
+  nysc_stage: Stage;
+  nysc_batch: string | null;
   completed_at: Date | null;
   created_at: Date;
   position: number | null;
@@ -73,7 +76,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
   // One extra row tells us whether there's a next page, without a separate count query.
   const rows = await sql<Row[]>`
     ${ranked()}
-    SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.completed_at, u.created_at,
+    SELECT u.id, u.nickname, u.whatsapp_e164, u.email, u.state, u.nysc_stage, u.nysc_batch, u.completed_at, u.created_at,
            r.position, r.refs, u.is_flagged, u.is_banned, u.is_seed, u.verification_status,
            COALESCE((
              SELECT jsonb_agg(jsonb_build_object('slug', b.slug, 'name', b.name, 'icon', b.icon, 'color', b.color,
@@ -168,7 +171,10 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
                   <div>{u.whatsapp_e164 ?? "–"}</div>
                   <div className="text-xs">{u.email}</div>
                 </td>
-                <td className="p-3">{u.state ?? "–"}</td>
+                <td className="p-3">
+                  <div>{u.state ?? "–"}</div>
+                  <div className="text-xs text-muted">{STAGE_CHIP[u.nysc_stage]}{u.nysc_batch ? ` · ${formatBatch(u.nysc_batch, true)}` : ""}</div>
+                </td>
                 <td className="p-3">{u.position ?? "–"}</td>
                 <td className="p-3">{u.refs ?? 0}</td>
                 <td className="p-3">

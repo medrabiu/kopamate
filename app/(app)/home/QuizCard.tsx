@@ -19,6 +19,7 @@ export default function QuizCard({
   standing,
   above,
   nextAt,
+  scores = true,
 }: {
   status: QuizStatus;
   streak: Streak;
@@ -26,6 +27,8 @@ export default function QuizCard({
   standing: StateStanding | undefined;
   above: StateStanding | undefined;
   nextAt: string;
+  /** Counts in the State League (serving or posted). Others play for their streak only. */
+  scores?: boolean;
 }) {
   const atRisk = streak.days > 0 && !streak.today;
   return (
@@ -46,7 +49,7 @@ export default function QuizCard({
           <div>
             <p className="text-[26px] leading-none tracking-[0.15em]">{status.result.marks.map(markEmoji).join("")}</p>
             <p className="mt-2 text-sm text-muted">
-              <span className="h-display text-xl text-lime-ink">{status.result.points + status.result.bonus}</span> pts for {state}
+              <span className="h-display text-xl text-lime-ink">{status.result.points + status.result.bonus}</span> pts{scores ? ` for ${state}` : " today"}
             </p>
           </div>
           <p className="text-right text-[13px] text-muted">
@@ -60,7 +63,7 @@ export default function QuizCard({
       ) : (
         <>
           <p className="h-display text-[26px] leading-tight">
-            {status.kind === "playing" ? "Finish today's quiz" : `Play for ${state}`}
+            {status.kind === "playing" ? "Finish today's quiz" : scores ? `Play for ${state}` : "Play today's quiz"}
           </p>
           {atRisk && (
             <p className="-mt-2 text-[13px] font-bold text-pink-ink">
@@ -75,7 +78,7 @@ export default function QuizCard({
         </>
       )}
 
-      {standing && (
+      {scores && standing && (
         <Link href="/league" className="-mb-1 flex items-center justify-between gap-3 border-t border-line pt-3 text-sm">
           <span className="min-w-0">
             {standing.rank ? (

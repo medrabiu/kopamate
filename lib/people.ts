@@ -1,8 +1,9 @@
 import "server-only";
 import { sql } from "./db";
+import type { Stage } from "./nysc";
 
 /**
- * What any signed-in user can see about another: a normal profile. Username, photo, state, when they
+ * What any signed-in user can see about another: a normal profile. Username, photo, state, NYSC stage and batch, when they
  * joined, whether they're verified, and follows. No position, referrals, badges, contact details,
  * state codes or anything else private.
  */
@@ -11,6 +12,8 @@ export type PublicProfile = {
   nickname: string;
   photo_version: number;
   state: string | null;
+  nysc_stage: Stage;
+  nysc_batch: string | null;
   joined: string;
   verified: boolean;
   followers: number;
@@ -36,7 +39,7 @@ export async function getProfileByCode(code: string, viewerId: string | null) {
 async function findProfile(where: ReturnType<typeof sql>, viewerId: string | null): Promise<PublicProfile | null> {
   const viewer = viewerId ?? "00000000-0000-0000-0000-000000000000";
   const [row] = await sql<PublicProfile[]>`
-    SELECT u.id, u.nickname, u.photo_version, u.state, u.completed_at::text AS joined,
+    SELECT u.id, u.nickname, u.photo_version, u.state, u.nysc_stage, u.nysc_batch, u.completed_at::text AS joined,
            (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified,
            (SELECT count(*)::int FROM follows f JOIN users x ON x.id = f.follower_id
               WHERE f.following_id = u.id AND NOT x.is_banned) AS followers,

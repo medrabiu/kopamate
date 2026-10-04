@@ -13,6 +13,7 @@ import { getProfileSteps, getUserBadges } from "@/lib/badges";
 import { getFollowCounts } from "@/lib/people";
 import { isState, STATE_CODE_PREFIX } from "@/lib/states";
 import { verificationBlock } from "@/lib/verification";
+import { stageLine } from "@/lib/nysc";
 import { formatJoined, formatNumber } from "@/lib/util";
 import { FollowStat, PhotoPicker, VerificationCard } from "./ProfileControls";
 
@@ -60,7 +61,7 @@ export default async function ProfilePage() {
             </>
           }
           username={user.nickname}
-          meta={`${user.state ? `Serving in ${user.state}` : "Corper"} · Joined ${formatJoined(user.completed_at!)}`}
+          meta={`${stageLine(user.nysc_stage, user.state, user.nysc_batch)} · Joined ${formatJoined(user.completed_at!)}`}
           stats={
             <>
               <FollowStat userId={user.id} list="following" count={follows.following} />
