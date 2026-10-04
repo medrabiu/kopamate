@@ -11,6 +11,7 @@ import { setFollow } from "@/app/actions/follows";
 import type { FollowRow, PublicProfile } from "@/lib/people";
 import { stateSlug } from "@/lib/states";
 import { stageLine } from "@/lib/nysc";
+import BusinessCard from "./hustle/BusinessCard";
 
 const joinedOn = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "Africa/Lagos" }).format(new Date(iso));
@@ -214,6 +215,8 @@ export function PeopleProvider({ viewerId, children }: { viewerId: string; child
                 <span className="text-muted">{profile.followers === 1 ? "Follower" : "Followers"}</span>
               </button>
             </div>
+
+            {profile.business && <BusinessCard b={profile.business} onClick={() => setTarget(null)} />}
 
             {error && (
               <p role="alert" className="text-sm text-pink-ink">

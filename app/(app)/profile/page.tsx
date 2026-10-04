@@ -5,7 +5,10 @@ import ProfileHeader from "@/components/ProfileHeader";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { ProfileChecklist } from "@/components/ProfileProgress";
 import { ShareProfileButton } from "@/components/ShareProfile";
-import { SettingsIcon } from "@/components/icons";
+import { ChevronRight, GiftIcon, SettingsIcon } from "@/components/icons";
+import { hustleEnabledFor } from "@/lib/hustle/access";
+import { getPublicBusiness } from "@/lib/hustle/market";
+import BusinessCard from "@/components/hustle/BusinessCard";
 import { APP_URL } from "@/lib/config";
 import { requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
@@ -27,15 +30,17 @@ const button = "flex h-10 items-center justify-center gap-1.5 rounded-full borde
  */
 export default async function ProfilePage() {
   const user = await requireUser();
-  const [rank, steps, mine, follows] = await Promise.all([
+  const [rank, steps, mine, follows, hustle] = await Promise.all([
     getRank(user.id),
     getProfileSteps(user.id),
     getUserBadges(user.id),
     getFollowCounts(user.id),
+    hustleEnabledFor(user),
   ]);
   // Badges aren't shown on Profile any more, but finishing your profile still gets its celebration.
   const complete = mine.find((b) => b.slug === "profile_complete");
   const verified = user.verification_status === "verified";
+  const business = hustle ? await getPublicBusiness(user.id) : null;
   const link = `${APP_URL}/u/${user.referral_code}`;
 
   return (
@@ -92,6 +97,17 @@ export default async function ProfilePage() {
         codePrefix={user.state && isState(user.state) ? STATE_CODE_PREFIX[user.state] : null}
         blocked={verificationBlock(user)}
       />
+
+      {business && <BusinessCard b={business} />}
+
+      {/* With My Hustle on, Rewards is no longer in the bottom nav. */}
+      {hustle && (
+        <Link href="/rewards" className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3">
+          <GiftIcon size={20} className="text-lime-ink" />
+          <span className="flex-1 text-[15px] font-bold">Rewards & prizes</span>
+          <ChevronRight size={18} className="text-muted" />
+        </Link>
+      )}
 
       <ProfileChecklist steps={steps} />
     </>

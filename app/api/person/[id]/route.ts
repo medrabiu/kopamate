@@ -1,3 +1,5 @@
+import { hustleEnabledFor } from "@/lib/hustle/access";
+import { getPublicBusiness } from "@/lib/hustle/market";
 import { getCurrentUser } from "@/lib/session";
 import { getFollowList, getPublicProfile } from "@/lib/people";
 
@@ -20,5 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
   const profile = await getPublicProfile(id, viewer.id);
   if (!profile) return Response.json({ error: "Not found" }, { status: 404 });
-  return Response.json(profile, { headers });
+  // Their My Hustle business, for viewers who have My Hustle (it's behind a feature flag).
+  const business = (await hustleEnabledFor(viewer)) ? await getPublicBusiness(id) : null;
+  return Response.json({ ...profile, business }, { headers });
 }

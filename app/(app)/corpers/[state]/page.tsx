@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { PersonButton } from "@/components/PersonSheet";
-import { ChevronLeft } from "@/components/icons";
+import { ChevronLeft, ChevronRight, StoreIcon } from "@/components/icons";
+import { hustleEnabledFor } from "@/lib/hustle/access";
+import { sql } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getPublicStats } from "@/lib/stats";
 import { getStateGroupCounts, getStateMembers, type MemberGroup } from "@/lib/ranking";
@@ -41,11 +43,15 @@ export default async function StatePage({ params, searchParams }: Props) {
     return params.size ? `${base}?${params}` : base;
   };
 
-  const [stats, members, counts] = await Promise.all([
+  const [stats, members, counts, hustle] = await Promise.all([
     getPublicStats(),
     getStateMembers(state, page * PAGE_SIZE + 1, tab.group),
     getStateGroupCounts(state),
+    hustleEnabledFor(user),
   ]);
+  const [businesses] = hustle
+    ? await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM hustle_businesses WHERE state = ${state} AND status <> 'closed'`
+    : [null];
   const info = stats.states.find((s) => s.state === state);
   const hasMore = members.length > page * PAGE_SIZE;
   const shown = members.slice(0, page * PAGE_SIZE);
@@ -74,6 +80,17 @@ export default async function StatePage({ params, searchParams }: Props) {
           </div>
         )}
       </section>
+      {businesses && (
+        <Link
+          href={isMine ? "/hustle/market" : `/hustle/market?state=${stateSlug(state)}`}
+          className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3"
+        >
+          <StoreIcon size={20} className="text-lime-ink" />
+          <span className="flex-1 text-[15px] font-bold">Businesses in {state}</span>
+          <span className="text-sm text-muted">{formatNumber(businesses.n)}</span>
+          <ChevronRight size={18} className="text-muted" />
+        </Link>
+      )}
       <nav aria-label="Who to show" className="grid grid-cols-3 gap-1 rounded-full bg-surface-2 p-1">
         {GROUPS.map((g) => (
           <Link

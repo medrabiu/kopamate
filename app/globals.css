@@ -16,6 +16,9 @@
   --color-lime: #c6f432;
   --color-lime-hover: #ddfb7a;
   --color-pink: #ff4fa3;
+  /* My Hustle warnings: due soon, busy, low cash */
+  --color-amber: #ff8a3d;
+  --color-amber-ink: #ff8a3d;
   /* Accent colours used as text on the page background */
   --color-lime-ink: #c6f432;
   --color-pink-ink: #ff4fa3;
@@ -48,6 +51,7 @@
   --color-lime-hover: #b4e21c;
   --color-lime-ink: #4d6b00;
   --color-pink-ink: #c21c6c;
+  --color-amber-ink: #b4530a;
   color-scheme: light;
 }
 

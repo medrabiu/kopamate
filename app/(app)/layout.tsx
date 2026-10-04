@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import BottomNav from "@/components/BottomNav";
 import { PeopleProvider } from "@/components/PersonSheet";
 import RefreshOnReturn from "@/components/RefreshOnReturn";
+import { hustleEnabledFor } from "@/lib/hustle/access";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const hustle = await hustleEnabledFor(user);
   return (
     <PeopleProvider viewerId={user.id}>
       {/*
@@ -22,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <main className="mx-auto flex max-w-[480px] flex-col gap-5 px-5 pb-8 pt-5">{children}</main>
         </div>
-        <BottomNav />
+        <BottomNav hustle={hustle} />
       </div>
       <RefreshOnReturn />
     </PeopleProvider>

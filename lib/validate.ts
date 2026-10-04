@@ -17,7 +17,7 @@ export function maskPhone(e164: string | null) {
 }
 
 // Short list of words we don't allow in nicknames. Extend as needed (admin can also rename).
-const BLOCKED = [
+export const BLOCKED_WORDS = [
   "fuck", "fuk", "shit", "bitch", "cunt", "dick", "pussy", "nigger", "nigga", "whore",
   "slut", "bastard", "asshole", "ashawo", "olosho", "ode", "mumu", "werey", "oloshi",
   "admin", "kopamate", "nysc", "official",
@@ -33,7 +33,7 @@ export function validateUsername(raw: string): { ok: true; value: string } | { o
   if (!/^[A-Za-z0-9_.]+$/.test(value)) return { ok: false, error: "Use letters, numbers, _ or . only." };
   if (!/[A-Za-z]/.test(value)) return { ok: false, error: "Include at least one letter." };
   const squashed = value.toLowerCase().replace(/[^a-z]/g, "");
-  if (BLOCKED.some((w) => (w.length <= 4 ? squashed === w : squashed.includes(w)))) {
+  if (BLOCKED_WORDS.some((w) => (w.length <= 4 ? squashed === w : squashed.includes(w)))) {
     return { ok: false, error: "Choose a different username." };
   }
   return { ok: true, value };

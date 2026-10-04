@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
+import { creditTaskReward, TASK_REWARDS } from "@/lib/hustle/wallet";
 import { getCurrentUser } from "@/lib/session";
 
 /** Follow or unfollow someone. Returns their new follower count, or an error. */
@@ -12,11 +13,13 @@ export async function setFollow(targetId: string, follow: boolean): Promise<{ fo
 
   if (follow) {
     // Only real, finished, not-banned accounts can be followed; following twice does nothing.
-    await sql`
+    const added = await sql`
       INSERT INTO follows (follower_id, following_id)
       SELECT ${user.id}, id FROM users WHERE id = ${targetId} AND completed_at IS NOT NULL AND NOT is_banned
-      ON CONFLICT DO NOTHING
+      ON CONFLICT DO NOTHING RETURNING 1
     `;
+    // My Hustle task reward: once per person ever followed, within the daily cap.
+    if (added.length) await creditTaskReward(user.id, "follow", TASK_REWARDS.follow, targetId);
   } else {
     await sql`DELETE FROM follows WHERE follower_id = ${user.id} AND following_id = ${targetId}`;
   }

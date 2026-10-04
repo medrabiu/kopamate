@@ -27,6 +27,9 @@ import { formatNumber, lagosDate, nextLagosMidnight } from "@/lib/util";
 import { stateSlug } from "@/lib/states";
 import QuizCard from "./QuizCard";
 import { ConfirmStageCard } from "@/components/NyscStatusForm";
+import HustleHomeCard from "@/components/hustle/HustleHomeCard";
+import { hustleOpenTo } from "@/lib/hustle/access";
+import { getHustleSettings } from "@/lib/hustle/settings";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -58,6 +61,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getStandings(weekStart(today)),
     getUnreadCount(user.id),
   ]);
+  const hustleSettings = await getHustleSettings();
+  const hustle = hustleOpenTo(user, hustleSettings.enabled);
   // The carousel: the last 30 days of announcements, pinned ones first, then newest.
   const monthAgo = Date.now() - 30 * 86_400_000;
   const slides = announcements
@@ -143,6 +148,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {quizFirst && quizCard}
       {news}
       {!quizFirst && quizCard}
+
+      {hustle && <HustleHomeCard userId={user.id} grant={hustleSettings.grant} />}
 
       <SetupCard steps={steps} publicKey={vapidPublicKey} />
 
