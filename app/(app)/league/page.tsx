@@ -10,16 +10,17 @@ import { getMyLeagueRank, getStandings, getTopPlayers, MIN_MEMBERS, weekEndsAt, 
 import { getQuizStatus } from "@/lib/quiz";
 import { requireUser } from "@/lib/session";
 import { formatNumber } from "@/lib/util";
+import Tabs from "@/components/Tabs";
 
 export const metadata: Metadata = { title: "State League" };
 
 const fmtScore = (n: number) => n.toFixed(1);
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 function Players({ title, rows, me, myRow }: { title: string; rows: PlayerRow[]; me: string; myRow: { rank: number; points: number } | null }) {
   const meInList = rows.some((r) => r.id === me);
   return (
     <section className="flex flex-col gap-3" aria-label={title}>
-      <h2 className="h-display text-xl">{title}</h2>
       {rows.length === 0 ? (
         <p className="card text-[15px] text-muted">Nobody has played this week yet. Be first.</p>
       ) : (
@@ -74,6 +75,7 @@ export default async function LeaguePage() {
   const me = standings.find((s) => s.state === myState);
   const above = me?.rank ? ranked[me.rank - 2] : undefined;
   const below = me?.rank ? ranked[me.rank] : undefined;
+  const played = quiz.kind === "done";
 
   return (
     <>
@@ -91,7 +93,10 @@ export default async function LeaguePage() {
         <section className="card flex flex-col gap-4 !p-[22px]" aria-label={`${myState} this week`}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm text-muted">{myState} this week</p>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                {myState} this week
+                {played && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-bold text-lime-ink">Played today ✓</span>}
+              </p>
               <p className="h-display text-[56px] leading-[0.95] text-lime-ink">{me.rank ? `#${me.rank}` : "–"}</p>
             </div>
             <div className="text-right">
@@ -111,64 +116,58 @@ export default async function LeaguePage() {
               {me.players} of {formatNumber(me.members)} corpers played this week.
             </span>
           </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            {quiz.kind === "ready" || quiz.kind === "playing" ? (
-              <Link href="/quiz" className="btn-primary h-12 text-[15px]">
-                {quiz.kind === "playing" ? "Finish quiz" : "Play today"}
-              </Link>
-            ) : (
-              <span className="flex h-12 items-center justify-center rounded-full bg-surface-2 text-[15px] font-bold text-muted">Played today ✓</span>
-            )}
-            <Link href="/invite" className="btn-secondary h-12 text-[15px]">
-              Invite to {myState.length > 9 ? "your state" : myState}
+          {!played && quiz.kind !== "unavailable" && (
+            <Link href="/quiz" className="btn-primary h-12 text-[15px]">
+              {quiz.kind === "playing" ? "Finish today's quiz" : "Play today's quiz"}
             </Link>
-          </div>
+          )}
         </section>
       )}
 
-      <p className="-mt-1 px-1 text-[13px] text-faint">
-        Every quiz point counts for your state. States are ranked by points per corper, so every member counts and small
-        states can win. The winning state&apos;s players (3+ days) get the Champion State badge; the top player gets Quiz MVP.
-        {last?.winner_state && ` Last week: ${last.winner_state} won.`}
-      </p>
+      <details className="-mt-1 px-1 text-[13px] text-faint">
+        <summary className="cursor-pointer select-none py-1 font-bold text-muted">How the League works</summary>
+        <p className="mt-1">
+          Every quiz point counts for your state. States are ranked by points per corper, so every member counts and small
+          states can win. The winning state&apos;s players (3+ days) get the Champion State badge; the top player gets Quiz MVP.
+          {last?.winner_state && ` Last week: ${last.winner_state} won.`}
+        </p>
+      </details>
 
-      <section className="flex flex-col gap-3" aria-label="States">
-        <h2 className="h-display text-xl">States</h2>
-        {ranked.length === 0 ? (
-          <p className="card text-[15px] text-muted">No state has {MIN_MEMBERS} corpers yet.</p>
-        ) : (
-          <ol className="card flex flex-col !p-0">
-            {ranked.map((s) => (
-              <li
-                key={s.state}
-                className={`flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0 ${s.state === myState ? "bg-surface-2" : ""}`}
-              >
-                <span className={`w-6 shrink-0 text-center text-sm font-bold tabular-nums ${s.rank === 1 ? "text-lime-ink" : "text-muted"}`}>
-                  {s.rank}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-bold">
-                    {s.state}
-                    {s.rank === 1 && s.points > 0 && " 🏆"}
+      <Tabs labels={["States", "Top players", myState ? `In ${myState}` : "Your state"]}>
+        <section className="flex flex-col gap-3" aria-label="States">
+          {ranked.length === 0 ? (
+            <p className="card text-[15px] text-muted">No state has {MIN_MEMBERS} corpers yet.</p>
+          ) : (
+            <ol className="card flex flex-col !p-0">
+              {ranked.map((s) => (
+                <li
+                  key={s.state}
+                  className={`flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0 ${s.state === myState ? "bg-surface-2" : ""}`}
+                >
+                  <span className={`w-6 shrink-0 text-center text-sm font-bold tabular-nums ${s.rank === 1 ? "text-lime-ink" : "text-muted"}`}>
+                    {s.points > 0 && s.rank! <= 3 ? MEDALS[s.rank! - 1] : s.rank}
                   </span>
-                  <span className="block text-[13px] text-muted">
-                    {s.players} of {formatNumber(s.members)} played
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-bold">{s.state}</span>
+                    <span className="block text-[13px] text-muted">
+                      {s.players} of {formatNumber(s.members)} played
+                    </span>
                   </span>
-                </span>
-                <span className="shrink-0 text-[15px] font-bold tabular-nums">{fmtScore(s.score)}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-        {unranked.length > 0 && (
-          <p className="px-1 text-[13px] text-faint">
-            Not ranked yet (under {MIN_MEMBERS} corpers): {unranked.map((s) => `${s.state} ${s.members}`).join(" · ")}
-          </p>
-        )}
-      </section>
+                  <span className="shrink-0 text-[15px] font-bold tabular-nums">{fmtScore(s.score)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {unranked.length > 0 && (
+            <p className="px-1 text-[13px] text-faint">
+              Not ranked yet (under {MIN_MEMBERS} corpers): {unranked.map((s) => `${s.state} ${s.members}`).join(" · ")}
+            </p>
+          )}
+        </section>
 
-      <Players title="Top players in Nigeria" rows={national} me={user.id} myRow={mine && { rank: mine.national, points: mine.points }} />
-      {myState && <Players title={`Top in ${myState}`} rows={local} me={user.id} myRow={mine && { rank: mine.in_state, points: mine.points }} />}
+        <Players title="Top players in Nigeria" rows={national} me={user.id} myRow={mine && { rank: mine.national, points: mine.points }} />
+        <Players title={`Top in ${myState || "your state"}`} rows={local} me={user.id} myRow={mine && { rank: mine.in_state, points: mine.points }} />
+      </Tabs>
     </>
   );
 }
