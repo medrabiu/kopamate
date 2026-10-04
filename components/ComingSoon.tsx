@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import CardArt, { type ArtKey } from "./CardArt";
 import { LockIcon } from "./icons";
@@ -32,12 +31,21 @@ function sections(state: string | null) {
         { title: `Most Stylish in ${state || "your state"}`, text: "Your state picks its best dressed.", art: "stylish" },
       ],
     },
+    {
+      heading: "Opportunities",
+      art: "jobs",
+      items: [
+        { title: "Jobs for corpers", text: "Entry-level and NYSC-friendly roles. Apply right here in Kopamate.", art: "jobs" },
+        { title: "Remote gigs", text: "Paid online work you can do during service.", art: "remote" },
+        { title: "Scholarships and grants", text: "Funding for your next step, without leaving the app.", art: "scholarships" },
+      ],
+    },
   ] satisfies { heading: string; art: ArtKey; items: Item[] }[];
 }
 
 const tile = "flex min-w-0 flex-col overflow-hidden rounded-[18px] border border-line text-left active:bg-surface-2";
 
-function TileBody({ art, heading, note, locked }: { art: ArtKey; heading: string; note: string; locked: boolean }) {
+function TileBody({ art, heading, note }: { art: ArtKey; heading: string; note: string }) {
   return (
     <>
       <span className="block aspect-[2/1] w-full">
@@ -47,8 +55,8 @@ function TileBody({ art, heading, note, locked }: { art: ArtKey; heading: string
         <span className="truncate text-[13px] font-bold" title={heading}>
           {heading}
         </span>
-        <span className={`flex items-center gap-1 truncate text-xs ${locked ? "text-muted" : "font-bold text-lime-ink"}`}>
-          {locked && <LockIcon size={11} strokeWidth={2.5} />}
+        <span className="flex items-center gap-1 truncate text-xs text-muted">
+          <LockIcon size={11} strokeWidth={2.5} />
           {note}
         </span>
       </span>
@@ -57,10 +65,10 @@ function TileBody({ art, heading, note, locked }: { art: ArtKey; heading: string
 }
 
 /**
- * "Explore" on Home: Opportunities (live, opens /opportunities) and Contests and Awards (coming soon; each opens
- * a sheet listing what's planned). Each tile has its illustration on top.
+ * "Explore" on Home: Opportunities, Contests and Awards, all coming soon. Each tile has its illustration on top
+ * and opens a sheet listing what's planned.
  */
-export default function ComingSoon({ state, newOpportunities }: { state: string | null; newOpportunities: number }) {
+export default function ComingSoon({ state }: { state: string | null }) {
   const [open, setOpen] = useState<string | null>(null);
   const all = sections(state);
   const current = all.find((s) => s.heading === open);
@@ -70,12 +78,9 @@ export default function ComingSoon({ state, newOpportunities }: { state: string 
         Explore
       </h2>
       <div className="grid grid-cols-3 gap-2.5">
-        <Link href="/opportunities" className={tile}>
-          <TileBody art="jobs" heading="Opportunities" note={newOpportunities > 0 ? `${newOpportunities} new` : "Open"} locked={false} />
-        </Link>
         {all.map(({ heading, art, items }) => (
           <button key={heading} type="button" onClick={() => setOpen(heading)} className={tile}>
-            <TileBody art={art} heading={heading} note={`${items.length} coming`} locked />
+            <TileBody art={art} heading={heading} note={`${items.length} coming`} />
           </button>
         ))}
       </div>

@@ -2,9 +2,9 @@ import "server-only";
 import { sql } from "./db";
 
 /**
- * Opportunities for corpers, pulled once a day from public RSS feeds (/api/cron/opportunities) and shown on
- * /opportunities and Home. We keep the title, a short summary and the link; people apply on the source site.
- * Admins can hide bad ones, pin good ones and add their own (/admin/opportunities).
+ * Opportunities for corpers, collected from public RSS feeds when an admin presses "Fetch now"
+ * (/admin/opportunities). Not shown to users yet: Opportunities is coming soon, with applying done inside
+ * Kopamate, so nothing sends people out of the app. Admins can hide, pin and add their own meanwhile.
  */
 
 export const CATEGORIES = ["jobs", "internships", "scholarships", "fellowships", "grants", "contests", "programs"] as const;
@@ -47,8 +47,6 @@ const FEEDS: Feed[] = [
 const PER_FEED = 40;
 /** Fetched items older than this are deleted (pinned and admin-added ones stay). */
 const KEEP_DAYS = 60;
-/** settings row holding when the feeds were last fetched (ISO time). */
-const FETCHED_KEY = "opportunities_fetched_at";
 
 const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", hellip: "…", ndash: "–", mdash: "—", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“" };
 
@@ -160,44 +158,5 @@ export async function fetchOpportunities() {
     DELETE FROM opportunities
     WHERE NOT pinned AND added_by IS NULL AND published_at < now() - ${KEEP_DAYS} * interval '1 day'
   `;
-  await sql`
-    INSERT INTO settings (key, value) VALUES (${FETCHED_KEY}, ${new Date().toISOString()})
-    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-  `;
   return { added, feeds: results.map((r) => ({ feed: r.feed, found: r.items.length, ...(r.error ? { error: r.error } : {}) })) };
-}
-
-/**
- * Fetches only when the last run is older than `maxAgeMs` (or there was none). The run is claimed first in one
- * statement, so many people opening an empty page at once cause one fetch, not one each. True if it fetched.
- */
-export async function refreshIfStale(maxAgeMs: number) {
-  const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
-  const claimed = await sql`
-    INSERT INTO settings (key, value) VALUES (${FETCHED_KEY}, ${new Date().toISOString()})
-    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value WHERE settings.value < ${cutoff}
-    RETURNING 1
-  `;
-  if (claimed.length === 0) return false;
-  await fetchOpportunities();
-  return true;
-}
-
-/** Newest first, pinned ones on top. `category` narrows the list. */
-export async function getOpportunities({ category, limit, offset = 0 }: { category?: Category; limit: number; offset?: number }) {
-  return sql<Opportunity[]>`
-    SELECT id::text, url, title, summary, source, category, deadline, published_at, pinned
-    FROM opportunities
-    WHERE NOT hidden ${category ? sql`AND category = ${category}` : sql``}
-    ORDER BY pinned DESC, published_at DESC, id DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
-}
-
-/** How many were added in the last 7 days (the "N new" on the Home tile). */
-export async function countNewOpportunities() {
-  const [row] = await sql<{ n: number }[]>`
-    SELECT count(*)::int AS n FROM opportunities WHERE NOT hidden AND created_at > now() - interval '7 days'
-  `;
-  return row.n;
 }

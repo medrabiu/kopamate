@@ -57,9 +57,10 @@ export default async function AdminOpportunitiesPage({ searchParams }: Props) {
       <section className={panel}>
         <h2 className="h-display mb-1 text-lg">Opportunities</h2>
         <p className="mb-3 text-sm text-muted">
-          {counts.live} live · {counts.week} new this week · {counts.hidden} hidden. Fetched every morning at 6:00 from Opportunities For
-          Africans, Opportunity Desk, Opportunities for Youth and Hot Nigerian Jobs (entry-level jobs only). Items older than 60 days are
-          removed unless pinned or added here.
+          Not shown to users yet: the app shows a blurred &quot;coming soon&quot; until people can apply inside Kopamate. {counts.live} live ·{" "}
+          {counts.week} new this week · {counts.hidden} hidden. &quot;Fetch now&quot; collects from Opportunities For Africans, Opportunity Desk,
+          Opportunities for Youth and Hot Nigerian Jobs (entry-level jobs only). Items older than 60 days are removed unless pinned or added
+          here.
         </p>
         <form action={refreshOpportunities}>
           <button className={btnPrimary}>Fetch now</button>

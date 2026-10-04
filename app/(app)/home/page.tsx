@@ -11,14 +11,12 @@ import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
 import RewardBanner from "@/components/RewardBanner";
 import AnnouncementCard from "@/components/AnnouncementCard";
-import CardArt from "@/components/CardArt";
-import OpportunityCard from "@/components/OpportunityCard";
+import OpportunitiesTeaser from "@/components/OpportunitiesTeaser";
 import { ArrowDownIcon, ArrowUpIcon, BellIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getRank, getSnapshotPosition } from "@/lib/ranking";
 import { getPublicStats, track } from "@/lib/stats";
 import { getAnnouncements, getUnreadCount } from "@/lib/notifications";
-import { countNewOpportunities, getOpportunities } from "@/lib/opportunities";
 import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified, topBadge } from "@/lib/badges";
 import type { BadgeInfo } from "@/lib/badge-meta";
 import { getStandings, weekStart } from "@/lib/league";
@@ -41,7 +39,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, announcements, snapshot, newcomers, steps, badges, myRewards, quiz, streak, standings, unread, opportunities, newOpportunities] = await Promise.all([
+  const [rank, stats, announcements, snapshot, newcomers, steps, badges, myRewards, quiz, streak, standings, unread] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getAnnouncements(20),
@@ -62,8 +60,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getStreak(user.id),
     getStandings(weekStart(today)),
     getUnreadCount(user.id),
-    getOpportunities({ limit: 6 }),
-    countNewOpportunities(),
   ]);
   // The newest pinned announcement is the banner up top; the rest are the latest updates near the bottom.
   const announcement = announcements.find((a) => a.pinned) ?? null;
@@ -174,38 +170,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </section>
       )}
 
+      {/* Coming soon: applying will happen inside Kopamate, so nothing here leads out of the app. */}
       <section className="flex flex-col gap-3" aria-labelledby="opps-title">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 id="opps-title" className="h-display text-xl">
-            Opportunities
-          </h2>
-          <Link href="/opportunities" className="flex items-center gap-0.5 py-1 text-sm font-medium text-lime-ink">
-            See all
-            <ChevronRight size={16} />
-          </Link>
-        </div>
-        {opportunities.length > 0 ? (
-          <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5">
-            {opportunities.map((o) => (
-              <OpportunityCard key={o.id} o={o} compact />
-            ))}
-          </div>
-        ) : (
-          // Nothing fetched yet: opening the page pulls the latest straight away.
-          <Link href="/opportunities" className="card flex items-center gap-4 !p-4 active:bg-surface-2">
-            <span className="block h-14 w-28 shrink-0 overflow-hidden rounded-xl">
-              <CardArt art="jobs" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold leading-snug">Jobs, internships and scholarships</span>
-              <span className="block text-sm text-muted">Tap to see the latest</span>
-            </span>
-            <ChevronRight size={18} className="shrink-0 text-faint" />
-          </Link>
-        )}
+        <h2 id="opps-title" className="h-display text-xl">
+          Opportunities
+        </h2>
+        <OpportunitiesTeaser />
       </section>
 
-      <ComingSoon state={user.state} newOpportunities={newOpportunities} />
+      <ComingSoon state={user.state} />
 
       {updates.length > 0 && (
         <section className="flex flex-col gap-3" aria-labelledby="updates-title">

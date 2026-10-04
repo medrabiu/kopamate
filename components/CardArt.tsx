@@ -23,7 +23,9 @@ export type ArtKey =
   | "comedian"
   | "mvp"
   | "stylish"
-  | "jobs";
+  | "jobs"
+  | "remote"
+  | "scholarships";
 
 function Frame({ glow, children }: { glow: string; children: React.ReactNode }) {
   return (
@@ -213,6 +215,34 @@ const ART: Record<ArtKey, () => React.ReactElement> = {
       <path d="M68 64h84" className="stroke-ink" strokeWidth="3" opacity="0.4" />
       <rect x="104" y="58" width="12" height="12" rx="2" className="fill-ink" />
       <path d="M168 76V30m-12 12 12-12 12 12" fill="none" stroke={PINK} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    </Frame>
+  ),
+  remote: () => (
+    <Frame glow={TEAL}>
+      {/* Laptop with Wi-Fi waves */}
+      <rect x="66" y="34" width="88" height="54" rx="6" className="fill-ink" />
+      <rect x="72" y="40" width="76" height="42" rx="3" fill={TEAL} />
+      <path d="M56 92h108l-6 8H62Z" className="fill-ink" opacity="0.85" />
+      <path d="M92 70h36M92 62h24" className="stroke-ink" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
+      <path d="M160 30a26 26 0 0 1 26 0M166 38a14 14 0 0 1 14 0" fill="none" stroke={LIME} strokeWidth="3.5" strokeLinecap="round" />
+      <circle cx="173" cy="45" r="3.5" fill={LIME} />
+      <text x="36" y="30" fontSize="16" fontWeight="800" fill={PINK} fontFamily="system-ui, sans-serif">
+        ₦
+      </text>
+    </Frame>
+  ),
+  scholarships: () => (
+    <Frame glow={PINK}>
+      {/* Graduation cap and coins */}
+      <path d="m110 22 52 22-52 22-52-22Z" className="fill-ink" />
+      <path d="M78 54v18q32 16 64 0V54l-32 12Z" className="fill-ink" opacity="0.85" />
+      <path d="M156 46v24" stroke={AMBER} strokeWidth="3" />
+      <circle cx="156" cy="74" r="4" fill={AMBER} />
+      {[0, 1, 2].map((i) => (
+        <ellipse key={i} cx="52" cy={96 - i * 8} rx="16" ry="5" fill={i === 2 ? LIME : AMBER} className="stroke-ink" strokeOpacity="0.25" />
+      ))}
+      <ellipse cx="178" cy="98" rx="14" ry="4.5" fill={AMBER} className="stroke-ink" strokeOpacity="0.25" />
+      <Sparkle x={184} y={24} s={0.9} c={LIME} />
     </Frame>
   ),
 };
