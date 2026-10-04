@@ -18,6 +18,8 @@ type Props = {
   underReview: boolean;
   /** Compact summary linking to Invite (Rewards page) instead of the full card. */
   compact?: boolean;
+  /** Compact only: replaces the bordered row's classes (the Rewards wallet card shows it as a plain line). */
+  className?: string;
 };
 
 const KINDS = [
@@ -44,7 +46,7 @@ export default function ReferralEarnings(p: Props) {
 
   if (p.compact) {
     return (
-      <Link href="/invite#earnings" className="flex items-center gap-3.5 rounded-[20px] border border-line px-4 py-3.5">
+      <Link href="/invite#earnings" className={p.className ?? "flex items-center gap-3.5 rounded-[20px] border border-line px-4 py-3.5"}>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-line text-lime-ink">
           <GiftIcon size={20} />
         </span>

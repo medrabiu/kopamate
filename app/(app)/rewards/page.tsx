@@ -11,7 +11,9 @@ import { referralLink, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import ReferralEarnings from "@/components/ReferralEarnings";
 import { getEarnings } from "@/lib/referral-bonus";
-import YourRewards, { type MyReward, type SavedBank } from "./YourRewards";
+import Tabs from "@/components/Tabs";
+import { formatNgn } from "@/lib/reward-meta";
+import YourRewards, { RewardHistory, type MyReward, type SavedBank } from "./YourRewards";
 import { Leaderboard, Prizes, RankConfetti, type BoardRow } from "./RewardsClient";
 
 export const metadata: Metadata = { title: "Rewards" };
@@ -113,20 +115,14 @@ export default async function RewardsPage() {
   const profileComplete = badges.find((b) => b.slug === "profile_complete");
   const closedRow = (text: string) => <p className="flex-1 text-sm text-muted">{text}</p>;
 
-  const yourRewards =
-    rewards.length > 0 ? (
-      <section id="your-rewards" className="flex scroll-mt-4 flex-col gap-2.5" aria-labelledby="your-rewards-title">
-        <h2 id="your-rewards-title" className="h-display text-xl">
-          Your rewards
-        </h2>
-        <YourRewards
-          rewards={rewards}
-          savedBank={saved[0] ?? { bank: null, account_number: null, account_name: null }}
-          whatsapp={user.whatsapp_e164}
-          underReview={user.is_flagged}
-        />
-      </section>
-    ) : null;
+  // Wallet totals. Hidden rewards have no amount yet; rejected ones don't count.
+  const sum = (rs: MyReward[]) => rs.reduce((t, r) => t + (r.amount_ngn ?? 0), 0);
+  const earned = sum(rewards.filter((r) => r.status !== "hidden" && r.status !== "rejected"));
+  const toClaim = sum(rewards.filter((r) => r.status === "unclaimed"));
+  const onTheWay = sum(rewards.filter((r) => r.status === "claimed" || r.status === "processing"));
+  // Full cards only for rewards that need you (reveal, claim, bank details); the rest is History.
+  const attention = rewards.filter((r) => r.status === "hidden" || r.status === "unclaimed" || r.status === "claimed");
+  const history = rewards.filter((r) => r.status === "processing" || r.status === "paid" || r.status === "rejected");
 
   return (
     <>
@@ -136,111 +132,138 @@ export default async function RewardsPage() {
       )}
       <h1 className="h-display text-[28px]">Rewards</h1>
 
-      {/* What you've won comes first: that's what people open this page for. */}
-      {yourRewards}
-
-      {!verified && (
-        <Link href="/profile#verify" className="flex items-center gap-3.5 rounded-[20px] border-[1.5px] border-lime px-4 py-3.5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-on-accent">
-            <ShieldIcon size={20} strokeWidth={2.2} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-bold">{user.verification_status === "pending" ? "Checking your ID" : "Get verified to win"}</span>
-            <span className="block text-sm leading-snug text-muted">
-              {user.verification_status === "pending"
-                ? "You'll qualify for prizes once you're verified."
-                : user.verification_status === "rejected"
-                  ? "Your verification needs another try."
-                  : "Only verified corpers win prizes."}
-            </span>
-          </span>
-          <ChevronRight size={20} className="shrink-0 text-lime-ink" />
-        </Link>
-      )}
-
-      <ReferralEarnings
-        compact
-        enabled={earnings.enabled}
-        rate={earnings.rate}
-        minWithdraw={earnings.minWithdraw}
-        available={earnings.available}
-        withdrawn={earnings.withdrawn}
-        earnedCount={earnings.earnedCount}
-        verified={user.verification_status === "verified"}
-        underReview={user.is_flagged}
-      />
-
-      {/* Standing, with the countdowns underneath */}
-      <section className="card flex flex-col gap-4 !p-[18px]" aria-labelledby="standing-title">
-        <h2 id="standing-title" className="h-display text-lg">
-          Your standing
-        </h2>
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="rounded-2xl border border-line px-3.5 py-3">
-            <div className="text-[13px] text-muted">Nigeria</div>
-            <div className="h-display text-[30px] leading-tight text-lime-ink">{me ? `#${me.rank}` : "–"}</div>
-          </div>
-          <div className="rounded-2xl border border-line px-3.5 py-3">
-            <div className="truncate text-[13px] text-muted">{state}</div>
-            <div className="h-display text-[30px] leading-tight text-pink-ink">{me ? `#${me.state_rank}` : "–"}</div>
-          </div>
+      {/* Wallet: one number and what's waiting, like a payments app. */}
+      <section className="card flex flex-col gap-3.5 !p-5" aria-label="Your earnings">
+        <div>
+          <p className="text-sm text-muted">Total earned</p>
+          <p className="h-display mt-0.5 text-[40px] leading-none">{formatNgn(earned)}</p>
+          <p className="mt-2 text-sm text-muted">
+            <span className={toClaim > 0 ? "font-bold text-lime-ink" : ""}>{formatNgn(toClaim)} to claim</span> · {formatNgn(onTheWay)} on the
+            way
+          </p>
         </div>
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[15px] font-medium leading-snug">{beat}</p>
-            <p className="mt-0.5 text-sm text-muted">{me ? `${friends(me.refs)} joined with your link` : "No friends have joined yet"}</p>
-          </div>
-          <Link href="/invite" className="shrink-0 rounded-full bg-lime px-4 py-2 text-sm font-bold text-on-accent">
-            Invite
-          </Link>
-        </div>
-        <div className="flex flex-col border-t border-line pt-1">
-          <div className="flex min-h-11 items-center gap-3">
-            <ClockIcon size={18} className={`shrink-0 ${earlyOpen ? "text-lime-ink" : "text-faint"}`} />
-            {earlyOpen ? (
-              <Deadline to={settings.earlyDeadline} after={closedRow("Early Corper closed · first rewards are being prepared.")}>
-                <p className="flex-1 text-sm">Early Corper badge closes in</p>
-                <Countdown to={settings.earlyDeadline} className="h-display text-[15px] text-lime-ink" />
-              </Deadline>
-            ) : (
-              closedRow("Early Corper closed · first rewards are being prepared.")
-            )}
-          </div>
-          <div className="flex min-h-11 items-center gap-3">
-            <TrophyIcon size={18} className="shrink-0 text-pink-ink" />
-            <Deadline to={settings.leaderboardClose} after={closedRow("Leaderboard closed · winners are being confirmed.")}>
-              <p className="flex-1 text-sm">Leaderboard closes in</p>
-              <Countdown to={settings.leaderboardClose} className="h-display text-[15px] text-pink-ink" />
-            </Deadline>
-          </div>
-        </div>
+        <ReferralEarnings
+          compact
+          className="flex items-center gap-3.5 border-t border-line pt-3.5"
+          enabled={earnings.enabled}
+          rate={earnings.rate}
+          minWithdraw={earnings.minWithdraw}
+          available={earnings.available}
+          withdrawn={earnings.withdrawn}
+          earnedCount={earnings.earnedCount}
+          verified={user.verification_status === "verified"}
+          underReview={user.is_flagged}
+        />
       </section>
 
-      <Leaderboard
-        national={national.map((r) => toBoard(r, r.rank))}
-        state={stateBoard.map((r) => toBoard(r, r.state_rank))}
-        stateName={state}
-        meNational={meNational}
-        meState={meState}
-        userId={user.id}
-      />
-
-      <Prizes
-        prizes={tagged}
-        revealText={settings.revealText}
-        leading={leading}
-        share={{ link: referralLink(user.referral_code), whatsappUrl: whatsappShareUrl(user.referral_code, shareText), message: shareText }}
-      />
-
-      {rewards.length === 0 && (
-        <section className="flex flex-col items-center gap-2 rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-6 text-center">
-          <GiftIcon size={28} strokeWidth={1.8} className="text-faint" />
-          <p className="font-bold">Rewards you win show up here</p>
-          <p className="text-sm leading-normal text-muted">
-            Prizes are sent as airtime, data or bank transfer. You&apos;ll claim them here and we&apos;ll message you on WhatsApp.
-          </p>
+      {(attention.length > 0 || !verified) && (
+        <section id="your-rewards" className="flex scroll-mt-4 flex-col gap-2.5" aria-labelledby="attention-title">
+          <h2 id="attention-title" className="h-display text-xl">
+            Needs your attention
+          </h2>
+          {attention.length > 0 && (
+            <YourRewards
+              rewards={attention}
+              savedBank={saved[0] ?? { bank: null, account_number: null, account_name: null }}
+              whatsapp={user.whatsapp_e164}
+              underReview={user.is_flagged}
+            />
+          )}
+          {!verified && (
+            <Link href="/profile#verify" className="flex items-center gap-3.5 rounded-[20px] border-[1.5px] border-lime px-4 py-3.5">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-on-accent">
+                <ShieldIcon size={20} strokeWidth={2.2} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">{user.verification_status === "pending" ? "Checking your ID" : "Get verified to win"}</span>
+                <span className="block text-sm leading-snug text-muted">
+                  {user.verification_status === "pending"
+                    ? "You'll qualify for prizes once you're verified."
+                    : user.verification_status === "rejected"
+                      ? "Your verification needs another try."
+                      : "Only verified corpers win prizes."}
+                </span>
+              </span>
+              <ChevronRight size={20} className="shrink-0 text-lime-ink" />
+            </Link>
+          )}
         </section>
       )}
+
+      <Tabs labels={["History", "Leaderboard", "Prizes"]}>
+        {history.length > 0 ? (
+          <RewardHistory rewards={history} />
+        ) : (
+          <section className="flex flex-col items-center gap-2 rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-6 text-center">
+            <GiftIcon size={28} strokeWidth={1.8} className="text-faint" />
+            <p className="font-bold">{rewards.length === 0 ? "Rewards you win show up here" : "Paid rewards show up here"}</p>
+            <p className="text-sm leading-normal text-muted">
+              Prizes are sent as airtime, data or bank transfer. You&apos;ll claim them here and we&apos;ll message you on WhatsApp.
+            </p>
+          </section>
+        )}
+        <>
+          {/* Standing, with the countdowns underneath */}
+          <section className="card flex flex-col gap-4 !p-[18px]" aria-labelledby="standing-title">
+            <h2 id="standing-title" className="h-display text-lg">
+              Your standing
+            </h2>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="rounded-2xl border border-line px-3.5 py-3">
+                <div className="text-[13px] text-muted">Nigeria</div>
+                <div className="h-display text-[30px] leading-tight text-lime-ink">{me ? `#${me.rank}` : "–"}</div>
+              </div>
+              <div className="rounded-2xl border border-line px-3.5 py-3">
+                <div className="truncate text-[13px] text-muted">{state}</div>
+                <div className="h-display text-[30px] leading-tight text-pink-ink">{me ? `#${me.state_rank}` : "–"}</div>
+              </div>
+            </div>
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[15px] font-medium leading-snug">{beat}</p>
+                <p className="mt-0.5 text-sm text-muted">{me ? `${friends(me.refs)} joined with your link` : "No friends have joined yet"}</p>
+              </div>
+              <Link href="/invite" className="shrink-0 rounded-full bg-lime px-4 py-2 text-sm font-bold text-on-accent">
+                Invite
+              </Link>
+            </div>
+            <div className="flex flex-col border-t border-line pt-1">
+              <div className="flex min-h-11 items-center gap-3">
+                <ClockIcon size={18} className={`shrink-0 ${earlyOpen ? "text-lime-ink" : "text-faint"}`} />
+                {earlyOpen ? (
+                  <Deadline to={settings.earlyDeadline} after={closedRow("Early Corper closed · first rewards are being prepared.")}>
+                    <p className="flex-1 text-sm">Early Corper badge closes in</p>
+                    <Countdown to={settings.earlyDeadline} className="h-display text-[15px] text-lime-ink" />
+                  </Deadline>
+                ) : (
+                  closedRow("Early Corper closed · first rewards are being prepared.")
+                )}
+              </div>
+              <div className="flex min-h-11 items-center gap-3">
+                <TrophyIcon size={18} className="shrink-0 text-pink-ink" />
+                <Deadline to={settings.leaderboardClose} after={closedRow("Leaderboard closed · winners are being confirmed.")}>
+                  <p className="flex-1 text-sm">Leaderboard closes in</p>
+                  <Countdown to={settings.leaderboardClose} className="h-display text-[15px] text-pink-ink" />
+                </Deadline>
+              </div>
+            </div>
+          </section>
+          <Leaderboard
+            national={national.map((r) => toBoard(r, r.rank))}
+            state={stateBoard.map((r) => toBoard(r, r.state_rank))}
+            stateName={state}
+            meNational={meNational}
+            meState={meState}
+            userId={user.id}
+          />
+        </>
+        <Prizes
+          prizes={tagged}
+          revealText={settings.revealText}
+          leading={leading}
+          share={{ link: referralLink(user.referral_code), whatsappUrl: whatsappShareUrl(user.referral_code, shareText), message: shareText }}
+        />
+      </Tabs>
     </>
   );
 }

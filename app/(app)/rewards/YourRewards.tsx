@@ -133,6 +133,77 @@ export default function YourRewards({
   );
 }
 
+/** Shown before "See all" in History. */
+const HISTORY_PREVIEW = 3;
+
+function historyStatus(r: MyReward): { text: string; tone: "lime" | "pink" | "muted" } {
+  if (r.status === "paid") return { text: `Paid${r.paid_at ? ` · ${day(r.paid_at)}` : ""}`, tone: "lime" };
+  if (r.status === "processing") return { text: "On the way", tone: "pink" };
+  if (r.status === "rejected") return { text: `Not approved${r.admin_note ? ` · ${r.admin_note}` : ""}`, tone: "pink" };
+  return { text: `Won ${day(r.created_at)}`, tone: "muted" };
+}
+
+const amountOf = (r: MyReward) => (r.amount_ngn ? `${formatNgn(r.amount_ngn)}${r.kind === "cash" ? "" : ` ${r.kind}`}` : "–");
+
+/**
+ * Past rewards (paid, on the way, not approved) as a compact list, like a bank app's transactions:
+ * one line each with the amount on the right. Tapping one shows everything about it.
+ */
+export function RewardHistory({ rewards }: { rewards: MyReward[] }) {
+  const [all, setAll] = useState(false);
+  const [open, setOpen] = useState<MyReward | null>(null);
+  const shown = all ? rewards : rewards.slice(0, HISTORY_PREVIEW);
+  const tone = { lime: "text-lime-ink", pink: "text-pink-ink", muted: "text-faint" };
+  return (
+    <>
+      <ul className="card flex flex-col divide-y divide-line !p-0">
+        {shown.map((r) => {
+          const st = historyStatus(r);
+          return (
+            <li key={r.id}>
+              <button type="button" onClick={() => setOpen(r)} className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-pink-ink">
+                  <GiftIcon size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-medium">{r.title}</span>
+                  <span className={`block truncate text-[13px] ${tone[st.tone]}`}>{st.text}</span>
+                </span>
+                <span className={`shrink-0 text-[15px] font-bold tabular-nums ${r.status === "rejected" ? "text-faint line-through" : ""}`}>
+                  {amountOf(r)}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {rewards.length > HISTORY_PREVIEW && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="-mt-2 self-center py-2 text-sm font-bold text-lime-ink">
+          {all ? "Show less" : `See all (${rewards.length})`}
+        </button>
+      )}
+      <Sheet open={open !== null} onClose={() => setOpen(null)} title={open?.title ?? "Reward"}>
+        {open && (
+          <dl className="flex flex-col divide-y divide-line text-[15px]">
+            {[
+              ["Amount", amountOf(open)],
+              ["Status", historyStatus(open).text],
+              ["Won", day(open.created_at)],
+              ...(open.description ? [["About", open.description]] : []),
+              ...(payoutSummary(open) ? [["Sent", payoutSummary(open)!]] : []),
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-start justify-between gap-4 py-3">
+                <dt className="shrink-0 text-muted">{k}</dt>
+                <dd className="min-w-0 text-right font-medium">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Sheet>
+    </>
+  );
+}
+
 function ClaimForm({
   reward: r,
   savedBank,
