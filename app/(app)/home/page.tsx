@@ -13,9 +13,9 @@ import RewardBanner from "@/components/RewardBanner";
 import AnnouncementCard from "@/components/AnnouncementCard";
 import Carousel from "@/components/Carousel";
 import OpportunitiesTeaser from "@/components/OpportunitiesTeaser";
-import { ArrowDownIcon, ArrowUpIcon, BellIcon, ChevronRight } from "@/components/icons";
+import { BellIcon, ChevronRight } from "@/components/icons";
 import { requireUser } from "@/lib/session";
-import { getRank, getSnapshotPosition } from "@/lib/ranking";
+import { getRank } from "@/lib/ranking";
 import { getPublicStats, track } from "@/lib/stats";
 import { getAnnouncements, getUnreadCount } from "@/lib/notifications";
 import { checkAutoBadges, getProfileSteps, getUserBadges, isVerified, topBadge } from "@/lib/badges";
@@ -40,11 +40,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, announcements, snapshot, newcomers, steps, badges, myRewards, quiz, streak, standings, unread] = await Promise.all([
+  const [rank, stats, announcements, newcomers, steps, badges, myRewards, quiz, streak, standings, unread] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getAnnouncements(20),
-    getSnapshotPosition(user.id, today),
     sql<{ id: string; nickname: string; photo_version: number; top_badge: BadgeInfo | null; verified: boolean }[]>`
       SELECT u.id, u.nickname, u.photo_version, ${topBadge()}, ${isVerified()} FROM users u
       WHERE u.state = ${user.state} AND u.id <> ${user.id} AND u.completed_at IS NOT NULL
@@ -65,14 +64,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // The carousel: the last 30 days of announcements, pinned ones first, then newest.
   const monthAgo = Date.now() - 30 * 86_400_000;
   const slides = announcements
-    .filter((a) => a.pinned || new Date(a.created_at).getTime() > monthAgo)
+    .filter((a) => a.pinned || new Date(a.published_at).getTime() > monthAgo)
     .sort((x, y) => Number(y.pinned) - Number(x.pinned))
     .slice(0, 6);
   const unclaimed = myRewards.filter((r) => r.status === "unclaimed");
   const profileComplete = badges.find((b) => b.slug === "profile_complete");
 
   const position = rank?.position ?? 0;
-  const change = snapshot ? snapshot - position : 0;
   const myState = stats.states.find((s) => s.state === user.state);
   const standing = standings.find((s) => s.state === user.state);
   const above = standing?.rank ? standings.find((s) => s.rank === standing.rank! - 1) : undefined;
@@ -100,23 +98,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <h1 className="h-display min-w-0 truncate text-2xl">Hi, {user.nickname}</h1>
         <div className="flex shrink-0 items-center gap-2">
           <StreakChip />
-          {position > 0 && (
-            <Link
-              href="/invite"
-              aria-label={`Your position: ${position}. Invite friends to move up`}
-              className="flex items-center gap-1 rounded-full border border-line px-3 py-1.5 text-sm font-bold text-lime-ink"
-            >
-              #{formatNumber(position)}
-              {change !== 0 && (
-                <span className={`flex items-center text-[12px] ${change > 0 ? "" : "text-muted"}`}>
-                  {change > 0 ? <ArrowUpIcon size={12} strokeWidth={2.5} /> : <ArrowDownIcon size={12} strokeWidth={2.5} />}
-                  {Math.abs(change)}
-                </span>
-              )}
-            </Link>
-          )}
+          {/* Prefetched in full while Home is open, so the bell opens instantly instead of on a loading screen. */}
           <Link
             href="/notifications"
+            prefetch
             aria-label={unread > 0 ? `Notifications, ${unread} new` : "Notifications"}
             className="relative flex size-10 items-center justify-center rounded-full border border-line"
           >

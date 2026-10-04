@@ -494,3 +494,19 @@ BEGIN
 END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS users_friend_notify ON users;
 CREATE TRIGGER users_friend_notify AFTER INSERT OR UPDATE OF completed_at ON users FOR EACH ROW EXECUTE FUNCTION notify_friend_joined();
+
+-- Announcements get a type (sets the label and colour on Home), can be hidden (drafts, or taken down), and
+-- count as new from when they were first shown, not when they were written.
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'general';
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS visible boolean NOT NULL DEFAULT true;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS published_at timestamptz;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+UPDATE announcements SET published_at = created_at WHERE published_at IS NULL AND visible;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'announcements_kind_check') THEN
+    ALTER TABLE announcements ADD CONSTRAINT announcements_kind_check
+      CHECK (kind IN ('general', 'update', 'promotion', 'event', 'reminder', 'contest'));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS announcements_published_idx ON announcements (published_at DESC) WHERE visible;

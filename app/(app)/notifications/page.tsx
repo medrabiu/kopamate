@@ -50,8 +50,8 @@ export default async function NotificationsPage() {
   const items = [
     ...notifications.map((n) => ({ type: "personal" as const, at: new Date(n.created_at).getTime(), n })),
     ...announcements
-      .filter((a) => new Date(a.created_at).getTime() > monthAgo)
-      .map((a) => ({ type: "announcement" as const, at: new Date(a.created_at).getTime(), a })),
+      .filter((a) => new Date(a.published_at).getTime() > monthAgo)
+      .map((a) => ({ type: "announcement" as const, at: new Date(a.published_at).getTime(), a })),
   ].sort((x, y) => y.at - x.at);
 
   return (

@@ -1,5 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
+import type { AnnouncementKind } from "./announcement-meta";
 import { sql } from "./db";
 
 /**
@@ -10,12 +11,14 @@ import { sql } from "./db";
 
 export type Announcement = {
   id: string;
+  kind: AnnouncementKind;
   title: string;
   body: string | null;
   button_label: string | null;
   button_url: string | null;
   pinned: boolean;
-  created_at: Date;
+  /** When it was first shown to users (hidden drafts have none). */
+  published_at: Date;
 };
 
 export type Notification = {
@@ -28,21 +31,16 @@ export type Notification = {
   actor: { id: string; nickname: string; photo_version: number } | null;
 };
 
-/** Newest first. Cached for a minute; admin changes clear it (tag "announcements"). */
+/** Visible ones, newest first. Cached for a minute; admin changes clear it (tag "announcements"). */
 export const getAnnouncements = unstable_cache(
   async (limit: number) =>
     sql<Announcement[]>`
-      SELECT id::text, title, body, button_label, button_url, pinned, created_at
-      FROM announcements ORDER BY created_at DESC, id DESC LIMIT ${limit}
+      SELECT id::text, kind, title, body, button_label, button_url, pinned, published_at
+      FROM announcements WHERE visible ORDER BY published_at DESC, id DESC LIMIT ${limit}
     `,
   ["announcements"],
   { revalidate: 60, tags: ["announcements"] },
 );
-
-/** The newest pinned announcement: the banner at the top of Home. */
-export async function getPinnedAnnouncement() {
-  return (await getAnnouncements(20)).find((a) => a.pinned) ?? null;
-}
 
 /** Unread personal notifications plus announcements, since the user last opened the bell. */
 export async function getUnreadCount(userId: string) {
@@ -50,7 +48,7 @@ export async function getUnreadCount(userId: string) {
     WITH seen AS (SELECT notifications_seen_at AS at FROM users WHERE id = ${userId})
     SELECT
       (SELECT count(*) FROM notifications n, seen WHERE n.user_id = ${userId} AND n.created_at > seen.at)::int +
-      (SELECT count(*) FROM announcements a, seen WHERE a.created_at > seen.at)::int AS n
+      (SELECT count(*) FROM announcements a, seen WHERE a.visible AND a.published_at > seen.at)::int AS n
   `;
   return row?.n ?? 0;
 }
