@@ -79,6 +79,16 @@ async function loadStandings(week: string): Promise<StateStanding[]> {
 /** The live table, cached briefly; finishing a quiz refreshes it (tag "league"). */
 export const getStandings = unstable_cache(loadStandings, ["league-standings"], { revalidate: 30, tags: ["league"] });
 
+/** This week's ranked states for the public landing page. */
+export async function getLandingLeague() {
+  const week = weekStart();
+  const standings = await getStandings(week);
+  return {
+    states: standings.filter((s) => s.rank !== null).map(({ state, score, players }) => ({ state, score, players })),
+    endsAt: weekEndsAt(week),
+  };
+}
+
 export type PlayerRow = { id: string; nickname: string; photo_version: number; verified: boolean; state: string; points: number; days: number; rank: number };
 
 const playerTotals = (week: string) => sql`

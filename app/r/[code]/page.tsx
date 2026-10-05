@@ -4,6 +4,7 @@ import { after } from "next/server";
 import Landing from "@/components/Landing";
 import { getCurrentUser } from "@/lib/session";
 import { getEarlyDeadline, getPublicStats, track } from "@/lib/stats";
+import { getLandingLeague } from "@/lib/league";
 import { sql } from "@/lib/db";
 import { APP_NAME } from "@/lib/config";
 
@@ -45,7 +46,12 @@ export default async function ReferralLanding({ params }: Params) {
   const user = await getCurrentUser();
   if (user) redirect(user.completed_at ? "/home" : "/join");
 
-  const [stats, inviter, earlyDeadline] = await Promise.all([getPublicStats(), findInviter(code), getEarlyDeadline()]);
+  const [stats, inviter, earlyDeadline, league] = await Promise.all([
+    getPublicStats(),
+    findInviter(code),
+    getEarlyDeadline(),
+    getLandingLeague(),
+  ]);
   after(() => track("landing_view", null, { referred: Boolean(inviter), code }));
-  return <Landing stats={stats} earlyDeadline={earlyDeadline} />;
+  return <Landing stats={stats} earlyDeadline={earlyDeadline} league={league} inviter={inviter} />;
 }
