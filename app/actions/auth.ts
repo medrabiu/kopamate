@@ -14,6 +14,7 @@ import {
   ipLimited,
   isUniqueViolation,
   isUsernameViolation,
+  creditChallenges,
   followFromCookie,
   referrerFromCookie,
   uniqueReferralCode,
@@ -79,6 +80,7 @@ export async function signupWithPhone(_prev: FormState, fd: FormData): Promise<F
   await track("signup_completed", userId, { method: "phone", referred: Boolean(referrer) });
   if (referrer) {
     await track("referral_completed", referrer.id, { referred: userId });
+    await creditChallenges(userId, referrer.id);
     const freeze = await giveFreeze(referrer.id);
     after(() => notifyFriendJoined(referrer.id, nick.value, freeze));
   }
@@ -124,6 +126,7 @@ export async function finishSignup(_prev: FormState, fd: FormData): Promise<Form
   await track("signup_completed", user.id, { method: "google", referred: Boolean(referrer) });
   if (referrer) {
     await track("referral_completed", referrer.id, { referred: user.id });
+    await creditChallenges(user.id, referrer.id);
     const freeze = await giveFreeze(referrer.id);
     after(() => notifyFriendJoined(referrer.id, nick.value, freeze));
   }

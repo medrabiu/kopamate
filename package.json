@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
     "db:seed": "node scripts/seed.mjs",
-    "db:quiz": "node scripts/seed-quiz.mjs"
+    "db:quiz": "node scripts/seed-quiz.mjs",
+    "test:challenges": "node --test tests/challenges.test.mjs && node scripts/test-challenge-signups.mjs"
   },
   "dependencies": {
     "@fontsource/bricolage-grotesque": "^5.1.0",

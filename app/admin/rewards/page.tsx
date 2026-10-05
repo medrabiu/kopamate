@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/session";
 import { sql } from "@/lib/db";
-import { getBudget } from "@/lib/rewards";
+import { getBudget, getChallengePayouts } from "@/lib/rewards";
 import { formatNgn, KIND_LABEL } from "@/lib/reward-meta";
 import { formatJoined, timeAgo } from "@/lib/util";
 import { revealBatch } from "@/app/actions/admin-rewards";
@@ -41,7 +41,7 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
   const params = await searchParams;
   const cols = sql`r.id, r.title, r.kind, r.status, r.amount_ngn, r.admin_note, r.payment_reference, r.paid_at, r.created_at,
                    r.batch_id, u.id AS user_id, u.nickname`;
-  const [budget, payouts, open, rejected, paid] = await Promise.all([
+  const [budget, payouts, open, rejected, paid, challengePayouts] = await Promise.all([
     getBudget(),
     sql<Payout[]>`
       SELECT ${cols}, u.whatsapp_e164, r.payout_bank, r.payout_account_number, r.payout_account_name, r.payout_phone, r.claimed_at
@@ -60,6 +60,7 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
       SELECT ${cols} FROM rewards r JOIN users u ON u.id = r.user_id
       WHERE r.status = 'paid' ORDER BY r.paid_at DESC NULLS LAST LIMIT 30
     `,
+    getChallengePayouts(),
   ]);
 
   // Hidden and unclaimed rewards, grouped by the award they came from (single awards together).
@@ -73,6 +74,28 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
     <>
       <Notice params={params} />
       <BudgetTracker b={budget} />
+
+      {challengePayouts.length > 0 && (
+        <section className={panel} aria-labelledby="challenge-payouts-title">
+          <h2 id="challenge-payouts-title" className="h-display mb-1 text-lg">
+            Challenge prizes
+          </h2>
+          <p className="mb-3 text-xs text-muted">Paid from each challenge&apos;s own prize pool, not the budget above. Winners claim them like any reward.</p>
+          <ul className="flex flex-col divide-y divide-line text-sm">
+            {challengePayouts.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <Link href={`/admin/challenges/${c.id}/winners`} className="font-bold underline">
+                  {c.title}
+                </Link>
+                <span className="text-muted">
+                  {c.winners} winners · awarded {formatNgn(c.awarded)} · claimed {formatNgn(c.claimed)} · processing {formatNgn(c.processing)} · paid{" "}
+                  {formatNgn(c.paid)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className={panel}>
         <h2 className="h-display mb-1 text-lg">Award</h2>

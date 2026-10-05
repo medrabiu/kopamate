@@ -8,6 +8,25 @@ import { ranked } from "./ranking";
  */
 
 export const DEFAULT_BUDGET_NGN = 200_000;
+
+/** Challenge prizes (batch "challenge:<id>") are paid from the challenge's own pool, not this budget. */
+const NOT_CHALLENGE = sql`(batch_id IS NULL OR batch_id NOT LIKE 'challenge:%')`;
+
+export type ChallengePayout = { id: number; title: string; awarded: number; claimed: number; processing: number; paid: number; winners: number };
+
+/** Each published challenge's prizes: awarded, claimed, processing and paid. */
+export async function getChallengePayouts(): Promise<ChallengePayout[]> {
+  return sql<ChallengePayout[]>`
+    SELECT c.id, c.title,
+           COALESCE(sum(r.amount_ngn) FILTER (WHERE r.status <> 'rejected'), 0)::int AS awarded,
+           COALESCE(sum(r.amount_ngn) FILTER (WHERE r.status = 'claimed'), 0)::int AS claimed,
+           COALESCE(sum(r.amount_ngn) FILTER (WHERE r.status = 'processing'), 0)::int AS processing,
+           COALESCE(sum(r.amount_ngn) FILTER (WHERE r.status = 'paid'), 0)::int AS paid,
+           count(r.id)::int AS winners
+    FROM challenges c JOIN rewards r ON r.batch_id = 'challenge:' || c.id
+    GROUP BY c.id ORDER BY c.published_at DESC NULLS LAST
+  `;
+}
 export const DEFAULT_PRESETS: Record<string, number[]> = {
   top_referrers: [30000, 20000, 15000, 10000, 10000, 5000, 5000, 5000, 5000, 5000],
 };
@@ -72,7 +91,7 @@ export async function getBudget(settings?: MoneySettings): Promise<Budget> {
              COALESCE(sum(amount_ngn) FILTER (WHERE status = 'paid'), 0)::int AS paid,
              count(*) FILTER (WHERE amount_ngn IS NULL AND status IN ('hidden', 'unclaimed'))::int AS "noAmount",
              count(*) FILTER (WHERE amount_ngn IS NULL AND status = 'paid')::int AS "legacyPaid"
-      FROM rewards
+      FROM rewards WHERE ${NOT_CHALLENGE}
     `,
   ]);
   return { ...row, budget: s.budget, remaining: s.budget - row.awarded };
@@ -83,7 +102,7 @@ export async function getUserTotals(userIds: string[]): Promise<Map<string, numb
   if (userIds.length === 0) return new Map();
   const rows = await sql<{ user_id: string; total: number }[]>`
     SELECT user_id, COALESCE(sum(amount_ngn), 0)::int AS total FROM rewards
-    WHERE user_id IN ${sql(userIds)} AND status <> 'rejected'
+    WHERE user_id IN ${sql(userIds)} AND status <> 'rejected' AND ${NOT_CHALLENGE}
     GROUP BY user_id
   `;
   return new Map(rows.map((r) => [r.user_id, r.total]));

@@ -12,6 +12,7 @@ import { checkAutoBadges } from "@/lib/badges";
 import { isState, stateCodeProblem } from "@/lib/states";
 import { batchFromStateCode, batchProblem, isStage, STATE_LABEL } from "@/lib/nysc";
 import { verificationBlock } from "@/lib/verification";
+import { sniffImage } from "@/lib/image";
 
 export type ProfileState = { error?: string; ok?: boolean } | undefined;
 
@@ -138,17 +139,6 @@ export async function changePin(_prev: ProfileState, fd: FormData): Promise<Prof
 }
 
 const MAX_PHOTO_BYTES = 300 * 1024;
-
-function sniffImage(bytes: Uint8Array): string | null {
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
-  if (
-    bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-    bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
-  )
-    return "image/webp";
-  return null;
-}
 
 const MAX_THUMB_BYTES = 40 * 1024;
 

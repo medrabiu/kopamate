@@ -3,8 +3,11 @@ import { cookies, headers } from "next/headers";
 import { sql } from "./db";
 import { MAX_SIGNUPS_PER_IP_PER_HOUR } from "./config";
 import { clientIp, hashIp, randomDigits, referralCodeBase } from "./util";
+import { entryOwner, recordChallengeSignup } from "./challenge-signups";
 
 export const REF_COOKIE = "km_ref";
+/** Set by challenge entry links (/c/<code>): credits the entry's owner, and the entry. */
+export const ENTRY_COOKIE = "km_entry";
 /** Set by profile links (/u/<code>): follow that person once sign-up is done. */
 export const FOLLOW_COOKIE = "km_follow";
 
@@ -63,11 +66,29 @@ export async function ipLimited(ipHash: string | null) {
   return (row?.n ?? 0) >= MAX_SIGNUPS_PER_IP_PER_HOUR;
 }
 
-/** The referrer from the km_ref cookie, if it points to a real, active, completed user. */
+/**
+ * The referrer from the km_ref cookie (or, after a challenge entry link, the entry's owner from km_entry),
+ * if it points to a real, active, completed user.
+ */
 export async function referrerFromCookie(excludeUserId?: string): Promise<{ id: string; nickname: string; photo_version: number } | null> {
-  const code = (await cookies()).get(REF_COOKIE)?.value;
-  if (!code) return null;
-  return referrerByCode(code, excludeUserId);
+  const jar = await cookies();
+  const code = jar.get(REF_COOKIE)?.value;
+  if (code) return referrerByCode(code, excludeUserId);
+  const entry = jar.get(ENTRY_COOKIE)?.value;
+  if (!entry) return null;
+  const owner = await entryOwner(sql, entry);
+  return owner && owner.id !== excludeUserId ? { id: owner.id, nickname: owner.nickname, photo_version: owner.photo_version } : null;
+}
+
+/** After sign-up with a referrer: credit any open challenge they're in (and the entry link used, if any). */
+export async function creditChallenges(newUserId: string, referrerId: string) {
+  try {
+    const entryCode = (await cookies()).get(ENTRY_COOKIE)?.value ?? null;
+    await recordChallengeSignup(sql, { newUserId, referrerId, entryCode });
+  } catch (err) {
+    // Sign-up must never fail because of a challenge.
+    console.error("challenge sign-up not recorded", err);
+  }
 }
 
 export async function referrerByCode(code: string, excludeUserId?: string) {

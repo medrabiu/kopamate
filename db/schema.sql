@@ -530,3 +530,147 @@ BEGIN
   END IF;
 END $$;
 CREATE INDEX IF NOT EXISTS users_state_stage_idx ON users (state, nysc_stage);
+
+-- Challenges (lib/challenges.ts). A challenge has a brief, rules and a prize pool that grows with approved
+-- entries. People join (verified, handles, follow us, accept rules), then submit up to max_entries_per_user
+-- post links. Each entry has its own link (/c/<entry_code>) that works like an invite link, so sign-ups are
+-- credited to the entry. The team picks winners offline; publishing creates rewards in the rewards system.
+CREATE TABLE IF NOT EXISTS challenges (
+  id                    serial PRIMARY KEY,
+  slug                  text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9-]{3,60}$'),
+  title                 text NOT NULL,
+  badge_name            text NOT NULL,                       -- short name for badges, like "Creator Challenge #1"
+  brief                 text NOT NULL DEFAULT '',
+  ideas                 text NOT NULL DEFAULT '',            -- one example idea per line
+  rules                 text NOT NULL DEFAULT '',            -- one rule per line
+  hashtag               text,                                -- a suggestion only, never required
+  required_tags         jsonb NOT NULL DEFAULT '{}',         -- {"x":"@kopamate","tiktok":"@kopamate","instagram":"@kopamate"}
+  social_links          jsonb NOT NULL DEFAULT '{}',         -- {"x":"https://…","tiktok":…,"instagram":…,"whatsapp":…}
+  max_entries_per_user  int NOT NULL DEFAULT 3 CHECK (max_entries_per_user BETWEEN 1 AND 10),
+  opens_at              timestamptz,
+  closes_at             timestamptz,
+  verify_by             timestamptz,                         -- sign-ups must be verified by then to count (null: closes_at + 14 days)
+  metrics_due_hours     int NOT NULL DEFAULT 72,
+  pool_base             int NOT NULL DEFAULT 100000,
+  pool_step_entries     int NOT NULL DEFAULT 50 CHECK (pool_step_entries > 0),
+  pool_step_amount      int NOT NULL DEFAULT 10000,
+  pool_cap              int NOT NULL DEFAULT 200000,
+  prize_split           jsonb NOT NULL,                      -- [{"key":"first","label":"1st place","pct":50}, …]
+  status                text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'upcoming', 'open', 'closed', 'results')),
+  published_at          timestamptz,                         -- when winners were published (locks the challenge)
+  created_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS challenge_participants (
+  challenge_id                int NOT NULL REFERENCES challenges(id) ON DELETE CASCADE,
+  user_id                     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  x_handle                    text,
+  tiktok_handle               text,
+  instagram_handle            text,
+  confirmed_follow_x          boolean NOT NULL DEFAULT false,
+  confirmed_follow_other      boolean NOT NULL DEFAULT false,
+  confirmed_whatsapp_channel  boolean NOT NULL DEFAULT false,
+  accepted_rules_at           timestamptz NOT NULL DEFAULT now(),
+  -- Finalist checks, by hand: follows on X, the other platform and the WhatsApp Channel.
+  check_x                     boolean,
+  check_other                 boolean,
+  check_whatsapp              boolean,
+  follow_check_status         text NOT NULL DEFAULT 'unchecked' CHECK (follow_check_status IN ('unchecked', 'ok', 'failed')),
+  checked_by                  uuid REFERENCES users(id) ON DELETE SET NULL,
+  checked_at                  timestamptz,
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (challenge_id, user_id),
+  CHECK (x_handle IS NOT NULL OR tiktok_handle IS NOT NULL OR instagram_handle IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS challenge_entries (
+  id                       serial PRIMARY KEY,
+  challenge_id             int NOT NULL REFERENCES challenges(id) ON DELETE CASCADE,
+  user_id                  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  platform                 text NOT NULL CHECK (platform IN ('x', 'tiktok', 'instagram')),
+  post_url                 text NOT NULL,
+  format                   text NOT NULL CHECK (format IN ('video', 'meme_art', 'skit', 'song', 'carousel', 'other')),
+  caption_note             text CHECK (char_length(caption_note) <= 200),
+  entry_code               text NOT NULL UNIQUE,
+  submitted_at             timestamptz NOT NULL DEFAULT now(),
+  status                   text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'disqualified')),
+  reject_reason            text,
+  reviewed_by              uuid REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at              timestamptz,
+  first_approved_at        timestamptz,
+  -- Post stats the entrant adds after metrics_due_hours, with a screenshot (admins only).
+  views                    int CHECK (views >= 0),
+  likes                    int CHECK (likes >= 0),
+  comments                 int CHECK (comments >= 0),
+  shares                   int CHECK (shares >= 0),
+  metrics_screenshot       text,                              -- base64, resized on the phone
+  metrics_screenshot_mime  text,
+  metrics_submitted_at     timestamptz,
+  metrics_verified         boolean NOT NULL DEFAULT false,
+  metrics_verified_by      uuid REFERENCES users(id) ON DELETE SET NULL,
+  metrics_reminded_at      timestamptz,
+  UNIQUE (challenge_id, post_url)
+);
+CREATE INDEX IF NOT EXISTS challenge_entries_user_idx ON challenge_entries (challenge_id, user_id);
+CREATE INDEX IF NOT EXISTS challenge_entries_status_idx ON challenge_entries (challenge_id, status, submitted_at DESC);
+
+-- One row per person who signed up through a participant's link during the challenge. Whether it counts
+-- is worked out when read (lib/challenges.ts countedSignup), so a later verification or revoke just works.
+CREATE TABLE IF NOT EXISTS challenge_signups (
+  id                bigserial PRIMARY KEY,
+  challenge_id      int NOT NULL REFERENCES challenges(id) ON DELETE CASCADE,
+  entry_id          int REFERENCES challenge_entries(id) ON DELETE SET NULL,
+  referrer_user_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  new_user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  signed_up_at      timestamptz NOT NULL DEFAULT now(),
+  void_reason       text,
+  voided_by         uuid REFERENCES users(id) ON DELETE SET NULL,
+  voided_at         timestamptz,
+  UNIQUE (challenge_id, new_user_id)
+);
+CREATE INDEX IF NOT EXISTS challenge_signups_referrer_idx ON challenge_signups (challenge_id, referrer_user_id);
+CREATE INDEX IF NOT EXISTS challenge_signups_entry_idx ON challenge_signups (entry_id);
+
+-- Winners picked by the team; one prize per person.
+CREATE TABLE IF NOT EXISTS challenge_winners (
+  challenge_id  int NOT NULL REFERENCES challenges(id) ON DELETE CASCADE,
+  prize_key     text NOT NULL,
+  user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  entry_id      int REFERENCES challenge_entries(id) ON DELETE SET NULL,
+  amount_ngn    int NOT NULL CHECK (amount_ngn > 0),
+  reward_id     uuid REFERENCES rewards(id) ON DELETE SET NULL,
+  PRIMARY KEY (challenge_id, prize_key),
+  UNIQUE (challenge_id, user_id)
+);
+
+-- Audit log of admin actions on a challenge.
+CREATE TABLE IF NOT EXISTS challenge_events (
+  id            bigserial PRIMARY KEY,
+  challenge_id  int NOT NULL REFERENCES challenges(id) ON DELETE CASCADE,
+  actor         uuid REFERENCES users(id) ON DELETE SET NULL,
+  action        text NOT NULL,
+  detail        jsonb,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS challenge_events_idx ON challenge_events (challenge_id, created_at DESC);
+
+INSERT INTO badges (slug, name, description, icon, color, priority, kind, qualifies_for_rewards) VALUES
+  ('founding_creator', 'Founding Creator', 'One of the first 50 creators with an approved challenge entry', 'flame', 'pink', 60, 'manual', false)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Creator Challenge #1, as a draft. Dates and social links are set in Admin → Challenges.
+INSERT INTO challenges (slug, title, badge_name, hashtag, required_tags, prize_split, brief, ideas, rules) VALUES (
+  'creator-challenge-1',
+  'Kopamate Creator Challenge #1',
+  'Creator Challenge #1',
+  '#KopamateChallenge',
+  '{"x": "@kopamate", "tiktok": "@kopamate", "instagram": "@kopamate"}',
+  '[{"key": "first", "label": "1st place", "pct": 50},
+    {"key": "second", "label": "2nd place", "pct": 20},
+    {"key": "third", "label": "3rd place", "pct": 10},
+    {"key": "recruiter", "label": "Top Recruiter", "pct": 10},
+    {"key": "rising", "label": "Rising creator", "pct": 10}]',
+  'Make something about Kopamate: a video, skit, meme, art, song or carousel. Post it on X, TikTok or Instagram, tag @kopamate and put your Kopamate link in the caption or bio. The more people join Kopamate through your link, the better your chances.',
+  E'POV: you found your camp buddy on Kopamate before camp\nCorper life before vs after Kopamate\nThings corpers say at camp (Kopamate edition)\nA Kopamate jingle\nMemes about allawee, camp and CDS',
+  E'Open to verified Kopamate users aged 18+, one account per person.\nFollow @kopamate on X (and TikTok or Instagram if you post there) and join our WhatsApp Channel. We check finalists.\nPosts must be public and original, tag @kopamate, and include your Kopamate link from the app in the caption or bio. Up to 3 entries. #KopamateChallenge is welcome but optional.\nWinners are chosen by the Kopamate team based on the people you bring to Kopamate, your post''s reach, and the quality of your content. Only people who join through your link and verify their account count.\nFake sign-ups, bought views or likes, bots, stolen content or multiple accounts lead to disqualification.\nNo politics, religion or ethnic content, no insults, nothing explicit.\nDon''t use the NYSC logo or crest, and don''t suggest NYSC endorses Kopamate.\nBy entering, you allow Kopamate to repost your entry with credit.\nWinners must verify their identity before payment. Prizes are paid within 7 days of verification.\nNo purchase needed. Kopamate''s decisions on eligibility and winners are final.'
+) ON CONFLICT (slug) DO NOTHING;

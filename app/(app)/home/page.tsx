@@ -27,6 +27,8 @@ import { formatNumber, lagosDate, nextLagosMidnight } from "@/lib/util";
 import { stateSlug } from "@/lib/states";
 import QuizCard from "./QuizCard";
 import { ConfirmStageCard } from "@/components/NyscStatusForm";
+import ChallengeBanner from "@/components/challenges/ChallengeBanner";
+import { getBannerChallenge, getParticipant, getPool } from "@/lib/challenges";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -37,7 +39,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, announcements, newcomers, steps, badges, myRewards, quiz, streak, standings, unread] = await Promise.all([
+  const [rank, stats, announcements, newcomers, steps, badges, myRewards, quiz, streak, standings, unread, challenge] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getAnnouncements(20),
@@ -57,6 +59,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getStreak(user.id),
     getStandings(weekStart(today)),
     getUnreadCount(user.id),
+    // The open (or upcoming) challenge for the banner, with its live pool and whether this user is in.
+    getBannerChallenge().then(async (c) =>
+      c ? { c, pool: (await getPool(c)).pool, joined: Boolean(await getParticipant(c.id, user.id)) } : null,
+    ),
   ]);
   // The carousel: the last 30 days of announcements, pinned ones first, then newest.
   const monthAgo = Date.now() - 30 * 86_400_000;
@@ -134,6 +140,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         hiddenCount={myRewards.length - unclaimed.length}
         underReview={user.is_flagged}
       />
+
+      {challenge && <ChallengeBanner c={challenge.c} pool={challenge.pool} joined={challenge.joined} />}
 
       {!user.stage_confirmed_at && (
         <ConfirmStageCard stage={user.nysc_stage} batch={user.nysc_batch} state={user.state} canPickState={false} />
