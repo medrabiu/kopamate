@@ -83,6 +83,7 @@ export default async function MyEntriesPage({ params, searchParams }: Props) {
               hasStats={Boolean(e.metrics_submitted_at)}
             />
           ) : (
+            c.ask_for_stats &&
             e.status !== "rejected" &&
             e.status !== "disqualified" &&
             !c.published_at && (

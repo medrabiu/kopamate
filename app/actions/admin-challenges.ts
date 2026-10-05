@@ -129,7 +129,7 @@ export async function saveChallenge(fd: FormData) {
       brief = ${text(fd, "brief", 5000)}, ideas = ${text(fd, "ideas", 5000)}, rules = ${text(fd, "rules", 10000)},
       hashtag = ${text(fd, "hashtag", 60) || null},
       required_tags = ${sql.json(tags as never)}, social_links = ${sql.json(links as never)},
-      max_entries_per_user = ${n.max}, metrics_due_hours = ${n.due},
+      max_entries_per_user = ${n.max}, metrics_due_hours = ${n.due}, ask_for_stats = ${fd.get("ask_for_stats") === "on"},
       opens_at = ${opens}, closes_at = ${closes}, verify_by = ${verifyBy},
       status = ${locked ? "results" : status},
       pool_base = ${locked ? c.pool_base : n.base}, pool_step_entries = ${locked ? c.pool_step_entries : n.stepEntries},

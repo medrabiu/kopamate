@@ -27,6 +27,8 @@ export type Challenge = {
   opens_at: Date | null;
   closes_at: Date | null;
   verify_by: Date | null;
+  /** Whether entrants are asked for post stats (views, likes, a screenshot). */
+  ask_for_stats: boolean;
   metrics_due_hours: number;
   pool_base: number;
   pool_step_entries: number;
@@ -143,9 +145,9 @@ export async function getMyEntries(challengeId: number, userId: string): Promise
 /** Entries that use up one of the user's places (rejected ones don't, so they can try again). */
 export const countsTowardLimit = (e: { status: EntryStatus }) => e.status !== "rejected";
 
-/** Post stats can be added from metrics_due_hours after submitting until winners are published. */
+/** Post stats (when the challenge asks for them) can be added from metrics_due_hours after submitting until winners are published. */
 export function metricsOpen(c: Challenge, e: { submitted_at: Date; status: EntryStatus }, now = Date.now()) {
-  return !c.published_at && e.status !== "rejected" && e.status !== "disqualified" && now >= e.submitted_at.getTime() + c.metrics_due_hours * 3_600_000;
+  return c.ask_for_stats && !c.published_at && e.status !== "rejected" && e.status !== "disqualified" && now >= e.submitted_at.getTime() + c.metrics_due_hours * 3_600_000;
 }
 
 /** Winners as shown on the challenge page once published: names and prizes only. */

@@ -105,9 +105,19 @@ export default async function ChallengeSettingsPage({ params, searchParams }: Pr
         <Field label="Sign-ups must be verified by (Lagos time)" hint="Leave empty for 14 days after closing.">
           <input type="datetime-local" name="verify_by" defaultValue={lagosInput(c.verify_by)} className={input} />
         </Field>
-        <Field label="Post stats open after (hours)">
+        <Field label="Post stats open after (hours)" hint="Only used when “Ask for post stats” is on.">
           <input name="metrics_due_hours" defaultValue={c.metrics_due_hours} inputMode="numeric" className={input} />
         </Field>
+        <label className="flex items-start gap-2 text-sm md:col-span-2">
+          <input type="checkbox" name="ask_for_stats" defaultChecked={c.ask_for_stats} className="mt-0.5 size-4 accent-lime" />
+          <span>
+            Ask for post stats
+            <span className="block text-xs text-muted">
+              Off: entrants never see the stats form or reminder; judge reach from the public posts. On: they can add views, likes and a
+              screenshot after the hours above.
+            </span>
+          </span>
+        </label>
 
         <h4 className="font-bold md:col-span-2">Our accounts</h4>
         {(

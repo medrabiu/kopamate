@@ -7,7 +7,7 @@ export const maxDuration = 60;
 /**
  * Daily (09:00 Lagos via vercel.json), at most one of each per person per day:
  * - "N people joined through your links" for sign-ups credited in the last 24 hours
- * - "Add your post stats" once an entry's stats are due (once per entry)
+ * - "Add your post stats" once an entry's stats are due (once per entry), for challenges that ask for them
  * - a last-day reminder when an open challenge closes within 24 hours
  */
 export async function GET(req: Request) {
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   const due = await sql<{ id: number; user_id: string; slug: string }[]>`
     UPDATE challenge_entries e SET metrics_reminded_at = now()
     FROM challenges c
-    WHERE c.id = e.challenge_id AND c.published_at IS NULL AND c.status IN ('open', 'closed')
+    WHERE c.id = e.challenge_id AND c.ask_for_stats AND c.published_at IS NULL AND c.status IN ('open', 'closed')
       AND e.status IN ('pending', 'approved') AND e.metrics_submitted_at IS NULL AND e.metrics_reminded_at IS NULL
       AND e.submitted_at + make_interval(hours => c.metrics_due_hours) <= now()
     RETURNING e.id, e.user_id, c.slug
