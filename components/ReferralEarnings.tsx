@@ -42,7 +42,7 @@ export default function ReferralEarnings(p: Props) {
   // Off, and nothing earned before it was switched off: nothing to show.
   if (!on && p.earnedCount === 0) return null;
 
-  const headline = on ? `Earn ${formatNgn(p.rate)} for every friend who gets verified` : "Referral earnings";
+  const headline = on ? `Earn ${formatNgn(p.rate)} for every friend who gets verified` : "The referral cash campaign has ended";
 
   if (p.compact) {
     return (
@@ -119,8 +119,12 @@ export default function ReferralEarnings(p: Props) {
         </Link>
       ) : p.underReview ? (
         <p className="text-sm text-muted">Your account is under review, so earnings can&apos;t be withdrawn right now.</p>
-      ) : (
+      ) : on ? (
         <p className="text-sm text-muted">Friends count once they get verified in their Profile. Paid as a bank transfer, airtime or data.</p>
+      ) : (
+        <p className="text-sm text-muted">
+          New friends no longer earn cash, but anything you earned is still yours to withdraw as a bank transfer, airtime or data.
+        </p>
       )}
 
       <Sheet open={open} onClose={() => setOpen(false)} title={state?.ok ? "Withdrawn" : `Withdraw ${formatNgn(p.available)}`}>

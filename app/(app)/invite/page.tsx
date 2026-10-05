@@ -9,8 +9,14 @@ import { PLACES_PER_REFERRAL, TOP_REFERRERS, referralLink, shareMessage, whatsap
 import { sql } from "@/lib/db";
 import { formatNumber, timeAgo } from "@/lib/util";
 import { isVerified } from "@/lib/badges";
-import { getEarnings } from "@/lib/referral-bonus";
+import { getEarnings, type FriendBonus } from "@/lib/referral-bonus";
 import FriendsJoined from "./FriendsJoined";
+
+/** Bonus status beside each friend. Once the campaign has ended, "Not verified yet" no longer means money to come. */
+function bonusTag(bonus: FriendBonus | undefined, on: boolean) {
+  if (!bonus) return undefined;
+  return on || bonus.status === "earned" || bonus.status === "paid" ? bonus : undefined;
+}
 
 export const metadata: Metadata = { title: "Invite friends" };
 
@@ -101,7 +107,7 @@ export default async function InvitePage() {
           photo_version: j.photo_version,
           ago: timeAgo(j.completed_at),
           verified: j.verified,
-          bonus: (earnings.enabled && earnings.rate > 0) || earnings.earnedCount > 0 ? earnings.friends.get(j.id) : undefined,
+          bonus: bonusTag(earnings.friends.get(j.id), earnings.enabled && earnings.rate > 0),
         }))}
       />
 
