@@ -60,7 +60,7 @@ export default async function AdminRewardsPage({ searchParams }: { searchParams:
       SELECT ${cols} FROM rewards r JOIN users u ON u.id = r.user_id
       WHERE r.status = 'paid' ORDER BY r.paid_at DESC NULLS LAST LIMIT 30
     `,
-    getChallengePayouts(),
+    getChallengePayouts().catch(() => []),
   ]);
 
   // Hidden and unclaimed rewards, grouped by the award they came from (single awards together).

@@ -60,9 +60,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getStandings(weekStart(today)),
     getUnreadCount(user.id),
     // The open (or upcoming) challenge for the banner, with its live pool and whether this user is in.
-    getBannerChallenge().then(async (c) =>
-      c ? { c, pool: (await getPool(c)).pool, joined: Boolean(await getParticipant(c.id, user.id)) } : null,
-    ),
+    // Never breaks Home: no banner if challenges can't be read (e.g. before the migration has run).
+    getBannerChallenge()
+      .then(async (c) => (c ? { c, pool: (await getPool(c)).pool, joined: Boolean(await getParticipant(c.id, user.id)) } : null))
+      .catch(() => null),
   ]);
   // The carousel: the last 30 days of announcements, pinned ones first, then newest.
   const monthAgo = Date.now() - 30 * 86_400_000;
