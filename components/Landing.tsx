@@ -45,7 +45,7 @@ const FAQ = [
   { q: `Is ${APP_NAME} free?`, a: "Yes. Signing up and using the app is free." },
   {
     q: "Who can join?",
-    a: "Corps members serving in any of Nigeria's 36 states and the FCT. Sign up with your phone number or Google in about 20 seconds.",
+    a: "Prospective corps members waiting for call-up, corpers serving in any of Nigeria's 36 states and the FCT, and ex-corpers who have passed out. Sign up with your phone number or Google in about 20 seconds.",
   },
   {
     q: "How do prizes work?",
@@ -91,7 +91,7 @@ function structuredData() {
 
 const STEPS = [
   { title: "Sign up in 20 seconds", text: "With your phone number or Google. Free." },
-  { title: "Pick your state", text: "Where you're serving, or where you've been posted." },
+  { title: "Tell us your stage", text: "Awaiting call-up, serving or passed out, plus your state once you have one." },
   { title: "Play and climb", text: "Take the Daily Quiz, keep your streak and carry your state up the League." },
 ];
 
@@ -170,7 +170,7 @@ function PhoneMock({ title, top }: { title: string; top: { state: string; value:
 }
 
 /** Small decorative art for each feature tile. */
-const FEATURES: { title: string; text: string; art: React.ReactNode; wide?: boolean }[] = [
+const FEATURES: { title: string; text: string; art: React.ReactNode; wide?: boolean; soon?: boolean }[] = [
   {
     title: "The Daily Quiz",
     text: "Five new questions every day on NYSC, Nigeria, sports and more. Be right, be quick, and every point counts for your state.",
@@ -223,7 +223,6 @@ const FEATURES: { title: string; text: string; art: React.ReactNode; wide?: bool
   {
     title: "Badges and real prizes",
     text: "Earn badges for your service year. Verified corpers win cash, airtime and data, paid straight to them.",
-    wide: true,
     art: (
       <div className="flex flex-wrap gap-2 text-sm font-bold">
         <span className="rounded-full bg-lime px-3 py-1 text-on-accent">🏅 Early Corper</span>
@@ -232,6 +231,27 @@ const FEATURES: { title: string; text: string; art: React.ReactNode; wide?: bool
       </div>
     ),
   },
+  {
+    title: "Gigs and competitions",
+    text: "Gig competitions, contests like Best Khaki Drip and Corper of the Month, and jobs and remote gigs for corpers and ex-corpers.",
+    wide: true,
+    soon: true,
+    art: (
+      <div className="flex flex-wrap gap-2 text-sm font-bold">
+        <span className="rounded-full border border-line px-3 py-1">💼 Gigs</span>
+        <span className="rounded-full border border-line px-3 py-1">📸 Best Khaki Drip</span>
+        <span className="rounded-full border border-line px-3 py-1">⭐ Corper of the Month</span>
+        <span className="rounded-full border border-line px-3 py-1">🧑‍💻 Remote jobs</span>
+      </div>
+    ),
+  },
+];
+
+/** Everyone in NYSC, at any stage, matching the stages people pick in the app (lib/nysc.ts). */
+const AUDIENCE = [
+  { emoji: "⏳", title: "Prospective corpers", text: "Waiting for call-up? Get to know NYSC life and other corpers before camp, and start playing the Daily Quiz." },
+  { emoji: "🪖", title: "Serving corpers", text: "Play for your state, find corpers serving in it and win prizes during your service year." },
+  { emoji: "🎓", title: "Ex-corpers", text: "Passed out? Stay connected with corpers you met and keep playing, with jobs and gigs on the way." },
 ];
 
 /** The public landing page at / (and invite links). Logged-in users never see it. */
@@ -362,6 +382,26 @@ export default function Landing({ stats, earlyDeadline, league, inviter }: Props
           <EarlyCorperBanner deadline={earlyDeadline} />
         </div>
 
+        {/* Who it's for */}
+        <section className="flex flex-col gap-6" aria-labelledby="who-title">
+          <h2 id="who-title" className="reveal h-display text-[30px] leading-tight md:text-[40px]">
+            For every stage of NYSC
+          </h2>
+          <ul className="grid gap-3 md:grid-cols-3">
+            {AUDIENCE.map(({ emoji, title, text }) => (
+              <li key={title} className="reveal flex gap-4 rounded-3xl border border-line p-5 transition-colors hover:border-lime md:flex-col md:gap-3 md:p-6">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-surface-2 text-2xl" aria-hidden="true">
+                  {emoji}
+                </span>
+                <span>
+                  <span className="block text-[17px] font-bold">{title}</span>
+                  <span className="mt-0.5 block leading-relaxed text-muted">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         {/* Try it */}
         <section id="try" className="reveal grid scroll-mt-20 items-center gap-8 md:grid-cols-[1fr_1.1fr] md:gap-12" aria-labelledby="try-title">
           <div className="flex flex-col gap-3">
@@ -383,10 +423,10 @@ export default function Landing({ stats, earlyDeadline, league, inviter }: Props
             <h2 id="features-title" className="h-display text-[30px] leading-tight md:text-[40px]">
               Something to look forward to every day
             </h2>
-            <p className="max-w-[36rem] text-muted">From the day your call-up letter drops to the day you pass out.</p>
+            <p className="max-w-[36rem] text-muted">Before call-up, all through service, and after you pass out.</p>
           </div>
           <ul className="grid gap-3 md:grid-cols-3">
-            {FEATURES.map(({ title, text, art, wide }) => (
+            {FEATURES.map(({ title, text, art, wide, soon }) => (
               <li
                 key={title}
                 className={`reveal group flex flex-col gap-5 rounded-3xl border border-line p-6 transition-[transform,border-color] duration-300 hover:-translate-y-1 hover:border-lime ${
@@ -397,20 +437,14 @@ export default function Landing({ stats, earlyDeadline, league, inviter }: Props
                   {art}
                 </div>
                 <div>
-                  <h3 className="text-[19px] font-bold">{title}</h3>
+                  <h3 className="flex flex-wrap items-center gap-2 text-[19px] font-bold">
+                    {title}
+                    {soon && <span className="rounded-full bg-pink px-2.5 py-0.5 text-xs font-bold text-on-accent">Coming soon</span>}
+                  </h3>
                   <p className="mt-1 leading-relaxed text-muted">{text}</p>
                 </div>
               </li>
             ))}
-            <li className="reveal flex flex-col justify-between gap-5 rounded-3xl border border-dashed border-line p-6">
-              <span className="text-2xl" aria-hidden="true">
-                🚀
-              </span>
-              <div>
-                <h3 className="text-[19px] font-bold">Coming soon</h3>
-                <p className="mt-1 leading-relaxed text-muted">Contests like Best Khaki Drip, Corper of the Month, and jobs and gigs for corpers.</p>
-              </div>
-            </li>
           </ul>
         </section>
 
