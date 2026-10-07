@@ -346,3 +346,49 @@ dialog.sheet[open] {
     animation: none !important;
   }
 }
+
+/* NYSC checklist (/nysc-checklist) */
+@keyframes pcm-ring-fill {
+  from {
+    stroke-dashoffset: var(--ring-c);
+  }
+}
+.pcm-ring {
+  animation: pcm-ring-fill 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: stroke-dashoffset 500ms ease-out;
+}
+@keyframes pcm-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(198 244 50 / 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgb(198 244 50 / 0);
+  }
+}
+.pcm-pulse {
+  animation: pcm-pulse 1.6s ease-out infinite;
+}
+/* With JavaScript, collapsed steps and the no-JS copies of the sheets are hidden. Without it, everything shows. */
+.js .pcm-collapse[data-open="false"],
+.js .pcm-nojs {
+  display: none;
+}
+@media print {
+  .pcm-noprint {
+    display: none !important;
+  }
+  .pcm-print-all {
+    display: block !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcm-ring,
+  .pcm-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+}

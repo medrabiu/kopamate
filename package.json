@@ -11,7 +11,8 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:seed": "node scripts/seed.mjs",
     "db:quiz": "node scripts/seed-quiz.mjs",
-    "test:challenges": "node --test tests/challenges.test.mjs && node scripts/test-challenge-signups.mjs"
+    "test:challenges": "node --test tests/challenges.test.mjs && node scripts/test-challenge-signups.mjs",
+    "test:pcm": "node --test tests/pcm-rules.test.mjs"
   },
   "dependencies": {
     "@fontsource/bricolage-grotesque": "^5.1.0",

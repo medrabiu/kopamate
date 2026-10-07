@@ -28,6 +28,10 @@ import { stateSlug } from "@/lib/states";
 import QuizCard from "./QuizCard";
 import { ConfirmStageCard } from "@/components/NyscStatusForm";
 import ChallengeBanner from "@/components/challenges/ChallengeBanner";
+import PcmHomeCard from "@/components/pcm/HomeCard";
+import { getGuideState, getUserPlan } from "@/lib/pcm-guide";
+import { answeredAll, readiness } from "@/lib/pcm-rules";
+import { APP_URL } from "@/lib/config";
 import { getBannerChallenge, getParticipant, getPool } from "@/lib/challenges";
 
 export const metadata: Metadata = { title: "Home" };
@@ -39,7 +43,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Auto badges are checked on every Home visit (cheap and idempotent), then read back.
   const badgesReady = checkAutoBadges(user.id);
-  const [rank, stats, announcements, newcomers, steps, badges, myRewards, quiz, streak, standings, unread, challenge] = await Promise.all([
+  // People waiting for call-up (or posted, before camp) get the NYSC checklist card.
+  const isPcm = user.nysc_stage === "waiting" || user.nysc_stage === "posted";
+  const [rank, stats, announcements, newcomers, steps, badges, myRewards, quiz, streak, standings, unread, challenge, pcm] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getAnnouncements(20),
@@ -64,7 +70,25 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getBannerChallenge()
       .then(async (c) => (c ? { c, pool: (await getPool(c)).pool, joined: Boolean(await getParticipant(c.id, user.id)) } : null))
       .catch(() => null),
+    isPcm
+      ? Promise.all([getGuideState(), getUserPlan(user.id)])
+          .then(([g, plan]) => (g.enabled ? { g, plan } : null))
+          .catch(() => null)
+      : null,
   ]);
+  const pcmCard = pcm
+    ? (() => {
+        const r = readiness(pcm.g.guide, pcm.plan);
+        return {
+          answered: answeredAll(pcm.plan.answers),
+          pct: r.pct,
+          done: r.done,
+          total: r.total,
+          next: r.next ? { slug: r.next.slug, title: r.next.title, campPack: r.next.opens !== "step" } : null,
+          batchLabel: pcm.g.guide.batchLabel,
+        };
+      })()
+    : null;
   // The carousel: the last 30 days of announcements, pinned ones first, then newest.
   const monthAgo = Date.now() - 30 * 86_400_000;
   const slides = announcements
@@ -134,6 +158,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Link>
         </div>
       </header>
+
+      {pcmCard && <PcmHomeCard {...pcmCard} shareUrl={`${APP_URL}/nysc-checklist?ref=${user.referral_code}`} />}
 
       <RewardBanner
         unclaimedIds={unclaimed.map((r) => r.id)}

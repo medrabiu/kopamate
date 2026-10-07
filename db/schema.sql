@@ -677,3 +677,7 @@ INSERT INTO challenges (slug, title, badge_name, hashtag, required_tags, prize_s
 
 -- Post stats (views, likes, screenshot) are optional per challenge; off unless the team asks for them.
 ALTER TABLE challenges ADD COLUMN IF NOT EXISTS ask_for_stats boolean NOT NULL DEFAULT false;
+
+-- NYSC checklist (/nysc-checklist): a signed-in user's answers and ticks (lib/pcm-rules.ts Plan). The guide
+-- content itself lives in settings (pcm_guide, pcm_guide_previous, pcm_guide_version, pcm_guide_enabled).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pcm_plan jsonb;
