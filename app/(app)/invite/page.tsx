@@ -5,7 +5,7 @@ import ShareButtons from "@/components/ShareButtons";
 import { ChevronRight, TrophyIcon } from "@/components/icons";
 import { requireUser } from "@/lib/session";
 import { getReferrerStanding } from "@/lib/ranking";
-import { PLACES_PER_REFERRAL, TOP_REFERRERS, referralLink, shareMessage, whatsappShareUrl } from "@/lib/config";
+import { PLACES_PER_REFERRAL, TOP_REFERRERS, profileLink, shareMessage, whatsappShareUrl } from "@/lib/config";
 import { sql } from "@/lib/db";
 import { formatNumber, timeAgo } from "@/lib/util";
 import { isVerified } from "@/lib/badges";
@@ -53,7 +53,7 @@ export default async function InvitePage() {
       <div className="flex flex-col gap-1">
         <h1 className="h-display text-[28px]">Invite friends</h1>
         <p className="text-[15px] leading-normal text-muted">
-          Every friend who joins with your link moves you <span className="font-bold text-lime-ink">up {PLACES_PER_REFERRAL} places</span>.
+          Bring your friends to Kopamate. They follow you as soon as they join, so you can connect, say hi and find corpers near you together.
         </p>
       </div>
 
@@ -64,8 +64,8 @@ export default async function InvitePage() {
           </h2>
           <p className="text-sm text-muted">
             {refs === 0
-              ? "Your first friend moves you up straight away."
-              : `You've moved up ${formatNumber(refs * PLACES_PER_REFERRAL)} places.`}
+              ? "Share your link on WhatsApp. Each friend who joins also moves you up the leaderboard."
+              : `They follow you on Kopamate, and you've moved up ${formatNumber(refs * PLACES_PER_REFERRAL)} places.`}
           </p>
         </div>
         <div className="flex flex-col gap-2">
@@ -83,7 +83,7 @@ export default async function InvitePage() {
         </div>
         <ShareButtons
           variant="full"
-          link={referralLink(user.referral_code)}
+          link={profileLink(user.referral_code)}
           whatsappUrl={whatsappShareUrl(user.referral_code)}
           message={shareMessage(user.referral_code)}
         />

@@ -30,7 +30,9 @@ export async function getBonusSettings(): Promise<BonusSettings> {
     return v !== undefined && v !== "" && Number.isInteger(n) && n >= 0 ? n : fallback;
   };
   return {
-    enabled: map.get("referral_bonus_enabled") !== "0",
+    // The ₦250 referral campaign ended in October 2026: no new bonuses, whatever the old setting says.
+    // People keep what they earned and can still withdraw it (rate and minimum below still apply).
+    enabled: false,
     rate: num("referral_bonus_ngn", DEFAULT_BONUS_NGN),
     minWithdraw: num("referral_bonus_min_withdraw_ngn", DEFAULT_MIN_WITHDRAW_NGN),
   };

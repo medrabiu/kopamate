@@ -58,8 +58,13 @@ export function referralLink(code: string) {
   return `${APP_URL}/r/${code}`;
 }
 
+/** Your profile link (/u/<invite code>): credits you as the inviter and makes them follow you once they join. */
+export function profileLink(code: string) {
+  return `${APP_URL}/u/${code}`;
+}
+
 export function shareMessage(code: string) {
-  return `I just joined ${APP_NAME}, the new app for corpers across Nigeria 🇳🇬 There are prizes for the first 500 people. Join with my link: ${referralLink(code)}`;
+  return `I'm on ${APP_NAME}, the app for NYSC corpers across Nigeria 🇳🇬 Join me so we can connect and find other corpers near us: ${profileLink(code)}`;
 }
 
 export function whatsappShareUrl(code: string, message = shareMessage(code)) {

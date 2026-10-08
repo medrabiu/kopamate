@@ -83,10 +83,9 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
               <input name="max_claim_per_user_ngn" defaultValue={money.cap ?? ""} inputMode="numeric" className={input} />
             </label>
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="referral_bonus_enabled" value="1" defaultChecked={bonus.enabled} className="size-4 accent-lime" />
-            Referral bonus on (off: no new bonuses; people can still withdraw what they already earned)
-          </label>
+          <p className="text-sm">
+            The ₦250 referral campaign has ended: no new bonuses are earned. People can still withdraw what they already earned.
+          </p>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm text-muted">
               Referral bonus per verified friend (₦)
