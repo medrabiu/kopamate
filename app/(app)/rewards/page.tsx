@@ -24,7 +24,7 @@ const lagosDay = (iso: string) =>
 const friends = (n: number) => `${n} ${n === 1 ? "friend" : "friends"}`;
 
 function toBoard(r: ReferrerRow, rank: number): BoardRow {
-  return { id: r.id, nickname: r.nickname, photo_version: r.photo_version, state: r.state, refs: r.refs, rank, verified: r.verified };
+  return { id: r.id, nickname: r.nickname, photo_version: r.photo_version, state: r.state, refs: r.refs, rank, verified: r.verified, brand: r.brand, team: r.team };
 }
 
 export default async function RewardsPage() {

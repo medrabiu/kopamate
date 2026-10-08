@@ -23,7 +23,7 @@ export const metadata: Metadata = { title: "Invite friends" };
 export default async function InvitePage() {
   const user = await requireUser();
   const [joined, { me, above }, earnings] = await Promise.all([
-    sql<{ id: string; nickname: string; photo_version: number; completed_at: Date; verified: boolean }[]>`
+    sql<{ id: string; nickname: string; photo_version: number; completed_at: Date; verified: boolean; brand: boolean; team: boolean }[]>`
       SELECT u.id, u.nickname, u.photo_version, u.completed_at, ${isVerified()} FROM users u
       WHERE u.referred_by = ${user.id} AND u.completed_at IS NOT NULL AND NOT u.is_banned AND NOT u.is_flagged
       ORDER BY u.completed_at DESC LIMIT 100
@@ -107,6 +107,8 @@ export default async function InvitePage() {
           photo_version: j.photo_version,
           ago: timeAgo(j.completed_at),
           verified: j.verified,
+          brand: j.brand,
+          team: j.team,
           bonus: bonusTag(earnings.friends.get(j.id), earnings.enabled && earnings.rate > 0),
         }))}
       />

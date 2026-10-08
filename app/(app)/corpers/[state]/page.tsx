@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import { NameBadges } from "@/components/VerifiedBadge";
 import { PersonButton } from "@/components/PersonSheet";
 import { ChevronLeft } from "@/components/icons";
 import { requireUser } from "@/lib/session";
@@ -122,7 +122,7 @@ export default async function StatePage({ params, searchParams }: Props) {
                       {m.nickname}
                       {me ? " (you)" : ""}
                     </span>
-                    {m.verified && <VerifiedBadge />}
+                    <NameBadges verified={m.verified} brand={m.brand} team={m.team} />
                   </span>
                   {m.school && <span className="w-full truncate text-center text-xs text-faint">{m.school}</span>}
                 </PersonButton>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Avatar from "../Avatar";
-import VerifiedBadge from "../VerifiedBadge";
+import { NameBadges } from "../VerifiedBadge";
 import SmallFollow from "./SmallFollow";
 import type { PersonCard } from "@/lib/social";
 
@@ -13,7 +13,7 @@ export default function PersonRow({ p, viewerId, note, onClickEvent }: { p: Pers
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1 font-bold">
             <span className="truncate">{p.nickname}</span>
-            {p.verified && <VerifiedBadge size={15} />}
+            <NameBadges verified={p.verified} brand={p.brand} team={p.team} size={15} />
           </span>
           <span className="block truncate text-sm text-muted">{note ?? p.school ?? p.state ?? ""}</span>
         </span>

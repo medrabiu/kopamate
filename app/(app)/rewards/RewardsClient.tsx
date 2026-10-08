@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Avatar from "@/components/Avatar";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import { NameBadges } from "@/components/VerifiedBadge";
 import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
 import Sheet from "@/components/Sheet";
@@ -17,6 +17,8 @@ export type BoardRow = {
   refs: number;
   rank: number;
   verified: boolean;
+  brand?: boolean;
+  team?: boolean;
 };
 
 function Row({ r, me, last }: { r: BoardRow; me: boolean; last?: boolean }) {
@@ -28,7 +30,7 @@ function Row({ r, me, last }: { r: BoardRow; me: boolean; last?: boolean }) {
         <span className="flex min-w-0 flex-1 flex-col">
           <span className={`flex min-w-0 items-center gap-1.5 ${me ? "font-bold text-lime-ink" : "font-medium"}`}>
             <span className="truncate">{me ? "You" : r.nickname}</span>
-            {r.verified && <VerifiedBadge />}
+            <NameBadges verified={r.verified} brand={r.brand} team={r.team} />
           </span>
           {r.state && <span className="truncate text-xs text-muted">{r.state}</span>}
         </span>

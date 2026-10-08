@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, useTransit
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Avatar from "./Avatar";
-import VerifiedBadge from "./VerifiedBadge";
+import { NameBadges } from "./VerifiedBadge";
 import Sheet from "./Sheet";
 import { ChevronLeft, ChevronRight } from "./icons";
 import { setFollow } from "@/app/actions/follows";
@@ -142,7 +142,7 @@ export function PeopleProvider({ viewerId, children }: { viewerId: string; child
                       <span className="min-w-0 flex-1">
                         <span className="flex min-w-0 items-center gap-1 font-bold">
                           <span className="truncate">{p.id === viewerId ? "You" : p.nickname}</span>
-                          {p.verified && <VerifiedBadge />}
+                          <NameBadges verified={p.verified} brand={p.brand} team={p.team} />
                         </span>
                         {p.state && <span className="block truncate text-sm text-muted">{p.state}</span>}
                       </span>
@@ -193,7 +193,7 @@ export function PeopleProvider({ viewerId, children }: { viewerId: string; child
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex items-center gap-1">
                   <span className="h-display text-xl">{profile.nickname}</span>
-                  {profile.verified && <VerifiedBadge size={20} />}
+                  <NameBadges verified={profile.verified} brand={profile.brand} team={profile.team} size={20} />
                 </span>
                 {me && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-bold">You</span>}
                 {!me && profile.follows_you && (

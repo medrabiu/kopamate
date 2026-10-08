@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Avatar from "@/components/Avatar";
+import { NameBadges } from "@/components/VerifiedBadge";
 import { requireAdmin } from "@/lib/session";
 import { sql } from "@/lib/db";
 import { ranked } from "@/lib/ranking";
@@ -26,6 +27,7 @@ import {
   revokeVerification,
   setBan,
   setFlag,
+  setNameBadge,
 } from "@/app/actions/admin";
 import { btn, btnPrimary, input, panel } from "../../ui";
 import { StatusBadges } from "../../badges";
@@ -48,6 +50,8 @@ type Detail = {
   created_at: Date;
   is_flagged: boolean;
   is_banned: boolean;
+  is_brand: boolean;
+  is_team: boolean;
   is_seed: boolean;
   show_in_list: boolean;
   verification_status: string;
@@ -80,7 +84,7 @@ export default async function AdminUserPage({
     sql<Detail[]>`
       ${ranked()}
       SELECT u.id, u.nickname, u.full_name, u.whatsapp_e164, u.email, u.state, u.state_code, u.referral_code, u.photo_version,
-             u.signup_number, u.completed_at, u.created_at, u.is_flagged, u.is_banned, u.is_seed, u.show_in_list,
+             u.signup_number, u.completed_at, u.created_at, u.is_flagged, u.is_banned, u.is_seed, u.show_in_list, u.is_brand, u.is_team,
              u.verification_status, u.verification_note, u.verified_at, (u.id_card_data IS NOT NULL) AS has_id_card,
              (u.pin_hash IS NOT NULL) AS has_pin, (u.google_id IS NOT NULL) AS google,
              r.position, r.refs, r.prize_position, ref.id AS referrer_id, ref.nickname AS referrer
@@ -195,6 +199,31 @@ export default async function AdminUserPage({
             <dt className="text-muted">In Corpers list</dt>
             <dd>{u.show_in_list ? "Shown" : "Hidden by them"}</dd>
           </dl>
+        </div>
+      </section>
+
+      <section className={panel}>
+        <h2 className="h-display mb-1 text-lg">Badges next to their name</h2>
+        <p className="mb-3 text-xs text-muted">
+          Like X: a gold check for brands and organisations (instead of the green verified-corper check), and the Kopamate logo for team members.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 flex items-center gap-1 text-sm font-bold">
+            {u.nickname} <NameBadges verified={u.verification_status === "verified" && !u.is_flagged} brand={u.is_brand} team={u.is_team} />
+          </span>
+          {(["brand", "team"] as const).map((badge) => {
+            const on = badge === "brand" ? u.is_brand : u.is_team;
+            return (
+              <form key={badge} action={setNameBadge}>
+                <input type="hidden" name="id" value={u.id} />
+                <input type="hidden" name="badge" value={badge} />
+                <input type="hidden" name="on" value={on ? "0" : "1"} />
+                <button className={btn}>
+                  {on ? (badge === "brand" ? "Remove gold brand check" : "Remove Kopamate team logo") : badge === "brand" ? "Give gold brand check" : "Give Kopamate team logo"}
+                </button>
+              </form>
+            );
+          })}
         </div>
       </section>
 

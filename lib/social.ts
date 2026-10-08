@@ -42,6 +42,8 @@ export type FullProfile = {
   nysc_batch: string | null;
   joined: string;
   verified: boolean;
+  brand: boolean;
+  team: boolean;
   bio: string | null;
   school: string | null;
   course: string | null;
@@ -86,7 +88,7 @@ export async function getFullProfile(userId: string, viewerId: string): Promise<
       ORDER BY (status = 'accepted') DESC, created_at DESC LIMIT 1
     )
     SELECT u.id, u.nickname, u.photo_version, u.state, u.nysc_stage, u.nysc_batch, u.completed_at::text AS joined,
-           (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified,
+           (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified, u.is_brand AS brand, u.is_team AS team,
            u.bio, u.school, u.course, u.interests, u.open_to, u.links, u.show_in_list,
            (SELECT count(*)::int FROM follows f JOIN users x ON x.id = f.follower_id WHERE f.following_id = u.id AND NOT x.is_banned) AS followers,
            (SELECT count(*)::int FROM follows f JOIN users x ON x.id = f.following_id WHERE f.follower_id = u.id AND NOT x.is_banned) AS following,
@@ -155,11 +157,13 @@ export type PersonCard = {
   state: string | null;
   school: string | null;
   verified: boolean;
+  brand: boolean;
+  team: boolean;
   is_following: boolean;
 };
 
 const cardCols = (viewer: string) => sql`
-  u.id, u.nickname, u.photo_version, u.state, u.school, (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified,
+  u.id, u.nickname, u.photo_version, u.state, u.school, (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified, u.is_brand AS brand, u.is_team AS team,
   EXISTS (SELECT 1 FROM follows WHERE follower_id = ${viewer} AND following_id = u.id) AS is_following
 `;
 

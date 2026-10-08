@@ -76,6 +76,8 @@ export type ReferrerRow = {
   top_badge: BadgeInfo | null;
   /** Shows the green verified check. */
   verified: boolean;
+  brand: boolean;
+  team: boolean;
 };
 
 /**
@@ -161,6 +163,8 @@ export type MemberRow = {
   photo_version: number;
   top_badge: BadgeInfo | null;
   verified: boolean;
+  brand: boolean;
+  team: boolean;
   /** Null for seed accounts: they're listed but never hold a position. */
   position: number | null;
   school: string | null;

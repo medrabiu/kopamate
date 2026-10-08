@@ -16,6 +16,8 @@ export type PublicProfile = {
   nysc_batch: string | null;
   joined: string;
   verified: boolean;
+  brand: boolean;
+  team: boolean;
   followers: number;
   following: number;
   /** The viewer follows this person. */
@@ -40,7 +42,7 @@ async function findProfile(where: ReturnType<typeof sql>, viewerId: string | nul
   const viewer = viewerId ?? "00000000-0000-0000-0000-000000000000";
   const [row] = await sql<PublicProfile[]>`
     SELECT u.id, u.nickname, u.photo_version, u.state, u.nysc_stage, u.nysc_batch, u.completed_at::text AS joined,
-           (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified,
+           (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified, u.is_brand AS brand, u.is_team AS team,
            (SELECT count(*)::int FROM follows f JOIN users x ON x.id = f.follower_id
               WHERE f.following_id = u.id AND NOT x.is_banned) AS followers,
            (SELECT count(*)::int FROM follows f JOIN users x ON x.id = f.following_id
@@ -53,19 +55,19 @@ async function findProfile(where: ReturnType<typeof sql>, viewerId: string | nul
   return row ?? null;
 }
 
-export type FollowRow = { id: string; nickname: string; photo_version: number; state: string | null; verified: boolean };
+export type FollowRow = { id: string; nickname: string; photo_version: number; state: string | null; verified: boolean; brand: boolean; team: boolean };
 
 /** Who follows someone, or who they follow, newest first (banned and unfinished accounts left out). */
 export async function getFollowList(id: string, list: "followers" | "following", limit = 200): Promise<FollowRow[]> {
   return list === "followers"
     ? sql<FollowRow[]>`
-        SELECT u.id, u.nickname, u.photo_version, u.state, (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified
+        SELECT u.id, u.nickname, u.photo_version, u.state, (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified, u.is_brand AS brand, u.is_team AS team
         FROM follows f JOIN users u ON u.id = f.follower_id
         WHERE f.following_id = ${id} AND NOT u.is_banned AND u.completed_at IS NOT NULL
         ORDER BY f.created_at DESC LIMIT ${limit}
       `
     : sql<FollowRow[]>`
-        SELECT u.id, u.nickname, u.photo_version, u.state, (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified
+        SELECT u.id, u.nickname, u.photo_version, u.state, (u.verification_status = 'verified' AND NOT u.is_flagged) AS verified, u.is_brand AS brand, u.is_team AS team
         FROM follows f JOIN users u ON u.id = f.following_id
         WHERE f.follower_id = ${id} AND NOT u.is_banned AND u.completed_at IS NOT NULL
         ORDER BY f.created_at DESC LIMIT ${limit}

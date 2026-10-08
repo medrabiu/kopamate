@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Avatar from "@/components/Avatar";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import { NameBadges } from "@/components/VerifiedBadge";
 import Sheet from "@/components/Sheet";
 import { PersonButton } from "@/components/PersonSheet";
 import { ChevronRight } from "@/components/icons";
@@ -15,6 +15,8 @@ export type Friend = {
   photo_version: number;
   ago: string;
   verified: boolean;
+  brand?: boolean;
+  team?: boolean;
   /** Their referral bonus status, when the bonus is on. */
   bonus?: FriendBonus;
 };
@@ -87,7 +89,7 @@ export default function FriendsJoined({ friends }: { friends: Friend[] }) {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex min-w-0 items-center gap-1.5 font-medium">
                     <span className="truncate">{f.nickname}</span>
-                    {f.verified && <VerifiedBadge />}
+                    <NameBadges verified={f.verified} brand={f.brand} team={f.team} />
                   </span>
                   <BonusTag bonus={f.bonus} />
                 </span>

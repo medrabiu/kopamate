@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BadgeCelebration from "@/components/BadgeCelebration";
 import ProfileHeader from "@/components/ProfileHeader";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import { NameBadges } from "@/components/VerifiedBadge";
 import { ProfileChecklist } from "@/components/ProfileProgress";
 import { ShareProfileButton } from "@/components/ShareProfile";
 import { SettingsIcon } from "@/components/icons";
 import { APP_URL } from "@/lib/config";
 import { requireUser } from "@/lib/session";
 import { getRank } from "@/lib/ranking";
-import { getProfileSteps, getUserBadges } from "@/lib/badges";
+import { getOwnNameBadges, getProfileSteps, getUserBadges } from "@/lib/badges";
 import { getFollowCounts } from "@/lib/people";
 import { isState, STATE_CODE_PREFIX } from "@/lib/states";
 import { verificationBlock } from "@/lib/verification";
@@ -27,11 +27,12 @@ const button = "flex h-10 items-center justify-center gap-1.5 rounded-full borde
  */
 export default async function ProfilePage() {
   const user = await requireUser();
-  const [rank, steps, mine, follows] = await Promise.all([
+  const [rank, steps, mine, follows, own] = await Promise.all([
     getRank(user.id),
     getProfileSteps(user.id),
     getUserBadges(user.id),
     getFollowCounts(user.id),
+    getOwnNameBadges(user.id),
   ]);
   // Badges aren't shown on Profile any more, but finishing your profile still gets its celebration.
   const complete = mine.find((b) => b.slug === "profile_complete");
@@ -57,7 +58,7 @@ export default async function ProfilePage() {
           name={
             <>
               <span className="h-display truncate text-2xl leading-tight">{user.nickname}</span>
-              {verified && !user.is_flagged && <VerifiedBadge size={22} />}
+              <NameBadges verified={verified && !user.is_flagged} brand={own.brand} team={own.team} size={22} />
             </>
           }
           username={user.nickname}

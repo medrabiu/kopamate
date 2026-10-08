@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import { NameBadges } from "@/components/VerifiedBadge";
 import Countdown from "@/components/Countdown";
 import { PersonButton } from "@/components/PersonSheet";
 import { ChevronLeft } from "@/components/icons";
@@ -33,7 +33,7 @@ function Players({ title, rows, me, myRow }: { title: string; rows: PlayerRow[];
                 <span className="min-w-0">
                   <span className="flex min-w-0 items-center gap-1 text-[15px] font-bold">
                     <span className="truncate">{r.id === me ? "You" : r.nickname}</span>
-                    {r.verified && <VerifiedBadge />}
+                    <NameBadges verified={r.verified} brand={r.brand} team={r.team} />
                   </span>
                   <span className="block truncate text-[13px] text-muted">
                     {r.state} · {r.days} {r.days === 1 ? "day" : "days"}

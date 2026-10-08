@@ -3,7 +3,7 @@ import Link from "next/link";
 import { after } from "next/server";
 import Avatar from "@/components/Avatar";
 import BadgeCelebration from "@/components/BadgeCelebration";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import { NameBadges } from "@/components/VerifiedBadge";
 import ComingSoon from "@/components/ComingSoon";
 import Confetti from "@/components/Confetti";
 import { PersonButton } from "@/components/PersonSheet";
@@ -51,7 +51,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     getRank(user.id),
     getPublicStats(),
     getAnnouncements(20),
-    sql<{ id: string; nickname: string; photo_version: number; verified: boolean }[]>`
+    sql<{ id: string; nickname: string; photo_version: number; verified: boolean; brand: boolean; team: boolean }[]>`
       SELECT u.id, u.nickname, u.photo_version, ${isVerified()} FROM users u
       WHERE u.state = ${user.state} AND u.id <> ${user.id} AND u.completed_at IS NOT NULL
         AND NOT u.is_banned AND u.show_in_list
@@ -215,7 +215,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 <Avatar id={n.id} nickname={n.nickname} photoVersion={n.photo_version} size={56} />
                 <span className="flex w-full items-center justify-center gap-1 text-xs text-muted">
                   <span className="truncate">{n.nickname}</span>
-                  {n.verified && <VerifiedBadge size={14} />}
+                  <NameBadges verified={n.verified} brand={n.brand} team={n.team} size={14} />
                 </span>
               </PersonButton>
             ))}

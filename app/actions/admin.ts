@@ -10,7 +10,7 @@ import { isState } from "@/lib/states";
 import { randomDigits } from "@/lib/util";
 import { isUniqueViolation, isUsernameViolation } from "@/lib/signup";
 import { awardBadge, checkAutoBadges, restoreBadge, revokeBadge } from "@/lib/badges";
-import { getLeaderboardClose } from "@/lib/stats";
+import { getLeaderboardClose, track } from "@/lib/stats";
 import { dropBonus, recordBonuses } from "@/lib/referral-bonus";
 
 function id(fd: FormData) {
@@ -59,6 +59,20 @@ export async function setFlag(fd: FormData) {
   const on = fd.get("on") === "1";
   await sql`UPDATE users SET is_flagged = ${on} WHERE id = ${id(fd)}`;
   done();
+}
+
+/** The gold brand check or the Kopamate team logo next to someone's name (logged as an admin action). */
+export async function setNameBadge(fd: FormData) {
+  const admin = await requireAdmin();
+  const userId = id(fd);
+  const badge = String(fd.get("badge"));
+  const on = fd.get("on") === "1";
+  if (badge === "brand") await sql`UPDATE users SET is_brand = ${on} WHERE id = ${userId}`;
+  else if (badge === "team") await sql`UPDATE users SET is_team = ${on} WHERE id = ${userId}`;
+  else return;
+  await track("admin_action", null, { admin: admin.id, action: `${on ? "give" : "remove"}_${badge}_badge`, target: userId });
+  done();
+  revalidatePath("/", "layout");
 }
 
 export async function setBan(fd: FormData) {

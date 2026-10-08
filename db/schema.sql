@@ -761,3 +761,8 @@ CREATE INDEX IF NOT EXISTS reports_target_idx ON reports (target_id);
 -- Notifications for "Say hi" carry the request id here (kinds hi_request, hi_accepted, school_joined).
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS data jsonb;
 CREATE INDEX IF NOT EXISTS notifications_actor_idx ON notifications (actor_id) WHERE actor_id IS NOT NULL;
+
+-- Badges next to names, set by admins (like X): a gold check for brands and organisations instead of the green
+-- verified-corper check, and a small Kopamate logo for the Kopamate team.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_brand boolean NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_team boolean NOT NULL DEFAULT false;

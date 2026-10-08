@@ -35,7 +35,20 @@ export const topBadge = () => sql`
  * Whether the user has the verified check (admin checked their NYSC ID, and they aren't flagged), as `verified`.
  * Use inside a SELECT where the users table is aliased `u`.
  */
-export const isVerified = () => sql`(u.verification_status = 'verified' AND NOT u.is_flagged) AS verified`;
+export const isVerified = () => sql`(u.verification_status = 'verified' AND NOT u.is_flagged) AS verified, ${nameBadges()}`;
+
+/** The gold brand check and the Kopamate team logo shown next to names (components/VerifiedBadge NameBadges). */
+export const nameBadges = () => sql`u.is_brand AS brand, u.is_team AS team`;
+
+/** One user's own badges (Profile, Rewards). Never fails: no badges if they can't be read. */
+export async function getOwnNameBadges(userId: string): Promise<{ brand: boolean; team: boolean }> {
+  try {
+    const [r] = await sql<{ brand: boolean; team: boolean }[]>`SELECT is_brand AS brand, is_team AS team FROM users WHERE id = ${userId}`;
+    return r ?? { brand: false, team: false };
+  } catch {
+    return { brand: false, team: false };
+  }
+}
 
 export async function getAllBadges(): Promise<Badge[]> {
   return sql<Badge[]>`

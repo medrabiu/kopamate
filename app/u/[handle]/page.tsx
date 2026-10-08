@@ -5,7 +5,7 @@ import { after } from "next/server";
 import Avatar from "@/components/Avatar";
 import ProfileHeader from "@/components/ProfileHeader";
 import { ShareProfileButton } from "@/components/ShareProfile";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import { NameBadges } from "@/components/VerifiedBadge";
 import ProfileActions from "@/components/social/ProfileActions";
 import { APP_NAME, APP_URL } from "@/lib/config";
 import { getProfileByCode } from "@/lib/people";
@@ -101,7 +101,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         name={
           <>
             <h1 className="h-display truncate text-2xl leading-tight">{p.nickname}</h1>
-            {p.verified && <VerifiedBadge size={22} />}
+            <NameBadges verified={p.verified} brand={p.brand} team={p.team} size={22} />
             {!me && (mutual || p.follows_you) && (
               <span className="ml-1 shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted">{mutual ? "Mutual" : "Follows you"}</span>
             )}
@@ -243,7 +243,7 @@ async function PublicPreview({ code }: { code: string }) {
           name={
             <>
               <h1 className="h-display truncate text-2xl leading-tight">{p.nickname}</h1>
-              {p.verified && <VerifiedBadge size={22} />}
+              <NameBadges verified={p.verified} brand={p.brand} team={p.team} size={22} />
             </>
           }
           username={p.nickname}
