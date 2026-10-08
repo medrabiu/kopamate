@@ -25,8 +25,14 @@ export default function VerifiedBadge({ size = 16, className = "", brand = false
 /** The small Kopamate logo shown after the check for Kopamate team members (like X's affiliate badges). */
 export function TeamBadge({ size = 16, className = "" }: { size?: number; className?: string }) {
   return (
-    <span role="img" aria-label="Kopamate team" title="Kopamate team" className={`inline-flex shrink-0 align-[-0.15em] ${className}`}>
-      <LogoMark size={size} />
+    <span
+      role="img"
+      aria-label="Kopamate team"
+      title="Kopamate team"
+      className={`inline-flex shrink-0 overflow-hidden rounded-[22%] align-[-0.12em] ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <LogoMark size={size} fullBleed />
     </span>
   );
 }
@@ -34,13 +40,17 @@ export function TeamBadge({ size = 16, className = "" }: { size?: number; classN
 /**
  * Everything after a name: the gold check for brands, otherwise the green check for verified corpers, then the
  * Kopamate logo for team members. Renders nothing when none apply.
+ *
+ * Like on X, the badges sit a little smaller than the name (`size` is the old full size; the check is drawn at
+ * about 85% of it and the logo smaller again), with the logo tucked close to the check.
  */
 export function NameBadges({ verified, brand, team, size = 16 }: { verified?: boolean; brand?: boolean; team?: boolean; size?: number }) {
   if (!verified && !brand && !team) return null;
+  const check = Math.max(12, Math.round(size * 0.85));
   return (
-    <>
-      {(brand || verified) && <VerifiedBadge size={size} brand={brand} />}
-      {team && <TeamBadge size={Math.round(size * 0.9)} />}
-    </>
+    <span className="inline-flex shrink-0 items-center gap-[3px] align-[-0.1em]">
+      {(brand || verified) && <VerifiedBadge size={check} brand={brand} />}
+      {team && <TeamBadge size={Math.max(11, Math.round(size * 0.7))} />}
+    </span>
   );
 }
