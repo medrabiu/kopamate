@@ -9,6 +9,8 @@ const ALLOWED = new Set([
   "checklist_step_ticked",
   "checklist_fix_used",
   "checklist_share",
+  // People: tapping "Chat on WhatsApp" (the number itself is never sent).
+  "wa_open",
 ]);
 
 /** Small analytics endpoint for events that happen in the browser. */

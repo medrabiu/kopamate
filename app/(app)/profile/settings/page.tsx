@@ -8,6 +8,10 @@ import { THEME_COOKIE } from "@/lib/theme";
 import { maskPhone } from "@/lib/validate";
 import { NyscStatusRow } from "@/components/NyscStatusForm";
 import { AccountActions, ChangePinRow, EditableRow, LightModeToggle, NotificationsToggle, ShowInListToggle } from "../ProfileControls";
+import { AboutYou, BlockedList, HiPolicyRow, type About } from "@/components/social/AboutYou";
+import { sql } from "@/lib/db";
+import { getBlocked, getSchoolSuggestions } from "@/lib/social";
+import { cleanLinks, type HiPolicy } from "@/lib/social-rules";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -20,6 +24,13 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
 export default async function SettingsPage() {
   const user = await requireUser();
   const jar = await cookies();
+  const [[about], schools, blocked] = await Promise.all([
+    sql<(Omit<About, "links"> & { links: unknown; hi_policy: HiPolicy })[]>`
+      SELECT bio, school, course, interests, open_to, links, hi_policy FROM users WHERE id = ${user.id}
+    `,
+    getSchoolSuggestions(),
+    getBlocked(user.id),
+  ]);
 
   return (
     <>
@@ -64,11 +75,24 @@ export default async function SettingsPage() {
           : "Your state can't be changed after you join; message us on WhatsApp if it's wrong."}
       </p>
 
+      <GroupLabel>About you</GroupLabel>
+      <AboutYou about={{ ...about, links: cleanLinks(about.links) }} schools={schools} />
+      <p className="-mt-3 px-1 text-xs text-faint">Shown on your profile to signed-in members. Everything here is optional.</p>
+
       <GroupLabel>Preferences</GroupLabel>
       <section className="divide-y divide-line rounded-[20px] border border-line">
         <ShowInListToggle on={user.show_in_list} />
         {vapidPublicKey && <NotificationsToggle publicKey={vapidPublicKey} />}
         <LightModeToggle initial={jar.get(THEME_COOKIE)?.value === "light"} />
+        <HiPolicyRow policy={about.hi_policy} />
+      </section>
+      <p className="-mt-3 px-1 text-xs text-faint">
+        When someone says hi and you accept, you can both see each other&apos;s WhatsApp number. Nobody sees it before that.
+      </p>
+
+      <GroupLabel>Blocked accounts</GroupLabel>
+      <section className="rounded-[20px] border border-line">
+        <BlockedList people={blocked} />
       </section>
 
       <AccountActions admin={isAdmin(user)} />

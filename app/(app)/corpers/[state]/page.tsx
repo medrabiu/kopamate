@@ -10,10 +10,13 @@ import { getPublicStats } from "@/lib/stats";
 import { getStateGroupCounts, getStateMembers, type MemberGroup } from "@/lib/ranking";
 import { stateFromSlug, stateSlug } from "@/lib/states";
 import { formatNumber } from "@/lib/util";
+import PeopleFilters, { readFilters } from "@/components/social/PeopleFilters";
+import SmallFollow from "@/components/social/SmallFollow";
+import { getSchoolSuggestions } from "@/lib/social";
 
 const PAGE_SIZE = 30;
 
-type Props = { params: Promise<{ state: string }>; searchParams: Promise<{ page?: string; show?: string }> };
+type Props = { params: Promise<{ state: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
 const GROUPS: { group: MemberGroup; label: string; empty: string }[] = [
   { group: "serving", label: "Serving", empty: "No one serving here yet" },
@@ -34,17 +37,22 @@ export default async function StatePage({ params, searchParams }: Props) {
   const page = Math.max(1, Math.min(50, Number(query.page) || 1));
   const tab = GROUPS.find((g) => g.group === query.show) ?? GROUPS[0];
   const base = `/corpers/${stateSlug(state)}`;
+  const filters = readFilters(query);
   const tabHref = (group: MemberGroup, p = 1) => {
     const params = new URLSearchParams();
     if (group !== "serving") params.set("show", group);
+    if (filters.school) params.set("school", filters.school);
+    if (filters.interest) params.set("interest", filters.interest);
+    if (filters.open) params.set("open", filters.open);
     if (p > 1) params.set("page", String(p));
     return params.size ? `${base}?${params}` : base;
   };
 
-  const [stats, members, counts] = await Promise.all([
+  const [stats, members, counts, schools] = await Promise.all([
     getPublicStats(),
-    getStateMembers(state, page * PAGE_SIZE + 1, tab.group),
+    getStateMembers(state, page * PAGE_SIZE + 1, tab.group, user.id, { school: filters.school, interest: filters.interest, openTo: filters.open }),
     getStateGroupCounts(state),
+    getSchoolSuggestions(),
   ]);
   const info = stats.states.find((s) => s.state === state);
   const hasMore = members.length > page * PAGE_SIZE;
@@ -90,11 +98,12 @@ export default async function StatePage({ params, searchParams }: Props) {
           </Link>
         ))}
       </nav>
+      <PeopleFilters action={base} values={filters} keep={{ show: tab.group === "serving" ? "" : tab.group }} schools={schools} />
       {shown.length > 0 && <p className="-mt-2 text-sm text-faint">Tap anyone to see their profile.</p>}
 
       {shown.length === 0 ? (
         <div className="rounded-[20px] border-[1.5px] border-dashed border-line px-5 py-8 text-center">
-          <p className="font-bold">{tab.empty}</p>
+          <p className="font-bold">{filters.school || filters.interest || filters.open ? "No one matches these filters" : tab.empty}</p>
           <p className="mt-1 text-sm text-muted">Know someone from {state}? Send them your link.</p>
           <Link href="/invite" className="mt-3 inline-block font-bold text-lime-ink">
             Invite friends
@@ -105,7 +114,7 @@ export default async function StatePage({ params, searchParams }: Props) {
           {shown.map((m) => {
             const me = m.id === user.id;
             return (
-              <li key={m.id}>
+              <li key={m.id} className="flex flex-col items-center gap-1.5">
                 <PersonButton id={m.id} label={m.nickname} className="flex w-full flex-col items-center gap-1.5 rounded-2xl py-1 active:bg-surface-2">
                   <Avatar id={m.id} nickname={m.nickname} photoVersion={m.photo_version} size={72} ring={me} />
                   <span className={`flex w-full items-center justify-center gap-1 text-sm font-medium ${me ? "text-lime-ink" : ""}`}>
@@ -115,8 +124,9 @@ export default async function StatePage({ params, searchParams }: Props) {
                     </span>
                     {m.verified && <VerifiedBadge />}
                   </span>
-                  {m.position !== null && <span className="text-xs text-faint">#{formatNumber(m.position)}</span>}
+                  {m.school && <span className="w-full truncate text-center text-xs text-faint">{m.school}</span>}
                 </PersonButton>
+                {!me && <SmallFollow id={m.id} following={m.is_following} />}
               </li>
             );
           })}

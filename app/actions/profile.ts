@@ -13,6 +13,8 @@ import { isState, stateCodeProblem } from "@/lib/states";
 import { batchFromStateCode, batchProblem, isStage, STATE_LABEL } from "@/lib/nysc";
 import { verificationBlock } from "@/lib/verification";
 import { sniffImage } from "@/lib/image";
+import { usernameChange } from "@/lib/social-rules";
+import { track } from "@/lib/stats";
 
 export type ProfileState = { error?: string; ok?: boolean } | undefined;
 
@@ -32,9 +34,33 @@ export async function updateField(_prev: ProfileState, fd: FormData): Promise<Pr
     case "nickname": {
       const nick = validateUsername(value);
       if (!nick.ok) return { error: nick.error };
+      if (nick.value === user.nickname) break;
+      // Only capitals changed: same username, no limit. Otherwise once every 30 days, and the old one keeps
+      // pointing here for 30 days so shared links don't break.
+      const renamed = nick.value.toLowerCase() !== user.nickname.toLowerCase();
+      if (renamed) {
+        const [row] = await sql<{ at: Date | null }[]>`SELECT username_changed_at AS at FROM users WHERE id = ${user.id}`;
+        const when = usernameChange(row?.at ?? null);
+        if (!when.allowed) {
+          return { error: `You can change your username again on ${when.next.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" })}.` };
+        }
+      }
       if (await usernameTaken(nick.value, user.id)) return { error: await usernameTakenError(nick.value) };
       try {
-        await sql`UPDATE users SET nickname = ${nick.value} WHERE id = ${user.id}`;
+        await sql`
+          UPDATE users SET nickname = ${nick.value}, username_changed_at = CASE WHEN ${renamed} THEN now() ELSE username_changed_at END
+          WHERE id = ${user.id}
+        `;
+        if (renamed) {
+          await sql`
+            INSERT INTO username_redirects (old_name, user_id, expires_at)
+            VALUES (${user.nickname.toLowerCase()}, ${user.id}, now() + interval '30 days')
+            ON CONFLICT (old_name) DO UPDATE SET user_id = EXCLUDED.user_id, expires_at = EXCLUDED.expires_at
+          `;
+          // Taking back your own old name: it isn't a redirect any more.
+          await sql`DELETE FROM username_redirects WHERE old_name = ${nick.value.toLowerCase()}`;
+          await track("profile_edit", user.id, { field: "username" });
+        }
       } catch (err) {
         if (isUsernameViolation(err)) return { error: await usernameTakenError(nick.value) };
         throw err;

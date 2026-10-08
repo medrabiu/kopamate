@@ -1,3 +1,5 @@
+import { ABUSIVE_WORDS, RESERVED_USERNAME_WORDS } from "./word-filter";
+
 /**
  * Normalise a Nigerian mobile number to E.164 (+234XXXXXXXXXX).
  * Accepts 0803..., 803..., 234803..., +234 803 ... Returns null if invalid.
@@ -16,12 +18,8 @@ export function maskPhone(e164: string | null) {
   return `${local.slice(0, 4)} ••• ${local.slice(-4)}`;
 }
 
-// Short list of words we don't allow in nicknames. Extend as needed (admin can also rename).
-const BLOCKED = [
-  "fuck", "fuk", "shit", "bitch", "cunt", "dick", "pussy", "nigger", "nigga", "whore",
-  "slut", "bastard", "asshole", "ashawo", "olosho", "ode", "mumu", "werey", "oloshi",
-  "admin", "kopamate", "nysc", "official",
-];
+// Words we don't allow in usernames (lib/word-filter.ts). Extend there; admins can also rename.
+const BLOCKED = [...ABUSIVE_WORDS.filter((w) => !w.includes(" ")), ...RESERVED_USERNAME_WORDS];
 
 /** Usernames, like on X: 2 to 20 letters, numbers, _ or ., at least one letter. Unique ignoring capitals (see lib/signup.ts). */
 export const USERNAME_RULES = "2 to 20 letters, numbers, _ or . (no spaces)";

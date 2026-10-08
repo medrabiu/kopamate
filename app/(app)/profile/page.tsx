@@ -64,8 +64,8 @@ export default async function ProfilePage() {
           meta={`${stageLine(user.nysc_stage, user.state, user.nysc_batch)} · Joined ${formatJoined(user.completed_at!)}`}
           stats={
             <>
-              <FollowStat userId={user.id} list="following" count={follows.following} />
-              <FollowStat userId={user.id} list="followers" count={follows.followers} />
+              <FollowStat nickname={user.nickname} list="following" count={follows.following} />
+              <FollowStat nickname={user.nickname} list="followers" count={follows.followers} />
               {rank && (
                 <span>
                   <span className="font-bold">#{formatNumber(rank.position)}</span> <span className="text-muted">Position</span>

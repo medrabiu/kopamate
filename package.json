@@ -12,7 +12,8 @@
     "db:seed": "node scripts/seed.mjs",
     "db:quiz": "node scripts/seed-quiz.mjs",
     "test:challenges": "node --test tests/challenges.test.mjs && node scripts/test-challenge-signups.mjs",
-    "test:pcm": "node --test tests/pcm-rules.test.mjs"
+    "test:pcm": "node --test tests/pcm-rules.test.mjs",
+    "test:social": "node --test tests/social-rules.test.mjs"
   },
   "dependencies": {
     "@fontsource/bricolage-grotesque": "^5.1.0",

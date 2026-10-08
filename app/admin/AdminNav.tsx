@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/usage", label: "Usage" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/people", label: "People" },
   { href: "/admin/verification", label: "Verification" },
   { href: "/admin/suspicious", label: "Suspicious" },
   { href: "/admin/rewards", label: "Rewards" },

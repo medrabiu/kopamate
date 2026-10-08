@@ -9,6 +9,10 @@ import { getAnnouncements, getNotifications, type Notification } from "@/lib/not
 import { requireUser } from "@/lib/session";
 import { timeAgo } from "@/lib/util";
 import MarkSeen from "./MarkSeen";
+import { after } from "next/server";
+import HiResponse from "@/components/social/HiResponse";
+import SmallFollow from "@/components/social/SmallFollow";
+import { track } from "@/lib/stats";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -32,9 +36,34 @@ function Row({ n, unread }: { n: Notification; unread: boolean }) {
     </>
   );
   const cls = "flex w-full items-start gap-3 px-4 py-3.5 text-left active:bg-surface-2";
-  if (n.actor) return <PersonButton id={n.actor.id} label={n.actor.nickname} className={cls}>{content}</PersonButton>;
-  if (n.url) return <Link href={n.url} className={cls}>{content}</Link>;
-  return <div className={cls}>{content}</div>;
+  // Inline actions: answer a "Say hi" while it's waiting, or follow back.
+  const waiting = n.kind === "hi_request" && n.actor && n.connection?.status === "pending";
+  const followBack = n.kind === "follow" && n.actor && !n.following_actor;
+  const actions =
+    waiting || followBack ? (
+      <div className="-mt-1.5 pr-4 pb-3.5 pl-[68px]">
+        {waiting ? <HiResponse connectionId={n.connection!.id} nickname={n.actor!.nickname} /> : <SmallFollow id={n.actor!.id} following={false} />}
+      </div>
+    ) : null;
+  const main = n.actor ? (
+    <PersonButton id={n.actor.id} label={n.actor.nickname} className={cls}>
+      {content}
+    </PersonButton>
+  ) : n.url ? (
+    <Link href={n.url} className={cls}>
+      {content}
+    </Link>
+  ) : (
+    <div className={cls}>{content}</div>
+  );
+  return actions ? (
+    <div>
+      {main}
+      {actions}
+    </div>
+  ) : (
+    main
+  );
 }
 
 /** One list, newest first: personal notifications and Kopamate team announcements from the last 30 days. */
@@ -46,6 +75,7 @@ export default async function NotificationsPage() {
     getAnnouncements(30),
   ]);
   const seenAt = seen?.at.getTime() ?? Date.now();
+  after(() => track("notification_open", user.id));
   const monthAgo = Date.now() - 30 * 86_400_000;
   const items = [
     ...notifications.map((n) => ({ type: "personal" as const, at: new Date(n.created_at).getTime(), n })),

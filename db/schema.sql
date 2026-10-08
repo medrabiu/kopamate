@@ -681,3 +681,83 @@ ALTER TABLE challenges ADD COLUMN IF NOT EXISTS ask_for_stats boolean NOT NULL D
 -- NYSC checklist (/nysc-checklist): a signed-in user's answers and ticks (lib/pcm-rules.ts Plan). The guide
 -- content itself lives in settings (pcm_guide, pcm_guide_previous, pcm_guide_version, pcm_guide_enabled).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS pcm_plan jsonb;
+
+-- People and connecting (lib/social.ts). Profile fields are all optional and shown as plain text.
+-- The nickname is the @username (unique, see users_username_idx); username_changed_at limits changes to one
+-- every 30 days, and username_redirects keeps an old one pointing to the new one for 30 days.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio text CHECK (char_length(bio) <= 160);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS school text CHECK (char_length(school) <= 80);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS school_set_at timestamptz;      -- when the school was first added (school_joined)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS course text CHECK (char_length(course) <= 80);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS interests text[] NOT NULL DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS open_to text[] NOT NULL DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS links jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username_changed_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hi_policy text NOT NULL DEFAULT 'everyone';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS strength_dismissed_at timestamptz;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_hi_policy_check') THEN
+    ALTER TABLE users ADD CONSTRAINT users_hi_policy_check CHECK (hi_policy IN ('everyone', 'following', 'nobody'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_interests_check') THEN
+    ALTER TABLE users ADD CONSTRAINT users_interests_check CHECK (cardinality(interests) <= 5);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_open_to_check') THEN
+    ALTER TABLE users ADD CONSTRAINT users_open_to_check CHECK (open_to <@ ARRAY['work', 'collab', 'friends', 'mentoring']::text[]);
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS users_school_idx ON users (lower(school)) WHERE school IS NOT NULL;
+CREATE INDEX IF NOT EXISTS users_interests_idx ON users USING gin (interests);
+CREATE INDEX IF NOT EXISTS users_open_to_idx ON users USING gin (open_to);
+CREATE INDEX IF NOT EXISTS follows_follower_time_idx ON follows (follower_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS username_redirects (
+  old_name    text PRIMARY KEY,                 -- lower(old nickname)
+  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at  timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS username_redirects_user_idx ON username_redirects (user_id);
+
+-- "Say hi": a request to connect. Accepted, both see a WhatsApp button on each other's profile.
+CREATE TABLE IF NOT EXISTS connections (
+  id            bigserial PRIMARY KEY,
+  from_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_id         uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status        text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'removed')),
+  note          text CHECK (char_length(note) <= 140),
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  responded_at  timestamptz,
+  CHECK (from_id <> to_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS connections_pending_idx ON connections (least(from_id, to_id), greatest(from_id, to_id)) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS connections_from_idx ON connections (from_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS connections_to_idx ON connections (to_id, status);
+
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (blocker_id, blocked_id),
+  CHECK (blocker_id <> blocked_id)
+);
+CREATE INDEX IF NOT EXISTS blocks_blocked_idx ON blocks (blocked_id);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id           bigserial PRIMARY KEY,
+  reporter_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason       text NOT NULL CHECK (reason IN ('fake', 'harassment', 'spam', 'inappropriate', 'other')),
+  note         text CHECK (char_length(note) <= 300),
+  status       text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  closed_at    timestamptz,
+  closed_by    uuid REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS reports_open_idx ON reports (reporter_id, target_id) WHERE status = 'open';
+CREATE INDEX IF NOT EXISTS reports_status_idx ON reports (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS reports_target_idx ON reports (target_id);
+
+-- Notifications for "Say hi" carry the request id here (kinds hi_request, hi_accepted, school_joined).
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS data jsonb;
+CREATE INDEX IF NOT EXISTS notifications_actor_idx ON notifications (actor_id) WHERE actor_id IS NOT NULL;

@@ -8,12 +8,32 @@ import { getStateMembers } from "@/lib/ranking";
 import { stateSlug } from "@/lib/states";
 import { formatNumber } from "@/lib/util";
 import StateList from "./StateList";
+import { Suspense } from "react";
+import { after } from "next/server";
+import PeopleFilters, { readFilters } from "@/components/social/PeopleFilters";
+import PersonRow from "@/components/social/PersonRow";
+import SearchBox from "@/components/social/SearchBox";
+import { getPeopleLikeYou, getSchoolSuggestions, searchPeople } from "@/lib/social";
+import { track } from "@/lib/stats";
 
 export const metadata: Metadata = { title: "Corpers" };
 
-export default async function CorpersPage() {
+type Props = { searchParams: Promise<Record<string, string | undefined>> };
+
+export default async function CorpersPage({ searchParams }: Props) {
   const user = await requireUser();
-  const [stats, faces] = await Promise.all([getPublicStats(), user.state ? getStateMembers(user.state, 5) : Promise.resolve([])]);
+  const sp = await searchParams;
+  const q = (sp.q ?? "").trim().slice(0, 40);
+  const filters = readFilters(sp);
+  const searching = q.length >= 2 || Boolean(filters.school || filters.interest || filters.open);
+  const [stats, faces, results, likeYou, schools] = await Promise.all([
+    getPublicStats(),
+    user.state ? getStateMembers(user.state, 5, "serving", user.id) : Promise.resolve([]),
+    searching ? searchPeople(user.id, q, { school: filters.school, interest: filters.interest, openTo: filters.open }) : Promise.resolve([]),
+    searching ? Promise.resolve([]) : getPeopleLikeYou(user.id),
+    getSchoolSuggestions(),
+  ]);
+  if (q.length >= 2) after(() => track("search_used", user.id));
   const rows = stats.states.map((s) => ({ ...s, slug: stateSlug(s.state) }));
   const mine = stats.states.find((s) => s.state === user.state);
 
@@ -27,7 +47,39 @@ export default async function CorpersPage() {
         </p>
       </div>
 
-      {user.state && mine && (
+      <Suspense>
+        <SearchBox />
+      </Suspense>
+      <PeopleFilters action="/corpers" values={filters} keep={{ q }} schools={schools} />
+
+      {searching ? (
+        <section className="flex flex-col gap-1" aria-labelledby="results-title">
+          <h2 id="results-title" className="text-sm font-bold text-muted">
+            {results.length === 0 ? "No one found. Try another name or fewer filters." : `${results.length}${results.length === 20 ? "+" : ""} found`}
+          </h2>
+          <ul className="flex flex-col divide-y divide-line">
+            {results.map((p) => (
+              <PersonRow key={p.id} p={p} viewerId={user.id} />
+            ))}
+          </ul>
+        </section>
+      ) : (
+        likeYou.length > 0 && (
+          <section className="flex flex-col gap-1" aria-labelledby="like-you-title">
+            <h2 id="like-you-title" className="h-display text-xl">
+              People like you
+            </h2>
+            <p className="text-sm text-muted">Same school, course, state or interests.</p>
+            <ul className="flex flex-col divide-y divide-line">
+              {likeYou.map((p) => (
+                <PersonRow key={p.id} p={p} viewerId={user.id} note={[p.reason, p.school ?? p.state].filter(Boolean).join(" · ")} onClickEvent="plyc" />
+              ))}
+            </ul>
+          </section>
+        )
+      )}
+
+      {!searching && user.state && mine && (
         <Link href={`/corpers/${stateSlug(user.state)}`} className="card flex flex-col gap-3.5 border-[1.5px] border-lime !p-[18px]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -62,7 +114,7 @@ export default async function CorpersPage() {
         </Link>
       )}
 
-      <StateList rows={rows} myState={user.state} />
+      {!searching && <StateList rows={rows} myState={user.state} />}
     </>
   );
 }

@@ -22,11 +22,17 @@ export async function uniqueReferralCode(nickname: string) {
   return base + randomDigits(8);
 }
 
-/** True if someone else already has this username (capitals don't matter). */
+/**
+ * True if someone else already has this username (capitals don't matter), or gave it up less than 30 days ago
+ * (it still points to their new one, see username_redirects).
+ */
 export async function usernameTaken(username: string, exceptUserId?: string) {
   const rows = await sql`
     SELECT 1 FROM users WHERE lower(nickname) = lower(${username})
     ${exceptUserId ? sql`AND id <> ${exceptUserId}` : sql``}
+    UNION ALL
+    SELECT 1 FROM username_redirects WHERE old_name = lower(${username}) AND expires_at > now()
+    ${exceptUserId ? sql`AND user_id <> ${exceptUserId}` : sql``}
   `;
   return rows.length > 0;
 }

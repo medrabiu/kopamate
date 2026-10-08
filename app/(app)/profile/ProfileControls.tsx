@@ -4,7 +4,6 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import Sheet from "@/components/Sheet";
-import { useOpenPerson } from "@/components/PersonSheet";
 import { useToast } from "@/components/Toast";
 import { CameraIcon, ChevronRight, ClockIcon, ShieldIcon } from "@/components/icons";
 import IdCardGuide from "@/components/IdCardGuide";
@@ -609,13 +608,12 @@ export function AccountActions({ admin }: { admin: boolean }) {
   );
 }
 
-/** "3 Following" / "0 Followers" in your profile header (X style); tapping opens the list in the profile sheet. */
-export function FollowStat({ userId, list, count }: { userId: string; list: "followers" | "following"; count: number }) {
-  const open = useOpenPerson();
+/** "3 Following" / "0 Followers" in your profile header (X style); tapping opens the list. */
+export function FollowStat({ nickname, list, count }: { nickname: string; list: "followers" | "following"; count: number }) {
   const label = list === "followers" ? (count === 1 ? "Follower" : "Followers") : "Following";
   return (
-    <button type="button" onClick={() => open?.(userId, list)} className="hover:underline">
+    <Link href={`/u/@${nickname}/${list}`} className="hover:underline">
       <span className="font-bold">{new Intl.NumberFormat("en-NG").format(count)}</span> <span className="text-muted">{label}</span>
-    </button>
+    </Link>
   );
 }

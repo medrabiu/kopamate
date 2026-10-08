@@ -163,7 +163,13 @@ export type MemberRow = {
   verified: boolean;
   /** Null for seed accounts: they're listed but never hold a position. */
   position: number | null;
+  school: string | null;
+  /** The viewer follows them (false when no viewer is given). */
+  is_following: boolean;
 };
+
+/** Optional filters on a state's people (URL search params on the state page). */
+export type MemberFilters = { school?: string | null; interest?: string | null; openTo?: string | null };
 
 /** Everyone listed in a state: ranked users by position first, then seed accounts by join time. */
 /** Who to list on a state's page: serving there (and posted), ex-corpers who served there, or awaiting call-up. */
@@ -171,14 +177,27 @@ export type MemberGroup = "serving" | "served" | "waiting";
 
 const groupStages = (group: MemberGroup) => (group === "serving" ? IN_SERVICE : [group]);
 
-export async function getStateMembers(state: string, limit: number, group: MemberGroup = "serving"): Promise<MemberRow[]> {
+export async function getStateMembers(
+  state: string,
+  limit: number,
+  group: MemberGroup = "serving",
+  viewerId: string | null = null,
+  filters: MemberFilters = {},
+): Promise<MemberRow[]> {
+  const viewer = viewerId ?? "00000000-0000-0000-0000-000000000000";
   return sql<MemberRow[]>`
     ${ranked()}
-    SELECT u.id, u.nickname, u.photo_version, r.position, ${topBadge()}, ${isVerified()}
+    SELECT u.id, u.nickname, u.photo_version, r.position, u.school, ${topBadge()}, ${isVerified()},
+           EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = ${viewer} AND f.following_id = u.id) AS is_following
     FROM users u LEFT JOIN ranked r ON r.id = u.id
     WHERE u.state = ${state} AND u.show_in_list AND u.completed_at IS NOT NULL AND NOT u.is_banned
       AND u.nysc_stage IN ${sql(groupStages(group))}
       AND (r.id IS NOT NULL OR u.is_seed)
+      -- Nobody the viewer blocked, or who blocked the viewer.
+      AND NOT EXISTS (SELECT 1 FROM blocks bl WHERE (bl.blocker_id = ${viewer} AND bl.blocked_id = u.id) OR (bl.blocker_id = u.id AND bl.blocked_id = ${viewer}))
+      ${filters.school ? sql`AND lower(u.school) = lower(${filters.school})` : sql``}
+      ${filters.interest ? sql`AND EXISTS (SELECT 1 FROM unnest(u.interests) i WHERE lower(i) = lower(${filters.interest}))` : sql``}
+      ${filters.openTo ? sql`AND u.open_to @> ARRAY[${filters.openTo}]::text[]` : sql``}
     ORDER BY r.position NULLS LAST, u.completed_at DESC
     LIMIT ${limit}
   `;

@@ -29,6 +29,8 @@ import QuizCard from "./QuizCard";
 import { ConfirmStageCard } from "@/components/NyscStatusForm";
 import ChallengeBanner from "@/components/challenges/ChallengeBanner";
 import PcmHomeCard from "@/components/pcm/HomeCard";
+import StrengthCard from "@/components/social/StrengthCard";
+import { cleanLinks, profileStrength } from "@/lib/social-rules";
 import { getGuideState, getUserPlan } from "@/lib/pcm-guide";
 import { answeredAll, readiness } from "@/lib/pcm-rules";
 import { APP_URL } from "@/lib/config";
@@ -45,7 +47,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const badgesReady = checkAutoBadges(user.id);
   // People waiting for call-up (or posted, before camp) get the NYSC checklist card.
   const isPcm = user.nysc_stage === "waiting" || user.nysc_stage === "posted";
-  const [rank, stats, announcements, newcomers, steps, badges, myRewards, quiz, streak, standings, unread, challenge, pcm] = await Promise.all([
+  const [rank, stats, announcements, newcomers, steps, badges, myRewards, quiz, streak, standings, unread, challenge, pcm, [about]] = await Promise.all([
     getRank(user.id),
     getPublicStats(),
     getAnnouncements(20),
@@ -53,6 +55,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       SELECT u.id, u.nickname, u.photo_version, ${isVerified()} FROM users u
       WHERE u.state = ${user.state} AND u.id <> ${user.id} AND u.completed_at IS NOT NULL
         AND NOT u.is_banned AND u.show_in_list
+        AND NOT EXISTS (SELECT 1 FROM blocks bl WHERE (bl.blocker_id = ${user.id} AND bl.blocked_id = u.id) OR (bl.blocker_id = u.id AND bl.blocked_id = ${user.id}))
       ORDER BY u.completed_at DESC LIMIT 5
     `,
     badgesReady.then(() => getProfileSteps(user.id)),
@@ -75,6 +78,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           .then(([g, plan]) => (g.enabled ? { g, plan } : null))
           .catch(() => null)
       : null,
+    // Profile strength, for the "Your profile is X% done" card.
+    sql<{ bio: string | null; school: string | null; course: string | null; interests: string[]; open_to: string[]; links: unknown; dismissed: boolean }[]>`
+      SELECT bio, school, course, interests, open_to, links,
+             COALESCE(strength_dismissed_at > now() - interval '7 days', false) AS dismissed
+      FROM users WHERE id = ${user.id}
+    `.catch(() => [undefined]),
   ]);
   const pcmCard = pcm
     ? (() => {
@@ -115,6 +124,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ]),
     );
   }
+
+  // Once "Finish setting up" is done (photo, state code, first friend), nudge a fuller profile, below 70%.
+  const strength =
+    about && steps.photo && steps.stateCode && steps.friend && !about.dismissed
+      ? profileStrength({ photo: user.photo_version > 0, ...about, links: cleanLinks(about.links) })
+      : null;
+  const strengthCard = strength && strength.score < 70 && strength.missing ? { score: strength.score, hint: strength.missing.hint } : null;
 
   const quizFirst = quiz.kind === "ready" || quiz.kind === "playing";
   const quizCard = (
@@ -180,6 +196,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {!quizFirst && quizCard}
 
       <SetupCard steps={steps} publicKey={vapidPublicKey} />
+      {strengthCard && <StrengthCard score={strengthCard.score} hint={strengthCard.hint} />}
 
       {newcomers.length > 0 && (
         <section className="flex flex-col gap-3" aria-labelledby="new-title">

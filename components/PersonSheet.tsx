@@ -250,11 +250,11 @@ export function PersonButton({
   className?: string;
   children: React.ReactNode;
 }) {
-  const open = useContext(OpenPerson);
-  if (!open) return <span className={className}>{children}</span>;
+  // Every avatar opens the person's full profile page (/u/@username). `id` is kept for callers.
+  void id;
   return (
-    <button type="button" onClick={() => open(id)} aria-label={`View ${label}'s profile`} className={`text-left ${className}`}>
+    <Link href={`/u/@${label}`} aria-label={`View ${label}'s profile`} className={`text-left ${className}`}>
       {children}
-    </button>
+    </Link>
   );
 }
