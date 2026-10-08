@@ -10,6 +10,11 @@ const MONTH = 60 * 60 * 24 * 30;
  * invite link. Whichever link was opened last wins.
  */
 export function middleware(req: NextRequest) {
+  // The landing page is cached and the same for everyone, so signed-in people are sent to the app here.
+  // (/home checks the session properly: an expired one goes to /login.)
+  if (req.nextUrl.pathname === "/" && req.cookies.has("km_session")) {
+    return NextResponse.redirect(new URL("/home", req.url));
+  }
   const res = NextResponse.next();
   const match = req.nextUrl.pathname.match(/^\/(r|u|c)\/([A-Za-z0-9]{2,24})\/?$/);
   // Shared checklist links carry the sharer's invite code (/nysc-checklist?ref=<code>).
@@ -34,4 +39,4 @@ export function middleware(req: NextRequest) {
   return res;
 }
 
-export const config = { matcher: ["/r/:path*", "/u/:path*", "/c/:path*", "/nysc-checklist"] };
+export const config = { matcher: ["/", "/r/:path*", "/u/:path*", "/c/:path*", "/nysc-checklist"] };

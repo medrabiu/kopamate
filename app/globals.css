@@ -392,3 +392,13 @@ dialog.sheet[open] {
     transition: none !important;
   }
 }
+/* Checklist header: Log in / Join for visitors, "Open the app" once ChecklistApp knows you're signed in. */
+.pcm-when-in {
+  display: none;
+}
+[data-signed-in] .pcm-when-in {
+  display: flex;
+}
+[data-signed-in] .pcm-when-out {
+  display: none;
+}

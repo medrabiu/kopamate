@@ -15,7 +15,8 @@ const STALE = "Someone updated the guide. Reload to see their changes.";
 
 function refresh() {
   revalidateTag("pcm-guide");
-  revalidatePath("/nysc-checklist");
+  // The checklist and every /nysc-checklist/<step> page.
+  revalidatePath("/nysc-checklist", "layout");
   revalidatePath("/home");
   revalidatePath("/admin/pcm-guide");
 }

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
@@ -7,11 +6,7 @@ import { APP_NAME, APP_URL, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/config";
 import ConnectionBanner from "@/components/ConnectionBanner";
 import ServiceWorker from "@/components/ServiceWorker";
 import { splashImages } from "@/lib/splash";
-import { THEME_COLOR, THEME_COOKIE, themeMigrationScript, type Theme } from "@/lib/theme";
-
-async function currentTheme(): Promise<Theme> {
-  return (await cookies()).get(THEME_COOKIE)?.value === "light" ? "light" : "dark";
-}
+import { THEME_COLOR, themeBootScript, themeMigrationScript } from "@/lib/theme";
 
 const APPLE_WEB_APP = { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" } as const;
 
@@ -47,32 +42,30 @@ const baseMetadata: Metadata = {
   twitter: { card: "summary_large_image", title: SITE_TITLE, description: SITE_DESCRIPTION },
 };
 
-/** The install manifest and iPhone launch screens follow the theme, so opening the app doesn't flash the wrong colour. */
-export async function generateMetadata(): Promise<Metadata> {
-  const theme = await currentTheme();
-  return {
-    ...baseMetadata,
-    manifest: theme === "light" ? "/manifest.webmanifest?theme=light" : "/manifest.webmanifest",
-    appleWebApp: { ...APPLE_WEB_APP, startupImage: splashImages(theme) },
-  };
-}
+/**
+ * The same for everyone, so pages that don't need a signed-in user can be cached. Dark by default; the head
+ * script switches the theme colour and install manifest to light for people who chose light mode.
+ */
+export const metadata: Metadata = {
+  ...baseMetadata,
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { ...APPLE_WEB_APP, startupImage: splashImages("dark") },
+};
 
-export async function generateViewport(): Promise<Viewport> {
-  return {
-    themeColor: THEME_COLOR[await currentTheme()],
-    width: "device-width",
-    initialScale: 1,
-    viewportFit: "cover",
-  };
-}
+export const viewport: Viewport = {
+  themeColor: THEME_COLOR.dark,
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const theme = await currentTheme();
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // Light mode is a cookie (km_theme), so the server sends the right theme. The migration script may still
-    // set data-theme for people with the old saved setting, so React must not complain about it.
-    <html lang="en" data-theme={theme} suppressHydrationWarning>
+    // Light mode is a cookie (km_theme) applied by the first script in <head>, before anything paints. That
+    // script (and the migration one) set data-theme, so React must not complain about it.
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeMigrationScript }} />
       </head>
       <body className="min-h-dvh">

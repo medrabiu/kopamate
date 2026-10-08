@@ -3,9 +3,11 @@
 // - Files that never change once published (hashed JS/CSS/fonts under /_next/static, avatars with
 //   ?v=<version>, app icons) are served from this cache first, so repeat visits don't download them
 //   again even when the phone's small browser cache has thrown them out.
-// Pages and data always come from the network, so nobody sees someone else's or stale data.
+// Pages and data come from the network, so nobody sees someone else's or stale data. The public pages that are
+// the same for everyone (landing, NYSC checklist) are also saved as they load, and shown when there's no
+// connection, so the checklist works offline (its ticks are on the phone).
 // Also shows push notifications.
-const VERSION = "v3";
+const VERSION = "v4";
 const PAGES = `kopamate-pages-${VERSION}`;
 const STATIC = `kopamate-static-${VERSION}`;
 const AVATARS = `kopamate-avatars-${VERSION}`;
@@ -33,6 +35,26 @@ async function trim(name) {
   for (let i = 0; i < extra; i++) await cache.delete(keys[i]);
 }
 
+/** Public pages that are the same for everyone: safe to keep a copy of. */
+function isPublicPage(url) {
+  return url.pathname === "/" || url.pathname === "/nysc-checklist" || url.pathname.startsWith("/nysc-checklist/");
+}
+
+/** Network first; keeps the latest good copy (never a redirect), and falls back to it offline. */
+async function networkThenSaved(request) {
+  const cache = await caches.open(PAGES);
+  const key = new URL(request.url);
+  key.search = "";
+  key.hash = "";
+  try {
+    const response = await fetch(request);
+    if (response.ok && !response.redirected && response.type === "basic") await cache.put(key.href, response.clone());
+    return response;
+  } catch {
+    return (await cache.match(key.href)) || (await cache.match(OFFLINE_URL));
+  }
+}
+
 async function cacheFirst(request, name) {
   const cache = await caches.open(name);
   const hit = await cache.match(request);
@@ -52,7 +74,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(isPublicPage(url) ? networkThenSaved(request) : fetch(request).catch(() => caches.match(OFFLINE_URL)));
     return;
   }
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {

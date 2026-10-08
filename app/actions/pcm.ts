@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, isAdmin } from "@/lib/session";
 import { getUserPlan } from "@/lib/pcm-guide";
 import { mergePlans, sanitizePlan, type Plan } from "@/lib/pcm-rules";
 
@@ -23,6 +23,18 @@ async function store(userId: string, plan: Plan) {
   await sql`UPDATE users SET pcm_plan = ${sql.json(plan as never)} WHERE id = ${userId}`;
   // Home shows the readiness card.
   revalidatePath("/home");
+}
+
+export type MyPlan = { signedIn: false } | { signedIn: true; plan: Plan; inviteCode: string; admin: boolean };
+
+/**
+ * Who's looking at the checklist, and their saved plan. The page itself is the same for everyone (served from
+ * the cache), so the personal part loads after it, from here.
+ */
+export async function loadMyPlan(): Promise<MyPlan> {
+  const user = await getCurrentUser();
+  if (!user?.completed_at || user.is_banned) return { signedIn: false };
+  return { signedIn: true, plan: await getUserPlan(user.id), inviteCode: user.referral_code, admin: isAdmin(user) };
 }
 
 /** Saves the signed-in user's checklist (answers and ticks), cleaned on the server. */

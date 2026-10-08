@@ -6,7 +6,7 @@ import Sheet from "../Sheet";
 import { CheckIcon, ChevronDown, ChevronRight } from "../icons";
 import Ring from "./Ring";
 import RichText from "./RichText";
-import { mergeDevicePlan, savePlan } from "@/app/actions/pcm";
+import { loadMyPlan, mergeDevicePlan, savePlan } from "@/app/actions/pcm";
 import { QUESTIONS, type Answers, type FixDocument, type Guide, type PackItem, type Step } from "@/content/pcm-guide";
 import {
   anchorTarget,
@@ -36,14 +36,15 @@ const DEVICE_KEY = "km_pcm_plan";
 
 type Props = {
   guide: Guide;
-  /** The signed-in user's saved plan, or null for visitors (their progress lives on the device). */
-  initialPlan: Plan | null;
-  inviteCode: string | null;
   contact: { whatsapp: string | null; email: string | null };
   appUrl: string;
-  /** Admins only: show the unsaved draft from the editor (kept in this browser). */
-  preview: boolean;
 };
+
+/**
+ * Who's looking. The page is the same for everyone (cached), so this loads after it: signed-in people get their
+ * saved plan, visitors keep theirs on the device. `preview`: an admin opened ?preview=1 (the editor's draft).
+ */
+type Account = { signedIn: boolean; inviteCode: string | null; preview: boolean };
 
 type SheetState = { kind: "situation"; slug: string } | { kind: "fix" } | null;
 
@@ -102,13 +103,14 @@ function ReportLink({ href }: { href: string | null }) {
   );
 }
 
-export default function ChecklistApp({ guide: savedGuide, initialPlan, inviteCode, contact, appUrl, preview }: Props) {
-  const loggedIn = initialPlan !== null;
+export default function ChecklistApp({ guide: savedGuide, contact, appUrl }: Props) {
+  const [account, setAccount] = useState<Account>({ signedIn: false, inviteCode: null, preview: false });
+  const { signedIn: loggedIn, inviteCode, preview } = account;
   const [guide, setGuide] = useState(savedGuide);
-  const [plan, setPlan] = useState<Plan>(initialPlan ?? emptyPlan());
-  const [hydrated, setHydrated] = useState(loggedIn);
+  const [plan, setPlan] = useState<Plan>(emptyPlan());
+  const [hydrated, setHydrated] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [draftAnswers, setDraftAnswers] = useState<Answers>(initialPlan?.answers ?? {});
+  const [draftAnswers, setDraftAnswers] = useState<Answers>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [sheet, setSheet] = useState<SheetState>(null);
   const [packTab, setPackTab] = useState<"docs" | "packing">("docs");
@@ -161,36 +163,53 @@ export default function ChecklistApp({ guide: savedGuide, initialPlan, inviteCod
     [persist],
   );
 
-  // ---------- First load: device progress, merging, the admin draft, links to a section ----------
+  // ---------- First load: who's looking, their progress (merging device progress in), the admin draft ----------
   useEffect(() => {
     logEvent("checklist_open");
-    if (preview) {
-      try {
-        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-        if (draft && guideProblems(draft).length === 0) setGuide(draft);
-      } catch {}
-    }
+    let cancelled = false;
     const device = readDevice();
-    if (!loggedIn) {
+    const useDevice = () => {
       if (device) {
         setPlan(device);
         setDraftAnswers(device.answers);
       }
-      setHydrated(true);
-    } else if (device && !preview) {
-      // Progress from before they signed up or logged in moves into the account, once.
-      mergeDevicePlan(device)
-        .then((res) => {
-          if (res.ok) {
-            setPlan(res.plan);
-            setDraftAnswers(res.plan.answers);
-            committed.current = res.plan;
+    };
+    loadMyPlan()
+      .catch(() => ({ signedIn: false as const }))
+      .then(async (me) => {
+        if (cancelled) return;
+        if (!me.signedIn) {
+          useDevice();
+          setHydrated(true);
+          return;
+        }
+        const preview = me.admin && new URLSearchParams(location.search).get("preview") === "1";
+        setAccount({ signedIn: true, inviteCode: me.inviteCode, preview });
+        document.documentElement.dataset.signedIn = "1";
+        if (preview) {
+          try {
+            const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+            if (draft && guideProblems(draft).length === 0) setGuide(draft);
+          } catch {}
+        }
+        let mine = me.plan;
+        if (device && !preview) {
+          // Progress from before they signed up or logged in moves into the account, once.
+          const res = await mergeDevicePlan(device).catch(() => null);
+          if (res?.ok) {
+            mine = res.plan;
             writeDevice(null);
           }
-        })
-        .catch(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        }
+        if (cancelled) return;
+        setPlan(mine);
+        setDraftAnswers(mine.answers);
+        committed.current = mine;
+        setHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const openAnchor = useCallback(
@@ -353,7 +372,7 @@ export default function ChecklistApp({ guide: savedGuide, initialPlan, inviteCod
         </p>
       </header>
 
-      {!loggedIn && hydrated && !preview && (
+      {!loggedIn && !preview && (
         <p className="pcm-noprint flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line px-4 py-3 text-sm">
           <span>Your progress is saved on this phone only.</span>
           <Link href="/join" className="font-bold text-lime-ink">
@@ -363,10 +382,9 @@ export default function ChecklistApp({ guide: savedGuide, initialPlan, inviteCod
       )}
 
       {/* Questions, or a summary of the answers */}
-      <section id="questions" className="pcm-noprint scroll-mt-20" aria-labelledby="questions-title" style={{ minHeight: hydrated ? undefined : 120 }}>
-        {!hydrated ? (
-          <div className="h-28 animate-pulse rounded-3xl bg-surface-2" aria-hidden="true" />
-        ) : showQuestions ? (
+      {/* The questions render straight away (no placeholder that jumps); a returning person's summary replaces them once their answers load. */}
+      <section id="questions" className="pcm-noprint scroll-mt-20" aria-labelledby="questions-title">
+        {showQuestions || !hydrated ? (
           <div className="card flex flex-col gap-5">
             <div>
               <span className="text-xs font-bold tracking-wide text-lime-ink uppercase">30 seconds</span>
@@ -604,7 +622,10 @@ export default function ChecklistApp({ guide: savedGuide, initialPlan, inviteCod
                     </button>
                   )}
                   <p className="text-xs text-faint">
-                    Last reviewed for {guide.batchLabel} · <ReportLink href={report(s.title)} />
+                    <a href={`/nysc-checklist/${s.slug}`} className="pcm-noprint font-bold text-lime-ink">
+                      Full guide to this step ›
+                    </a>{" "}
+                    · Last reviewed for {guide.batchLabel} · <ReportLink href={report(s.title)} />
                   </p>
                 </div>
               </li>
@@ -644,7 +665,11 @@ export default function ChecklistApp({ guide: savedGuide, initialPlan, inviteCod
           .filter((s) => s.show)
           .map((s) => (
             <article key={s.slug} className="card flex flex-col gap-2">
-              <h3 className="font-bold">{s.title}</h3>
+              <h3 className="font-bold">
+                <a href={`/nysc-checklist/${s.slug}`} className="underline">
+                  {s.title}
+                </a>
+              </h3>
               <p className="text-muted">
                 <RichText text={s.intro} />
               </p>
@@ -805,7 +830,10 @@ export default function ChecklistApp({ guide: savedGuide, initialPlan, inviteCod
               </div>
             )}
             <p className="text-xs text-faint">
-              Last reviewed for {guide.batchLabel} · <ReportLink href={report(sheetSituation.title)} />
+              <a href={`/nysc-checklist/${sheetSituation.slug}`} className="font-bold text-lime-ink">
+                Open as a page ›
+              </a>{" "}
+              · Last reviewed for {guide.batchLabel} · <ReportLink href={report(sheetSituation.title)} />
               <br />
               Not affiliated with NYSC. Requirements can change, so always confirm with official NYSC instructions.
             </p>

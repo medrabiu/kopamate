@@ -3,6 +3,8 @@ import { track } from "@/lib/stats";
 
 const ALLOWED = new Set([
   "share_clicked",
+  // The cached landing page (/) counts its views from the browser.
+  "landing_view",
   // NYSC checklist (/nysc-checklist). Only a step or section slug, never personal details.
   "checklist_open",
   "checklist_questions_done",
